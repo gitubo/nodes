@@ -1,0 +1,120 @@
+/* styles/main.css */
+:root {
+    --baltic-blue: #34639E;
+    --blue-energy: #518fdb;
+    --lavender: #d3e3fc;
+    --alice-blue: #E6EFFE;
+    --platinum: #f8fbff;
+    --pale-slate: #bfc4c9;
+    --black: #000000;
+    --white: #ffffff;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body, html {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+}
+
+#app-container {
+    width: 100%;
+    height: 100vh;
+    background-color: var(--platinum);
+}
+
+svg {
+    display: block;
+    user-select: none;
+}
+
+/* Grid */
+.grid-dot {
+    fill: var(--alice-blue);
+}
+
+/* Nodes */
+.node-body {
+    fill: var(--alice-blue);
+    stroke: var(--pale-slate);
+    stroke-width: 1px;
+    cursor: grab;
+    transition: stroke 0.15s;
+}
+
+.node:hover .node-body {
+    stroke: var(--blue-energy);
+}
+
+.node.selected .node-body {
+    stroke: var(--blue-energy);
+    stroke-width: 3px;
+}
+
+/* Node labels */
+.node-label-bg {
+    fill: var(--white);
+    stroke: var(--pale-slate);
+    stroke-width: 1px;
+}
+
+.node-name-label, .node-title-label {
+    fill: var(--baltic-blue);
+    font-size: 14px;
+    font-family: sans-serif;
+    pointer-events: none;
+}
+
+/* Handlers */
+.handler-body {
+    fill: var(--alice-blue);
+    stroke: var(--blue-energy);
+    stroke-width: 1px;
+}
+
+.handler-connector {
+    fill: var(--alice-blue);
+    stroke: var(--blue-energy);
+    stroke-width: 2px;
+}
+
+.handler.target {
+    fill: var(--alice-blue);
+    stroke: var(--blue-energy);
+    stroke-width: 1px;
+    cursor: pointer;
+}
+
+.handler-g {
+    cursor: grab;
+}
+
+.handler-g:active {
+    cursor: grabbing;
+}
+
+/* Links */
+.link {
+    fill: none;
+    stroke: var(--pale-slate);
+    stroke-width: 2px;
+    pointer-events: stroke;
+}
+
+.ghost-link {
+    fill: none;
+    stroke: var(--pale-slate);
+    stroke-width: 2px;
+    stroke-dasharray: 5, 5;
+    pointer-events: none;
+}
+
+.link:hover {
+    stroke: var(--blue-energy);
+    stroke-width: 3px;
+}
