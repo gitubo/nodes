@@ -10,15 +10,6 @@ export class HandlerDefinition {
     }
     
     /**
-     * Calculate the local position of this handler relative to node origin
-     * @param {Object} handler - Handler instance
-     * @returns {Object} {x, y} local coordinates
-     */
-    calculatePosition(handler) {
-        return { x: 0, y: 0 };
-    }
-    
-    /**
      * Render the handler visual elements
      * @param {d3.Selection} selection - D3 selection to render into
      */

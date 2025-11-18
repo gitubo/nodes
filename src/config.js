@@ -18,9 +18,11 @@ export const CONFIG = {
     
     // Node settings
     node: {
-        width: 120,
+        width: 60,
         height: 60,
-        borderRadius: 10
+        smallBorderRadius: 5,
+        borderRadius: 10,
+        largeBorderRadius: 20
     },
     
     // Handler settings

@@ -6,6 +6,7 @@
     --alice-blue: #E6EFFE;
     --platinum: #f8fbff;
     --pale-slate: #bfc4c9;
+    --dim-gray: #606265;
     --black: #000000;
     --white: #ffffff;
 }
@@ -41,32 +42,34 @@ svg {
 /* Nodes */
 .node-body {
     fill: var(--alice-blue);
-    stroke: var(--pale-slate);
+    stroke: var(--dim-gray);
     stroke-width: 1px;
     cursor: grab;
     transition: stroke 0.15s;
 }
 
 .node:hover .node-body {
-    stroke: var(--blue-energy);
+    stroke: var(--baltic-blue);
+    stroke-width: 2px;
 }
 
 .node.selected .node-body {
-    stroke: var(--blue-energy);
+    stroke: var(--baltic-blue);
     stroke-width: 3px;
 }
 
-/* Node labels */
-.node-label-bg {
-    fill: var(--white);
-    stroke: var(--pale-slate);
-    stroke-width: 1px;
+.node-label {
+    fill: var(--baltic-blue);
+    font-size: 1rem;
+    font-family: sans-serif;
+    pointer-events: none;
 }
 
-.node-name-label, .node-title-label {
-    fill: var(--baltic-blue);
-    font-size: 14px;
+.node-sublabel {
+    fill: var(--pale-slate);
+    font-size: 0.75rem;
     font-family: sans-serif;
+    font-style: oblique;
     pointer-events: none;
 }
 
@@ -83,11 +86,33 @@ svg {
     stroke-width: 2px;
 }
 
-.handler.target {
+.handler.source {
     fill: var(--alice-blue);
-    stroke: var(--blue-energy);
+    stroke: var(--dim-gray);
     stroke-width: 1px;
     cursor: pointer;
+}
+
+.handler.source.background {
+    fill: var(--platinum);
+    cursor: pointer;
+}
+
+.handler.source.background.arc {
+    stroke: var(--dim-gray);
+    stroke-width: 1px;
+    cursor: pointer;
+}
+
+.handler.target {
+    fill: var(--pale-slate);
+    stroke: var(--dim-gray);
+    stroke-width: 1px;
+    cursor: pointer;
+}
+
+.handler.target:hover {
+    stroke: var(--blue-energy);
 }
 
 .handler-g {
@@ -101,14 +126,14 @@ svg {
 /* Links */
 .link {
     fill: none;
-    stroke: var(--pale-slate);
+    stroke: var(--dim-gray);
     stroke-width: 2px;
     pointer-events: stroke;
 }
 
 .ghost-link {
     fill: none;
-    stroke: var(--pale-slate);
+    stroke: var(--dim-gray);
     stroke-width: 2px;
     stroke-dasharray: 5, 5;
     pointer-events: none;

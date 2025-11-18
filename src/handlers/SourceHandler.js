@@ -5,7 +5,8 @@ import { state } from '../state.js';
 import { render } from '../render.js';
 
 const DIMENSIONS = {
-    radius: 5
+    radius: 8,
+    largeRadius: 10
 }
 
 export class SourceHandlerDefinition extends HandlerDefinition {
@@ -14,14 +15,27 @@ export class SourceHandlerDefinition extends HandlerDefinition {
         this.type = 'source';
     }
     
-    calculatePosition(handler) {
-        const radius = DIMENSIONS.radius;        
-        return { x: radius/2, y: radius/2 };
-    }
-    
     render(selection) {
         const radius = DIMENSIONS.radius;
+        const lRadius = DIMENSIONS.largeRadius;
         
+        selection.append("path")
+            .attr("class", "handler source background")
+            .attr("d", `
+                M 0 ${-lRadius}
+                A ${lRadius} ${lRadius} 0 0 0 0 ${lRadius}
+                L 0 0
+                Z
+            `)
+
+        selection.append("path")
+            .attr("class", "handler source background arc")
+            .attr("d", `
+                M 0 ${-lRadius}
+                A ${lRadius} ${lRadius} 0 0 0 0 ${lRadius}
+            `)
+            .attr("stroke-width", 1);
+            
         selection.append("circle")
             .attr("class", "handler source")
             .attr("x", radius/2)

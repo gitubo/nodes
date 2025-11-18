@@ -9,16 +9,16 @@ import { CONFIG } from './config.js';
  * @returns {Object} {x, y} global coordinates
  */
 export function findGlobalHandlerPos(handlerId) {
-    for (const node of state.nodes) {
+for (const node of state.nodes) {
         const handler = node.handlers.find(h => h.id === handlerId);
         if (handler) {
-            const handlerDef = registry.getHandlerDefinition(handler.type);
-            if (!handlerDef) return { x: node.x, y: node.y };
+            // Use the explicit offsets on the handler instance
+            const localX = handler.offset_x || 0;
+            const localY = handler.offset_y || 0;
             
-            const localPos = handlerDef.calculatePosition(handler);
             return {
-                x: node.x + localPos.x,
-                y: node.y + localPos.y
+                x: node.x + localX,
+                y: node.y + localY
             };
         }
     }
@@ -33,9 +33,9 @@ export function findGlobalHandlerPos(handlerId) {
 export function calculatePath(link) {
     let sourcePos, targetPos;
     
-    if (link.sourceId && link.targetId) {
-        sourcePos = findGlobalHandlerPos(link.sourceId);
-        targetPos = findGlobalHandlerPos(link.targetId);
+    if (link.source && link.target) {
+        sourcePos = findGlobalHandlerPos(link.source);
+        targetPos = findGlobalHandlerPos(link.target);
     } else if (link.sourceId && link.targetX !== undefined) {
         sourcePos = findGlobalHandlerPos(link.sourceId);
         targetPos = { x: link.targetX, y: link.targetY };

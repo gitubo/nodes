@@ -3,6 +3,12 @@ import { registry } from './Registry.js';
 import { CONFIG } from './config.js';
 import { snapToGrid } from './config.js';
 
+
+const DIMENSIONS = {
+    label_margin: 20,
+    sublabel_margin: 20
+}
+
 export class NodeRenderer {
     constructor(renderCallback) {
         this.renderCallback = renderCallback;
@@ -35,8 +41,8 @@ export class NodeRenderer {
             const hasName = !!d.name;
             const internalLabelText = hasName ? '' : (d.label || '');
             
-            const W = CONFIG.node.width;
-            const H = CONFIG.node.height;
+            const W = d.width || CONFIG.node.width;
+            const H = d.height || CONFIG.node.height;
             
             const nameBgJoin = currentSelection.selectAll(".node-label-bg")
                 .data(hasName ? [d] : []);
@@ -52,31 +58,44 @@ export class NodeRenderer {
             
             nameBgJoin.exit().remove();
             
-            const nameTextJoin = currentSelection.selectAll(".node-name-label")
-                .data(hasName ? [d] : []);
-            
-            nameTextJoin.enter().append("text")
-                .attr("class", "node-name-label")
-                .attr("text-anchor", "middle")
-                .merge(nameTextJoin)
-                .attr("x", W/2)
-                .attr("y", 5)
-                .text(d => d.name);
-            
-            nameTextJoin.exit().remove();
-            
-            const titleTextJoin = currentSelection.selectAll(".node-title-label")
-                .data((!hasName && internalLabelText) ? [d] : []);
-            
-            titleTextJoin.enter().append("text")
-                .attr("class", "node-title-label")
-                .attr("text-anchor", "middle")
-                .merge(titleTextJoin)
-                .attr("x", W/2)
-                .attr("y", H/2 + 5)
-                .text(() => internalLabelText);
-            
-            titleTextJoin.exit().remove();
+            let yOffset = H + DIMENSIONS.label_margin;
+
+            // ─── LABEL PRINCIPALE ───
+            if (d.label) {
+                const labelJoin = currentSelection.selectAll(".node-label")
+                    .data([d]);
+
+                labelJoin.enter()
+                    .append("text")
+                    .attr("class", "node-label")
+                    .attr("text-anchor", "middle")
+                    .merge(labelJoin)
+                    .attr("x", W / 2)
+                    .attr("y", yOffset)
+                    .text(d.label);
+
+                labelJoin.exit().remove();
+
+                // Aggiorna yOffset per posizionare la sublabel sotto
+                yOffset += DIMENSIONS.sublabel_margin;
+            }
+
+            // ─── SUBLABEL ───
+            if (d.sublabel) {
+                const sublabelJoin = currentSelection.selectAll(".node-sublabel")
+                    .data([d]);
+
+                sublabelJoin.enter()
+                    .append("text")
+                    .attr("class", "node-sublabel")
+                    .attr("text-anchor", "middle")
+                    .merge(sublabelJoin)
+                    .attr("x", W / 2)
+                    .attr("y", yOffset)
+                    .text(d.sublabel);
+
+                sublabelJoin.exit().remove();
+            }
         });
     }
     
@@ -90,25 +109,25 @@ export class NodeRenderer {
             .join(
                 enter => {
                     const handlerGroup = enter.append("g")
-                        .attr("class", d => `handler-g ${d.type}`);
+                        .attr("class", d => `handler-g ${d.type}`)
+                        // Apply the initial offset transform directly
+                        .attr("transform", d => `translate(${d.offset_x || 0}, ${d.offset_y || 0})`);
                     
                     handlerGroup.each(function(h) {
                         const handlerDef = registry.getHandlerDefinition(h.type);
                         if (handlerDef) {
-                            handlerDef.render(d3.select(this));
+                            // Handler just renders its visuals, no internal positioning
+                            handlerDef.render(d3.select(this)); 
                         }
                     });
                     
                     return handlerGroup;
                 },
                 update => {
-                    update.each(function(h) {
-                        const handlerDef = registry.getHandlerDefinition(h.type);
-                        if (handlerDef) {
-                            const pos = handlerDef.calculatePosition(h);
-                            handlerDef.updatePosition(d3.select(this), pos);
-                        }
-                    });
+                    // Update the transform if offsets change (e.g., if node resized, though not implemented here)
+                    update.attr("transform", d => `translate(${d.offset_x || 0}, ${d.offset_y || 0})`);
+                    
+                    // No need to call handlerDef.updatePosition if it only applies the transform
                     return update;
                 },
                 exit => exit.remove()

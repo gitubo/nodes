@@ -1,6 +1,7 @@
 // NodeDefinition.js - Base interface for all node types
 import { CONFIG } from '../config.js';
 
+
 /**
  * Base NodeDefinition class that all node types should extend
  */
@@ -32,7 +33,7 @@ export class NodeDefinition {
     getShapePath() {
         const W = CONFIG.node.width;
         const H = CONFIG.node.height;
-        const R = CONFIG.node.borderRadius;
+        const R = CONFIG.node.smallBorderRadius;
         return `M ${R},0 L ${W-R},0 A ${R},${R} 0 0 1 ${W},${R} L ${W},${H-R} A ${R},${R} 0 0 1 ${W-R},${H} L ${R},${H} A ${R},${R} 0 0 1 0,${H-R} L 0,${R} A ${R},${R} 0 0 1 ${R},0 Z`;
     }
     

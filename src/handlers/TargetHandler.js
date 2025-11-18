@@ -1,8 +1,12 @@
 // handlers/TargetHandler.js
 import { HandlerDefinition } from './HandlerDefinition.js';
-import { CONFIG } from '../config.js';
 import { state } from '../state.js';
 import { render } from '../render.js';
+
+const DIMENSIONS = {
+    width: 8,
+    height: 16
+}
 
 export class TargetHandlerDefinition extends HandlerDefinition {
     constructor() {
@@ -10,14 +14,9 @@ export class TargetHandlerDefinition extends HandlerDefinition {
         this.type = 'target';
     }
     
-    calculatePosition(handler) {
-        const H = CONFIG.node.height;
-        return { x: 0, y: H / 2 };
-    }
-    
     render(selection) {
-        const w = CONFIG.handler.target.width;
-        const h = CONFIG.handler.target.height;
+        const w = DIMENSIONS.width;
+        const h = DIMENSIONS.height;
         
         selection.append("rect")
             .attr("width", w)

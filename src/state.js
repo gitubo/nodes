@@ -32,7 +32,9 @@ export function createNode(type, x, y) {
     const handlers = definition.getInitialHandlers().map(h => ({
         id: `${nodeId}_${h.type}_${generateId()}`,
         type: h.type,
-        label: h.label || h.type
+        label: h.label || h.type,
+        offset_x: h.offset_x || 0,
+        offset_y: h.offset_y || 0 
     }));
     
     const baseData = {
