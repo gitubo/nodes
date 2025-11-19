@@ -1,18 +1,28 @@
-// main.js
+// main.js - Final version with proper initialization
 import { CONFIG } from './config.js';
 import { initializeState, state, serializeState, deserializeState } from './state.js';
 import { render } from './render.js';
 import { Grid } from './Grid.js';
+import { uiController } from './UIController.js';
+
+console.log('[Main] Starting DAG Editor initialization...');
 
 document.addEventListener('DOMContentLoaded', () => {
-    initializeState();
+    console.log('[Main] DOM Content Loaded');
     
+    // Initialize state
+    initializeState();
+    console.log('[Main] ✓ State initialized');
+    
+    // Create SVG canvas
     const appContainer = d3.select("#app-container");
     const svg = appContainer.append("svg")
         .attr("width", "100%")
         .attr("height", "100%");
     
-    // Defs for gradients and filters
+    console.log('[Main] ✓ SVG canvas created');
+    
+    // Add defs for gradients
     svg.append("defs").html(`
         <linearGradient id="node-gradient" x1="0%" y1="0%" x2="0%" y2="100%">
             <stop offset="0%" stop-color="#ffffff" />
@@ -20,20 +30,27 @@ document.addEventListener('DOMContentLoaded', () => {
         </linearGradient>
     `);
     
-    // Viewport with layers
+    // Create viewport with layers
     const viewport = svg.append("g").attr("class", "viewport");
     
     // Layer 1: Grid
     const gridLayer = viewport.append("g").attr("class", "grid-layer");
     Grid.render(gridLayer, CONFIG.canvas.width, CONFIG.canvas.height);
-    
-    // Layer 2: Links
+    console.log('[Main] ✓ Grid layer created');
+
+    // Layer 2: Helper layer (for add node helpers) - AGGIUNGI QUESTA RIGA
+    viewport.append("g").attr("class", "helper-layer");
+    console.log('[Main] ✓ Helper layer created');
+
+    // Layer 3: Links (must be before nodes for proper z-ordering)
     viewport.append("g").attr("class", "link-layer");
-    
-    // Layer 3: Nodes
+    console.log('[Main] ✓ Link layer created');
+
+    // Layer 4: Nodes
     viewport.append("g").attr("class", "node-layer");
+    console.log('[Main] ✓ Node layer created');
     
-    // Zoom and pan behavior
+    // Setup zoom and pan
     function zoomed({ transform }) {
         viewport.attr("transform", transform);
         state.transform = transform;
@@ -44,9 +61,51 @@ document.addEventListener('DOMContentLoaded', () => {
         .on("zoom", zoomed);
     
     svg.call(zoomBehavior);
+    window.zoomBehavior = zoomBehavior; // Make available globally
+    console.log('[Main] ✓ Zoom behavior attached');
+    
+    // Initialize UI Controller
+    uiController.initialize();
+    console.log('[Main] ✓ UI Controller initialized');
+    
+    // Connect selection callback
+    state.ui.onSelectionChange = (selectedObject) => {
+        uiController.onSelectionChange(selectedObject);
+    };
+    console.log('[Main] ✓ Selection callback connected');
+    
+    // Register property change callback
+    uiController.onPropertyChange((selectedObject, property, value) => {
+        console.log(`[Main] Property "${property}" changed to:`, value);
+    });
+    
+    // Deselect on canvas click
+    svg.on("click", function(event) {
+        if (event.target === this) {
+            state.ui.selectedObject = null;
+            uiController.hidePropertiesPanel();
+            render();
+        }
+    });
     
     // Initial render
+    console.log('[Main] ✓ Performing initial render...');
     render();
+    console.log('[Main] ✓✓✓ DAG Editor ready!');
+    
+    // Update debug info
+    setTimeout(() => {
+        const debugInfo = document.getElementById('debug-info');
+        if (debugInfo) {
+            debugInfo.innerHTML = `
+                ✓ DAG Editor Ready<br>
+                ✓ Nodes: ${state.nodes.length}<br>
+                ✓ Links: ${state.links.length}<br>
+                ✓ Zoom: ${document.getElementById('zoom-panel') ? '✓' : '✗'}<br>
+                ✓ Props: ${document.getElementById('properties-panel') ? '✓' : '✗'}
+            `;
+        }
+    }, 500);
     
     // Expose API for testing
     window.DAG = {
@@ -54,6 +113,23 @@ document.addEventListener('DOMContentLoaded', () => {
         serialize: serializeState,
         deserialize: deserializeState,
         render: render,
-        config: CONFIG
+        config: CONFIG,
+        ui: uiController,
+        // Debugging helpers
+        debug: {
+            showZoom: () => uiController.toggleZoomPanel(true),
+            hideZoom: () => uiController.toggleZoomPanel(false),
+            logState: () => console.log('Current State:', state),
+            testSelect: () => {
+                if (state.nodes.length > 0) {
+                    state.ui.selectedObject = { type: 'node', data: state.nodes[0] };
+                    uiController.onSelectionChange(state.ui.selectedObject);
+                    render();
+                }
+            }
+        }
     };
+    
+    console.log('[Main] ✓ API exposed as window.DAG');
+    console.log('[Main] Try: window.DAG.debug.testSelect()');
 });

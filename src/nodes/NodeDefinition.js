@@ -8,13 +8,18 @@ import { CONFIG } from '../config.js';
 export class NodeDefinition {
     constructor() {
         this.type = 'base';
+        this.name = '';
+    }
+
+    static getDimensions() {
+        return {};
     }
     
     /**
      * Returns the initial handlers configuration for this node type
      * @returns {Array} Array of handler definitions
      */
-    getInitialHandlers() {
+    getHandlers() {
         return [];
     }
     
@@ -22,7 +27,7 @@ export class NodeDefinition {
      * Returns the initial data for a new node instance
      * @returns {Object} Initial node data
      */
-    getInitialData() {
+    getData() {
         return {};
     }
     
@@ -33,8 +38,19 @@ export class NodeDefinition {
     getShapePath() {
         const W = CONFIG.node.width;
         const H = CONFIG.node.height;
-        const R = CONFIG.node.smallBorderRadius;
-        return `M ${R},0 L ${W-R},0 A ${R},${R} 0 0 1 ${W},${R} L ${W},${H-R} A ${R},${R} 0 0 1 ${W-R},${H} L ${R},${H} A ${R},${R} 0 0 1 0,${H-R} L 0,${R} A ${R},${R} 0 0 1 ${R},0 Z`;
+        const sR = CONFIG.node.smallBorderRadius;
+        return `
+            M ${sR},0
+            L ${W - sR},0
+            A ${sR},${sR} 0 0 1 ${W},${sR}
+            L ${W},${H - sR}
+            A ${R},${R} 0 0 1 ${W - sR},${H}
+            L ${sR},${H}
+            A ${sR},${sR} 0 0 1 0,${H - sR}
+            L 0,${sR}
+            A ${sR},${sR} 0 0 1 ${sR},0
+            Z
+        `.replace(/\s+/g, ' ');
     }
     
     /**
@@ -77,7 +93,7 @@ export class NodeDefinition {
             name: data.name,
             x: data.x || 0,
             y: data.y || 0,
-            handlers: data.handlers || this.getInitialHandlers()
+            handlers: data.handlers || this.getHandlers()
         };
     }
     

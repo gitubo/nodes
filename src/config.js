@@ -27,20 +27,9 @@ export const CONFIG = {
     
     // Handler settings
     handler: {
-        source: {
-            width: 64,
-            height: 20,
-            connectorRadius: 5,
-            connectorOffset: 5,
-            bottomOffset: 25
-        },
-        target: {
-            width: 16,
-            height: 16
-        },
-        basic: {
-            radius: 8
-        }
+        width: 8,
+        height: 16,
+        radius: 8
     },
     
     // Link settings

@@ -4,6 +4,10 @@ import { CONFIG } from '../config.js';
 import { state } from '../state.js';
 import { render } from '../render.js';
 
+/* 
+M 5 0 L 55 0 A 5 5 0 0 1 60 5 L 60 10 A 1 1 0 0 0 60 40 L 60 45 A 5 5 0 0 1 55 50 L 5 50 A 5 5 0 0 1 0 45 L 0 5 A 5 5 0 0 1 5 0 Z
+*/
+
 export class SourceHandlerDefinition extends HandlerDefinition {
     constructor() {
         super();

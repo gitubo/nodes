@@ -1,6 +1,7 @@
 // nodes/EndNode.js
 import { NodeDefinition } from './NodeDefinition.js';
 import { CONFIG } from '../config.js';
+import { TargetHandlerDefinition } from '../handlers/TargetHandler.js';
 
 const DIMENSIONS = {
     width: 60,
@@ -12,8 +13,12 @@ export class EndNodeDefinition extends NodeDefinition {
         super();
         this.type = 'end';
     }
+
+    static getDimensions() {
+        return DIMENSIONS;
+    }
     
-    getInitialHandlers() {
+    getHandlers() {
         return [
             { 
                 type: 'target', 
@@ -24,7 +29,7 @@ export class EndNodeDefinition extends NodeDefinition {
         ];
     }
     
-    getInitialData() {
+    getData() {
         return {
             label: 'End',
             width: DIMENSIONS.width,
@@ -32,27 +37,31 @@ export class EndNodeDefinition extends NodeDefinition {
         };
     }
     
-getShapePath() {
-    const W = DIMENSIONS.width;
-    const H = DIMENSIONS.height;
-    const R  = CONFIG.node.largeBorderRadius;        
-    const sR = CONFIG.node.smallBorderRadius;   
+    getShapePath() {
+        const W = DIMENSIONS.width;
+        const H = DIMENSIONS.height;
+        const R  = CONFIG.node.largeBorderRadius;        
+        const sR = CONFIG.node.smallBorderRadius;   
+        const targetHandlerWidth =  TargetHandlerDefinition.getDimension().width/2+2;
+        const targetHandlerHeightUp =  H/2 - TargetHandlerDefinition.getDimension().height/2 - 2;
+        const targetHandlerHeightDown =  H/2 + TargetHandlerDefinition.getDimension().height/2 + 2;
 
-    return `
-        M ${sR},0
-        L ${W - R},0
-        A ${R},${R} 0 0 1 ${W},${R}
-        L ${W},${H - R}
-        A ${R},${R} 0 0 1 ${W - R},${H}
-        L ${sR},${H}
-        A ${sR},${sR} 0 0 1 0,${H - sR}
-        L 0,${sR}
-        A ${sR},${sR} 0 0 1 ${sR},0
-        Z
-    `.replace(/\s+/g, ' ');
-}
-    
-    getBodyClass() {
-        return 'node-body end';
+        return `
+            M ${sR},0
+            L ${W - R},0
+            A ${R},${R} 0 0 1 ${W},${R}
+            L ${W},${H - R}
+            A ${R},${R} 0 0 1 ${W - R},${H}
+            L ${sR},${H}
+            A ${sR},${sR} 0 0 1 0,${H - sR}
+            L 0,${targetHandlerHeightDown}
+            L ${targetHandlerWidth},${targetHandlerHeightDown} 
+            L ${targetHandlerWidth},${targetHandlerHeightUp}
+            L 0,${targetHandlerHeightUp}
+            L 0,${sR}
+            A ${sR},${sR} 0 0 1 ${sR},0
+            Z
+        `.replace(/\s+/g, ' ');
     }
+
 }

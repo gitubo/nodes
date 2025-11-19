@@ -1,12 +1,13 @@
-// handlers/HandlerDefinition.js
-import { CONFIG } from '../config.js';
-
 /**
  * Base HandlerDefinition class for all handler types
  */
 export class HandlerDefinition {
     constructor() {
-        this.type = 'base';
+        this.name = 'base';
+        this.type = 'source';
+    }
+
+    getDimension() {
     }
     
     /**

@@ -1,4 +1,4 @@
-// state.js
+// state.js - Updated with selection management
 import { registry } from './Registry.js';
 import { snapToGrid } from './config.js';
 
@@ -10,7 +10,9 @@ export const state = {
     transform: d3.zoomIdentity,
     ui: {
         ghostLink: null,
-        disconnectingLink: null
+        disconnectingLink: null,
+        selectedObject: null,  // { type: 'node'|'link', data: {...} }
+        onSelectionChange: null  // Callback for selection changes
     }
 };
 
@@ -29,7 +31,7 @@ export function createNode(type, x, y) {
     }
     
     const nodeId = generateId();
-    const handlers = definition.getInitialHandlers().map(h => ({
+    const handlers = definition.getHandlers().map(h => ({
         id: `${nodeId}_${h.type}_${generateId()}`,
         type: h.type,
         label: h.label || h.type,
@@ -46,7 +48,7 @@ export function createNode(type, x, y) {
         handlers: handlers
     };
     
-    const initialData = definition.getInitialData();
+    const initialData = definition.getData();
     return { ...baseData, ...initialData };
 }
 
@@ -81,6 +83,50 @@ export function removeNode(nodeId) {
     
     // Remove the node
     state.nodes = state.nodes.filter(n => n.id !== nodeId);
+    
+    // Clear selection if deleted
+    if (state.ui.selectedObject?.type === 'node' && 
+        state.ui.selectedObject?.data?.id === nodeId) {
+        state.ui.selectedObject = null;
+    }
+}
+
+/**
+ * Remove a link
+ * @param {string} linkId - Link ID to remove
+ */
+export function removeLink(linkId) {
+    state.links = state.links.filter(l => l.id !== linkId);
+    
+    // Clear selection if deleted
+    if (state.ui.selectedObject?.type === 'link' && 
+        state.ui.selectedObject?.data?.id === linkId) {
+        state.ui.selectedObject = null;
+    }
+}
+
+/**
+ * Select an object (node or link)
+ * @param {string} type - 'node' or 'link'
+ * @param {Object} data - The object data
+ */
+export function selectObject(type, data) {
+    state.ui.selectedObject = { type, data };
+    
+    if (state.ui.onSelectionChange) {
+        state.ui.onSelectionChange(state.ui.selectedObject);
+    }
+}
+
+/**
+ * Clear selection
+ */
+export function clearSelection() {
+    state.ui.selectedObject = null;
+    
+    if (state.ui.onSelectionChange) {
+        state.ui.onSelectionChange(null);
+    }
 }
 
 /**
@@ -117,6 +163,7 @@ export function deserializeState(data) {
     state.links = [];
     state.ui.ghostLink = null;
     state.ui.disconnectingLink = null;
+    state.ui.selectedObject = null;
     
     // Deserialize nodes
     state.nodes = data.nodes.map(nodeData => {

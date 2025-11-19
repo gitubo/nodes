@@ -5,36 +5,22 @@ import { state } from '../state.js';
 import { render } from '../render.js';
 
 const DIMENSIONS = {
-    radius: 8,
-    largeRadius: 10
+    radius: CONFIG.handler.radius
 }
 
 export class SourceHandlerDefinition extends HandlerDefinition {
     constructor() {
         super();
+        this.name = 'basic_source';
         this.type = 'source';
+    }
+
+    static getDimension() {
+        return DIMENSIONS;
     }
     
     render(selection) {
         const radius = DIMENSIONS.radius;
-        const lRadius = DIMENSIONS.largeRadius;
-        
-        selection.append("path")
-            .attr("class", "handler source background")
-            .attr("d", `
-                M 0 ${-lRadius}
-                A ${lRadius} ${lRadius} 0 0 0 0 ${lRadius}
-                L 0 0
-                Z
-            `)
-
-        selection.append("path")
-            .attr("class", "handler source background arc")
-            .attr("d", `
-                M 0 ${-lRadius}
-                A ${lRadius} ${lRadius} 0 0 0 0 ${lRadius}
-            `)
-            .attr("stroke-width", 1);
             
         selection.append("circle")
             .attr("class", "handler source")

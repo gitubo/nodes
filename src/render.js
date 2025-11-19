@@ -1,4 +1,4 @@
-// render.js
+// render.js - Optimized with proper link caching
 import { state } from './state.js';
 import { calculatePath } from './geometry.js';
 import { NodeRenderer } from './NodeRenderer.js';
@@ -16,6 +16,18 @@ function initRenderer() {
 }
 
 /**
+ * Fast link update without full re-render (for drag operations)
+ */
+export function updateLinksOnly() {
+    const linkLayer = d3.select("g.link-layer");
+    if (linkLayer.empty()) return;
+    
+    // Update all links (fast path calculation)
+    linkLayer.selectAll("path.link")
+        .attr("d", d => calculatePath(d));
+}
+
+/**
  * Render links
  * @param {d3.Selection} viewport - Viewport selection
  */
@@ -28,8 +40,31 @@ function renderLinks(viewport) {
         .join(
             enter => enter.append("path")
                 .attr("class", "link")
-                .on("mousedown", (event) => event.stopPropagation()),
-            update => update.attr("d", d => calculatePath(d)),
+                .attr("d", d => calculatePath(d))
+                .on("mousedown", (event) => event.stopPropagation())
+                .on("click", (event, d) => {
+                    event.stopPropagation();
+                    state.ui.selectedObject = { type: 'link', data: d };
+                    if (state.ui.onSelectionChange) {
+                        state.ui.onSelectionChange(state.ui.selectedObject);
+                    }
+                    render();
+                })
+                .on("contextmenu", function(event, d) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    
+                    // Context menu per link
+                    import('./ContextMenu.js').then(module => {
+                        module.showLinkContextMenu(event, d);
+                    });
+                }),
+            update => update
+                .attr("d", d => calculatePath(d))
+                .classed("selected", d => 
+                    state.ui.selectedObject?.type === 'link' && 
+                    state.ui.selectedObject?.data?.id === d.id
+                ),
             exit => exit.remove()
         );
     
@@ -37,7 +72,9 @@ function renderLinks(viewport) {
     linkLayer.selectAll("path.ghost-link")
         .data(state.ui.ghostLink ? [state.ui.ghostLink] : [], d => d.sourceId)
         .join(
-            enter => enter.append("path").attr("class", "ghost-link"),
+            enter => enter.append("path")
+                .attr("class", "ghost-link")
+                .attr("d", d => calculatePath(d)),
             update => update.attr("d", d => calculatePath(d)),
             exit => exit.remove()
         );
@@ -63,7 +100,15 @@ export function render() {
             enter => {
                 const nodeGroup = enter.append("g")
                     .attr("class", d => `node ${d.type}`)
-                    .attr("transform", d => `translate(${d.x}, ${d.y})`);
+                    .attr("transform", d => `translate(${d.x}, ${d.y})`)
+                    .on("click", (event, d) => {
+                        event.stopPropagation();
+                        state.ui.selectedObject = { type: 'node', data: d };
+                        if (state.ui.onSelectionChange) {
+                            state.ui.onSelectionChange(state.ui.selectedObject);
+                        }
+                        render();
+                    });
                 
                 nodeGroup.each(function() {
                     nodeRenderer.render(d3.select(this));
@@ -73,6 +118,10 @@ export function render() {
             },
             update => {
                 update.attr("transform", d => `translate(${d.x}, ${d.y})`);
+                update.classed("selected", d => 
+                    state.ui.selectedObject?.type === 'node' && 
+                    state.ui.selectedObject?.data?.id === d.id
+                );
                 update.each(function() {
                     nodeRenderer.update(d3.select(this));
                 });
@@ -83,4 +132,9 @@ export function render() {
     
     // Render links
     renderLinks(viewport);
+    
+    // Render add node helpers - AGGIUNGI QUESTA PARTE
+    import('./AddNodeHelper.js').then(module => {
+        module.renderAddNodeHelpers(viewport);
+    });
 }

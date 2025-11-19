@@ -2,6 +2,7 @@
 import { StartNodeDefinition } from './nodes/StartNode.js';
 import { TaskNodeDefinition } from './nodes/TaskNode.js';
 import { EndNodeDefinition } from './nodes/EndNode.js';
+import { DecisionNodeDefinition } from './nodes/DecisionNode.js';
 import { SourceHandlerDefinition } from './handlers/SourceHandler.js';
 import { TargetHandlerDefinition } from './handlers/TargetHandler.js';
 
@@ -71,6 +72,7 @@ export const registry = new Registry();
 registry.registerNode('start', new StartNodeDefinition());
 registry.registerNode('task', new TaskNodeDefinition());
 registry.registerNode('end', new EndNodeDefinition());
+registry.registerNode('decision', new DecisionNodeDefinition());
 
 // Register built-in handlers
 registry.registerHandler('source', new SourceHandlerDefinition());

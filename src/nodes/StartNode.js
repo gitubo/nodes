@@ -1,6 +1,7 @@
 // nodes/StartNode.js
 import { NodeDefinition } from './NodeDefinition.js';
 import { CONFIG } from '../config.js';
+import { SourceHandlerDefinition } from '../handlers/SourceHandler.js';
 
 const DIMENSIONS = {
     width: 60,
@@ -12,21 +13,25 @@ export class StartNodeDefinition extends NodeDefinition {
         super();
         this.type = 'start';
     }
+
+    static getDimensions() {
+        return DIMENSIONS;
+    }
     
-    getInitialHandlers() {
+    getHandlers() {
         return [
             { 
                 type: 'source', 
-                label: 'Output',
-                offset_x: DIMENSIONS.width,          // Posizione X: Larghezza intera del nodo
-                offset_y: DIMENSIONS.height / 2       // Posizione Y: Centro del nodo
+                label: 'output',
+                offset_x: DIMENSIONS.width,     
+                offset_y: DIMENSIONS.height / 2
             }
         ];
     }
     
-    getInitialData() {
+    getData() {
         return {
-            label: 'Start',
+            label: 'start',
             width: DIMENSIONS.width,
             height: DIMENSIONS.height
         };
@@ -36,12 +41,15 @@ export class StartNodeDefinition extends NodeDefinition {
         const W = DIMENSIONS.width;
         const H = DIMENSIONS.height;
         const R = CONFIG.node.largeBorderRadius;           
-        const sR = CONFIG.node.smallBorderRadius;     
+        const sR = CONFIG.node.smallBorderRadius;    
+        const source =  H/2 - (SourceHandlerDefinition.getDimension().radius+2);
 
         return `
             M ${R},0
             L ${W - sR},0
             A ${sR},${sR} 0 0 1 ${W},${sR}
+            L ${W},${source}
+            A 1,1 0 0 0 ${W},${H - source}
             L ${W},${H - sR}
             A ${sR},${sR} 0 0 1 ${W - sR},${H}
             L ${R},${H}
@@ -52,8 +60,4 @@ export class StartNodeDefinition extends NodeDefinition {
         `.replace(/\s+/g, ' ');
     }
 
-    
-    getBodyClass() {
-        return 'node-body start';
-    }
 }

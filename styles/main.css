@@ -1,4 +1,4 @@
-/* styles/main.css */
+/* styles/main.css - Updated with UI panels */
 :root {
     --baltic-blue: #34639E;
     --blue-energy: #518fdb;
@@ -9,6 +9,7 @@
     --dim-gray: #606265;
     --black: #000000;
     --white: #ffffff;
+    --danger: #dc3545;
 }
 
 * {
@@ -21,12 +22,14 @@ body, html {
     width: 100%;
     height: 100%;
     overflow: hidden;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
 }
 
 #app-container {
     width: 100%;
     height: 100vh;
     background-color: var(--platinum);
+    position: relative;
 }
 
 svg {
@@ -34,12 +37,184 @@ svg {
     user-select: none;
 }
 
-/* Grid */
+/* ========== UI PANELS ========== */
+.ui-panel {
+    position: fixed;
+    background: var(--white);
+    border: 1px solid var(--pale-slate);
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    z-index: 1000;
+    pointer-events: auto; /* Ensure panels are clickable */
+}
+
+/* Zoom Panel */
+.zoom-panel {
+    bottom: 24px;
+    right: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 8px;
+}
+
+.zoom-btn {
+    width: 32px;
+    height: 32px;
+    border: none;
+    background: var(--alice-blue);
+    border-radius: 6px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--dim-gray);
+    transition: all 0.2s;
+}
+
+.zoom-btn:hover {
+    background: var(--lavender);
+    color: var(--baltic-blue);
+    transform: scale(1.05);
+}
+
+.zoom-btn:active {
+    transform: scale(0.95);
+}
+
+/* Properties Panel */
+.properties-panel {
+    top: 24px;
+    right: 24px;
+    width: 320px;
+    max-height: calc(100vh - 48px);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px;
+    border-bottom: 1px solid var(--pale-slate);
+}
+
+.panel-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--baltic-blue);
+    margin: 0;
+}
+
+.close-btn {
+    background: none;
+    border: none;
+    font-size: 24px;
+    color: var(--dim-gray);
+    cursor: pointer;
+    padding: 0;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    transition: background 0.2s;
+}
+
+.close-btn:hover {
+    background: var(--alice-blue);
+    color: var(--baltic-blue);
+}
+
+.panel-content {
+    padding: 16px;
+    overflow-y: auto;
+    flex: 1;
+}
+
+.empty-state {
+    color: var(--pale-slate);
+    font-style: italic;
+    text-align: center;
+    padding: 32px 16px;
+}
+
+.property-group {
+    margin-bottom: 16px;
+}
+
+.property-group label {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--dim-gray);
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.property-group input {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid var(--pale-slate);
+    border-radius: 4px;
+    font-size: 14px;
+    transition: border-color 0.2s;
+}
+
+.property-group input:focus {
+    outline: none;
+    border-color: var(--baltic-blue);
+}
+
+.prop-readonly {
+    background: var(--alice-blue);
+    color: var(--dim-gray);
+}
+
+.prop-editable {
+    background: var(--white);
+    color: var(--black);
+}
+
+.property-actions {
+    margin-top: 24px;
+    padding-top: 16px;
+    border-top: 1px solid var(--pale-slate);
+}
+
+.btn-danger {
+    width: 100%;
+    padding: 10px;
+    background: var(--danger);
+    color: var(--white);
+    border: none;
+    border-radius: 4px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-danger:hover {
+    background: #c82333;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(220, 53, 69, 0.3);
+}
+
+.btn-danger:active {
+    transform: translateY(0);
+}
+
+/* ========== GRID ========== */
 .grid-dot {
     fill: var(--alice-blue);
 }
 
-/* Nodes */
+/* ========== NODES ========== */
 .node-body {
     fill: var(--alice-blue);
     stroke: var(--dim-gray);
@@ -56,6 +231,16 @@ svg {
 .node.selected .node-body {
     stroke: var(--baltic-blue);
     stroke-width: 3px;
+    filter: drop-shadow(0 0 8px rgba(52, 99, 158, 0.4));
+}
+
+.node.dragging .node-body {
+    cursor: grabbing;
+    opacity: 0.8;
+}
+
+.node.dragging {
+    filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.2));
 }
 
 .node-label {
@@ -73,7 +258,7 @@ svg {
     pointer-events: none;
 }
 
-/* Handlers */
+/* ========== HANDLERS ========== */
 .handler-body {
     fill: var(--alice-blue);
     stroke: var(--blue-energy);
@@ -91,6 +276,12 @@ svg {
     stroke: var(--dim-gray);
     stroke-width: 1px;
     cursor: pointer;
+    transition: all 0.2s;
+}
+
+.handler.source:hover {
+    fill: var(--lavender);
+    stroke: var(--baltic-blue);
 }
 
 .handler.source.background {
@@ -109,10 +300,13 @@ svg {
     stroke: var(--dim-gray);
     stroke-width: 1px;
     cursor: pointer;
+    transition: all 0.2s;
 }
 
 .handler.target:hover {
+    fill: var(--lavender);
     stroke: var(--blue-energy);
+    stroke-width: 2px;
 }
 
 .handler-g {
@@ -123,12 +317,25 @@ svg {
     cursor: grabbing;
 }
 
-/* Links */
+/* ========== LINKS ========== */
 .link {
     fill: none;
     stroke: var(--dim-gray);
     stroke-width: 2px;
     pointer-events: stroke;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.link:hover {
+    stroke: var(--blue-energy);
+    stroke-width: 2px;
+}
+
+.link.selected {
+    stroke: var(--baltic-blue);
+    stroke-width: 2px;
+    filter: drop-shadow(0 0 4px rgba(52, 99, 158, 0.4));
 }
 
 .ghost-link {
@@ -137,9 +344,114 @@ svg {
     stroke-width: 2px;
     stroke-dasharray: 5, 5;
     pointer-events: none;
+    opacity: 0.6;
 }
 
-.link:hover {
-    stroke: var(--blue-energy);
-    stroke-width: 3px;
+/* ========== ADD NODE HELPER ========== */
+.helper-link {
+    stroke: var(--pale-slate);
+    stroke-width: 2px;
+    stroke-dasharray: 4, 4;
+    pointer-events: none;
+}
+
+.helper-box {
+    fill: var(--white);
+    stroke: var(--pale-slate);
+    stroke-width: 2px;
+    stroke-dasharray: 4, 4;
+    transition: all 0.15s;
+}
+
+.helper-button:hover .helper-box {
+    fill: var(--lavender);
+    stroke: var(--baltic-blue);
+}
+
+.helper-plus {
+    stroke: var(--dim-gray);
+    stroke-linecap: round;
+    fill: none;
+    pointer-events: none;
+}
+
+.helper-button:hover .helper-plus {
+    stroke: var(--baltic-blue);
+}
+
+.helper-button {
+    cursor: pointer;
+}
+
+/* ========== NODE TYPE MENU ========== */
+.node-type-menu {
+    pointer-events: all;
+}
+
+.menu-background {
+    fill: var(--white);
+    stroke: var(--pale-slate);
+    stroke-width: 1px;
+    filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.15));
+}
+
+.menu-item-bg {
+    fill: transparent;
+    transition: fill 0.15s;
+}
+
+.menu-item-hover {
+    fill: var(--alice-blue) !important;
+}
+
+.menu-item-text {
+    font-size: 14px;
+    fill: var(--dim-gray);
+    pointer-events: none;
+    user-select: none;
+}
+
+/* ========== CONTEXT MENU ========== */
+.context-menu {
+    pointer-events: all;
+}
+
+.context-menu-shadow {
+    fill: rgba(0, 0, 0, 0.1);
+}
+
+.context-menu-bg {
+    fill: var(--white);
+    stroke: var(--pale-slate);
+    stroke-width: 1px;
+    filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.15));
+}
+
+.context-menu-item .item-bg {
+    fill: transparent;
+    transition: fill 0.15s;
+}
+
+.context-menu-item .item-hover {
+    fill: var(--alice-blue);
+}
+
+.context-menu-text {
+    font-size: 14px;
+    fill: var(--dim-gray);
+    pointer-events: none;
+    user-select: none;
+}
+
+.material-icon {
+    fill: var(--dim-gray);
+    pointer-events: none;
+}
+
+.context-menu-item:hover .material-icon {
+    fill: var(--baltic-blue);
+}
+
+.context-menu-item:hover .context-menu-text {
+    fill: var(--baltic-blue);
 }
