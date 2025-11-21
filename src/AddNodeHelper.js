@@ -1,4 +1,4 @@
-// AddNodeHelper.js - Helper per aggiungere nuovi nodi da SOURCE handlers
+// AddNodeHelper.js - Fixed helper for adding new nodes from SOURCE handlers
 import { registry } from './Registry.js';
 import { state } from './state.js';
 import { render } from './render.js';
@@ -25,8 +25,8 @@ export function renderAddNodeHelpers(viewport) {
     state.nodes.forEach(node => {
         node.handlers.forEach(handler => {
             if (handler.type === 'source') {
-                // Verifica se è connesso
-                const isConnected = state.links.some(link => link.source === handler.id);
+                // Verifica se è connesso - FIXED: controlla se esiste un link con questo handler come source
+                const isConnected = state.links.some(link => String(link.source) === String(handler.id));
                 
                 if (!isConnected) {
                     helpers.push({
@@ -48,14 +48,23 @@ export function renderAddNodeHelpers(viewport) {
     }
     
     helperLayer.selectAll("g.add-node-helper")
-        .data(helpers, d => d.id)
+        .data(helpers, d => d.handlerId) // Usa handlerId come key univoca
         .join(
             enter => {
                 const group = enter.append("g")
                     .attr("class", "add-node-helper")
+                    // È buona norma mettere l'ID nel DOM per debug
+                    .attr("data-handler-id", d => d.handlerId) 
                     .attr("transform", d => `translate(${d.x}, ${d.y})`);
                 
-                renderHelper(group);
+                // --- FIX QUI ---
+                // Invece di renderHelper(group), usiamo .each()
+                // Questo assicura che renderHelper venga chiamato per OGNI singolo nodo
+                // con il contesto corretto (d3.select(this)).
+                group.each(function() {
+                    renderHelper(d3.select(this));
+                });
+                
                 return group;
             },
             update => update.attr("transform", d => `translate(${d.x}, ${d.y})`),
@@ -207,6 +216,7 @@ function createNodeFromHelper(helperData, nodeType) {
         });
     }
     
+    // FIXED: Force immediate re-render to update helpers
     render();
 }
 

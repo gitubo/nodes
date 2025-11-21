@@ -1,47 +1,54 @@
-// nodes/DecisionNode.js - Example of a custom node definition
 import { NodeDefinition } from './NodeDefinition.js';
 import { CONFIG } from '../config.js';
 import { SourceHandlerDefinition } from '../handlers/SourceHandler.js';
 import { TargetHandlerDefinition } from '../handlers/TargetHandler.js';
 
-const DIMENSIONS = {
-    width: 120,
-    sourceSeparator: 20
+const DEFINITIONS = {
+    sourceSeparator: 20,
+    sourceHandlerLabels: ["yes", "no"]
+}
+
+function appendSourceHandler(d, label) {
+    if(!d || !(d.sourceHandlers))
+        return;
+    const sourceHandlerBox = (SourceHandlerDefinition.getDimension().radius+2);
+    const verticalOffset = (DEFINITIONS.sourceSeparator+sourceHandlerBox) + (DEFINITIONS.sourceSeparator+sourceHandlerBox*2)*(d.sourceHandlers.length);
+    const element = {type: 'source', label: label, offset_x: d.width, offset_y: verticalOffset};
+    d.sourceHandlers.push(element);
 }
 
 export class DecisionNodeDefinition extends NodeDefinition {
     constructor() {
         super();
         this.type = 'decision';
-        this.width = CONFIG.node.width;
-        this.height = CONFIG.node.height;
-    }
-
-    static getDimensions() {
-        return  {
-            width: this.width,
-            height: this.height
-        };
+        this.width = 120;
+        this.height = 60;
+        this.targetHandlers = [];
+        this.targetHandlers.push(
+            { type: 'target', label: 'input', offset_x: 0, offset_y: CONFIG.node.height / 2 },
+        );
+        this.sourceHandlers = [];
+        DEFINITIONS.sourceHandlerLabels.forEach(sourceHandlerLabel => {appendSourceHandler(this, sourceHandlerLabel)});
     }
     
-    /**
-     * Define initial handlers: 1 input, 2 outputs (yes/no)
-     */
+    getDimensions(d) {
+        const sourceHandlers = (Array.isArray(d?.handlers) ? d.handlers : []).filter(h => h.type === 'source');
+        const sourceHandlerBox = (SourceHandlerDefinition.getDimension().radius+2);
+        console.log("sourceHandlerBox: "+sourceHandlerBox);
+        console.log("DEFINITIONS.sourceSeparator: "+DEFINITIONS.sourceSeparator);
+        const verticalOffset = (DEFINITIONS.sourceSeparator) + (DEFINITIONS.sourceSeparator+sourceHandlerBox*2)*(sourceHandlers.length);
+        console.log("verticalOffset: "+verticalOffset);
+        return {
+            width: 120, 
+            height: verticalOffset 
+        };
+    }
+
     getHandlers() {
-
-        const sourceHandlers = ['yes', 'no'];
-
-        let handlers = [];
-        handlers.push(
-            { type: 'target', label: 'input', offset_x: 0, offset_y: CONFIG.node.height / 2 },
-            { type: 'source', label: 'yes', offset_x: CONFIG.node.width, offset_y: CONFIG.node.height / 3 },
-            { type: 'source', label: 'no', offset_x: CONFIG.node.width, offset_y: CONFIG.node.height / 3 * 2 }
-        );
-        sourceHandlers.forEach(handler => {
-            
-        })
-
-        return handlers;
+        return [
+            ...this.targetHandlers,
+            ...this.sourceHandlers
+        ];
     }
     
     /**
@@ -50,7 +57,9 @@ export class DecisionNodeDefinition extends NodeDefinition {
     getData() {
         return {
             name: 'Decision',
-            condition: ''
+            condition: '',
+            width: this.width,
+            height: this.height
         };
     }
     
@@ -58,8 +67,8 @@ export class DecisionNodeDefinition extends NodeDefinition {
      * Diamond shape path
      */
     getShapePath() {
-        const W = CONFIG.node.width;
-        const H = CONFIG.node.height;
+        const W = this.width;
+        const H = this.height;
         const sR = CONFIG.node.smallBorderRadius;
         const sourceHandler = (SourceHandlerDefinition.getDimension().radius+2)*2;
         const targetHandlerWidth =  TargetHandlerDefinition.getDimension().width/2+2;
@@ -67,21 +76,7 @@ export class DecisionNodeDefinition extends NodeDefinition {
         const targetHandlerHeightDown =  H/2 + TargetHandlerDefinition.getDimension().height/2 + 2;
 
         let height = 0;
-        const sourceSeparator = DIMENSIONS.sourceSeparator;
-/*
-        return `
-            M ${sR},0
-            L ${W - sR},0
-            A ${sR},${sR} 0 0 1 ${W},${sR}
-            L ${W},${H - sR}
-            A ${sR},${sR} 0 0 1 ${W - sR},${H}
-            L ${sR},${H}
-            A ${sR},${sR} 0 0 1 0,${H - sR}
-            L 0,${sR}
-            A ${sR},${sR} 0 0 1 ${sR},0
-            Z
-        `.replace(/\s+/g, ' ');
-*/
+        const sourceSeparator = DEFINITIONS.sourceSeparator;
 
         // Upper side
         let path = "";
@@ -91,16 +86,14 @@ export class DecisionNodeDefinition extends NodeDefinition {
         path += "L ${W},"+sourceSeparator+" ";
         height += sourceSeparator;
 
-        const handlers = this.getHandlers().filter(h => h.type === 'source')
-        handlers.forEach((handler, index) => {
-                console.log(handler.label);
+        this.sourceHandlers.forEach((handler, index) => {
                 height += sourceHandler;
                 path += "A 1,1 0 0 0 ${W},"+height+" ";
                 height += sourceSeparator;
-                if(index === handlers.length-1 ) path += "L ${W},"+(height-sR)+" ";
+                if(index === this.sourceHandlers.length-1 ) path += "L ${W},"+(height-sR)+" ";
                 else path += "L ${W},"+height+" ";
             });
-        if(handlers.length == 0){
+        if(this.sourceHandlers.length == 0){
             height += sourceSeparator;
             path += "L ${W},"+height+" ";
         }
@@ -136,7 +129,6 @@ export class DecisionNodeDefinition extends NodeDefinition {
             const regex = new RegExp(key.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "g");
             path = path.replace(regex, vars[key]);
         }
-        console.log("path: ",path);
         return path.replace(/\s+/g, ' ');
     }
     

@@ -9,12 +9,18 @@ export class NodeDefinition {
     constructor() {
         this.type = 'base';
         this.name = '';
+        this.width = CONFIG.node.width;
+        this.height = CONFIG.node.height;
     }
 
-    static getDimensions() {
-        return {};
+
+    getDimensions(d) {
+        return {
+            width: CONFIG.node.width,
+            height: CONFIG.node.height
+        };
     }
-    
+
     /**
      * Returns the initial handlers configuration for this node type
      * @returns {Array} Array of handler definitions

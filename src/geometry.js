@@ -63,3 +63,28 @@ export function calculatePath(link) {
     
     return `M ${startX},${startY} C ${c1x},${startY} ${c2x},${endY} ${endX},${endY}`;
 }
+
+/**
+ * Calcola la posizione (x, y) lungo un path SVG
+ * @param {string} pathString - Il path SVG 'd'
+ * @param {number} offset - Posizione normalizzata (0.0 a 1.0)
+ * @returns {Object} {x, y} coordinate
+ */
+export function calculatePositionAlongPath(pathString, offset) {
+    // 1. Crea un elemento SVG temporaneo per il percorso
+    const tempPath = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    tempPath.setAttribute("d", pathString);
+    
+    // 2. Ottieni la lunghezza totale del percorso
+    const length = tempPath.getTotalLength();
+    
+    // 3. Calcola il punto lungo il percorso alla distanza richiesta
+    const point = tempPath.getPointAtLength(length * offset);
+    
+    // 4. Cleanup (importante per le performance)
+    // Non possiamo eliminare l'elemento perché non è attaccato al DOM in questo esempio,
+    // ma `getPointAtLength` funziona ugualmente. Se si usa D3 in modo più tradizionale
+    // (es. `d3.select(".link").node().getPointAtLength(...)`), non serve creare l'elemento.
+    
+    return { x: point.x, y: point.y };
+}

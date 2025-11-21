@@ -3,19 +3,13 @@ import { NodeDefinition } from './NodeDefinition.js';
 import { CONFIG } from '../config.js';
 import { TargetHandlerDefinition } from '../handlers/TargetHandler.js';
 
-const DIMENSIONS = {
-    width: 60,
-    height: 60
-}
 
 export class EndNodeDefinition extends NodeDefinition {
     constructor() {
         super();
         this.type = 'end';
-    }
-
-    static getDimensions() {
-        return DIMENSIONS;
+        this.width = 60;
+        this.height = 60;
     }
     
     getHandlers() {
@@ -24,7 +18,7 @@ export class EndNodeDefinition extends NodeDefinition {
                 type: 'target', 
                 label: 'Input', 
                 offset_x: 0, 
-                offset_y: DIMENSIONS.height/2 
+                offset_y: this.height/2 
             }
         ];
     }
@@ -32,14 +26,14 @@ export class EndNodeDefinition extends NodeDefinition {
     getData() {
         return {
             label: 'End',
-            width: DIMENSIONS.width,
-            height: DIMENSIONS.height
+            width: this.width,
+            height: this.height
         };
     }
     
     getShapePath() {
-        const W = DIMENSIONS.width;
-        const H = DIMENSIONS.height;
+        const W = this.width;
+        const H = this.height;
         const R  = CONFIG.node.largeBorderRadius;        
         const sR = CONFIG.node.smallBorderRadius;   
         const targetHandlerWidth =  TargetHandlerDefinition.getDimension().width/2+2;

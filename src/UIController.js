@@ -1,6 +1,8 @@
 // UIController.js - Centralized UI state and panel management
 import { state } from './state.js';
 import { render } from './render.js';
+// 👇 QUESTA RIGA È FONDAMENTALE
+import { getStrokeIcon, getIcon } from './Icons.js'; 
 
 export class UIController {
     constructor() {
@@ -14,55 +16,60 @@ export class UIController {
         };
     }
     
-    /**
-     * Initialize all UI panels
-     */
     initialize() {
         console.log('UIController: Initializing panels...');
         this.createZoomPanel();
         this.createPropertiesPanel();
         
-        // Wait for next frame to ensure DOM is ready
         requestAnimationFrame(() => {
             this.attachEventListeners();
             console.log('UIController: Panels initialized successfully');
         });
     }
     
-    /**
-     * Create zoom control panel
-     */
     createZoomPanel() {
         const panel = document.createElement('div');
         panel.id = 'zoom-panel';
         panel.className = 'ui-panel zoom-panel';
         panel.style.display = this.panels.zoom.visible ? 'flex' : 'none';
         
+        // Ora getStrokeIcon è definito grazie all'import
         panel.innerHTML = `
-            <button class="zoom-btn" data-action="zoom-in" title="Zoom In">
-                <svg width="24" height="24" viewBox="0 0 20 20">
-                    <path d="M10 5 L10 15 M5 10 L15 10" stroke="currentColor" stroke-width="2"/>
-                </svg>
-            </button>
-            <button class="zoom-btn" data-action="zoom-reset" title="Reset Zoom">
-                <svg width="24" height="24" viewBox="0 0 20 20">
-                    <circle cx="10" cy="10" r="4" fill="none" stroke="currentColor" stroke-width="2"/>
-                </svg>
-            </button>
-            <button class="zoom-btn" data-action="zoom-out" title="Zoom Out">
-                <svg width="24" height="24" viewBox="0 0 20 20">
-                    <path d="M5 10 L15 10" stroke="currentColor" stroke-width="2"/>
-                </svg>
-            </button>
+            <div class="panel-group">
+                <button class="icon-btn" data-action="zoom-in" title="Zoom In">
+                    ${getStrokeIcon('zoomIn')}
+                </button>
+                <button class="icon-btn" data-action="zoom-out" title="Zoom Out">
+                    ${getStrokeIcon('zoomOut')}
+                </button>
+                <button class="icon-btn" data-action="zoom-fit-to-screen" title="Fit to screen">
+                    ${getStrokeIcon('zoomFitToScreen')}
+                </button>
+                <button class="icon-btn" data-action="zoom-reset-view" title="Reset view">
+                    ${getStrokeIcon('zoomResetView')}
+                </button>
+            </div>
+            <div class="panel-separator"></div> 
+            <div class="panel-group">
+                <button class="icon-btn" data-action="add-node" title="Add Node">
+                    ${getStrokeIcon('addNode')}
+                </button>
+            </div>
+            <div class="panel-separator"></div> 
+            <div class="panel-group">
+                <button class="icon-btn" data-action="open-file" title="Open file">
+                    ${getStrokeIcon('openFile')}
+                </button>
+                <button class="icon-btn" data-action="save-file" title="Save file">
+                    ${getStrokeIcon('saveFile')}
+                </button>
+            </div>
         `;
         
         document.body.appendChild(panel);
         this.panels.zoom.element = panel;
     }
     
-    /**
-     * Create properties panel
-     */
     createPropertiesPanel() {
         const panel = document.createElement('div');
         panel.id = 'properties-panel';
@@ -72,7 +79,9 @@ export class UIController {
         panel.innerHTML = `
             <div class="panel-header">
                 <h3 class="panel-title">Properties</h3>
-                <button class="close-btn" data-action="close-properties">&times;</button>
+                <button class="close-btn icon-btn" data-action="close-properties">
+                    ${getIcon('close', 20)}
+                </button>
             </div>
             <div class="panel-content" id="properties-content">
                 <p class="empty-state">Select an object to view properties</p>
@@ -82,15 +91,15 @@ export class UIController {
         document.body.appendChild(panel);
         this.panels.properties.element = panel;
     }
+
+    // ... (Il resto del file rimane invariato: attachEventListeners, handleAction, ecc.) ...
     
-    /**
-     * Attach event listeners to UI elements
-     */
     attachEventListeners() {
         // Zoom controls
         document.querySelectorAll('[data-action]').forEach(btn => {
             btn.addEventListener('click', (e) => {
-                const action = e.currentTarget.dataset.action;
+                // Usa currentTarget per prendere il bottone anche se clicchi sull'SVG interno
+                const action = e.currentTarget.dataset.action; 
                 this.handleAction(action);
             });
         });
@@ -106,43 +115,41 @@ export class UIController {
         }
     }
     
-    /**
-     * Handle UI actions
-     */
     handleAction(action) {
         const svg = d3.select('svg');
-        const viewport = d3.select('g.viewport');
         
         switch(action) {
             case 'zoom-in':
-                svg.transition().call(
-                    window.zoomBehavior.scaleBy, 1.3
-                );
+                svg.transition().call(window.zoomBehavior.scaleBy, 1.3);
                 break;
-                
             case 'zoom-out':
-                svg.transition().call(
-                    window.zoomBehavior.scaleBy, 0.7
-                );
+                svg.transition().call(window.zoomBehavior.scaleBy, 0.7);
                 break;
-                
-            case 'zoom-reset':
-                svg.transition().call(
-                    window.zoomBehavior.transform, 
-                    d3.zoomIdentity
-                );
+            case 'fit-to-screen':
+                //TODO
                 break;
-                
+            case 'reset-view':
+                svg.transition().call(window.zoomBehavior.transform, d3.zoomIdentity);
+                break;
+            case 'add-node':
+                //TODO add new node to the canvas
+                break;
+            case 'open-file':
+                //TODO
+                break;
+            case 'save-file':
+                //TODO 
+                break;
             case 'close-properties':
                 this.hidePropertiesPanel();
                 this.deselectAll();
                 break;
         }
     }
+
+    // ... copia qui il resto dei metodi (toggleZoomPanel, showPropertiesPanel, ecc.) ...
+    // Assicurati di mantenere tutti i metodi della classe originale!
     
-    /**
-     * Show/hide zoom panel
-     */
     toggleZoomPanel(visible) {
         this.panels.zoom.visible = visible;
         if (this.panels.zoom.element) {
@@ -150,16 +157,12 @@ export class UIController {
         }
     }
     
-    /**
-     * Show properties panel with object data
-     */
     showPropertiesPanel(selectedObject) {
         if (!selectedObject) return;
         
         const panel = this.panels.properties.element;
         const content = panel.querySelector('#properties-content');
         
-        // Generate properties based on object type
         if (selectedObject.type === 'node') {
             content.innerHTML = this.generateNodeProperties(selectedObject.data);
         } else if (selectedObject.type === 'link') {
@@ -170,18 +173,12 @@ export class UIController {
         this.attachPropertyListeners(selectedObject);
     }
     
-    /**
-     * Hide properties panel
-     */
     hidePropertiesPanel() {
         if (this.panels.properties.element) {
             this.panels.properties.element.style.display = 'none';
         }
     }
     
-    /**
-     * Generate node property editor HTML
-     */
     generateNodeProperties(node) {
         return `
             <div class="property-group">
@@ -206,12 +203,12 @@ export class UIController {
             ` : ''}
             <div class="property-group">
                 <label>Position X</label>
-                <input type="number" value="${node.x}" 
+                <input type="number" value="${Math.round(node.x)}" 
                        data-property="x" class="prop-editable">
             </div>
             <div class="property-group">
                 <label>Position Y</label>
-                <input type="number" value="${node.y}" 
+                <input type="number" value="${Math.round(node.y)}" 
                        data-property="y" class="prop-editable">
             </div>
             <div class="property-actions">
@@ -220,9 +217,6 @@ export class UIController {
         `;
     }
     
-    /**
-     * Generate link property editor HTML
-     */
     generateLinkProperties(link) {
         return `
             <div class="property-group">
@@ -230,11 +224,11 @@ export class UIController {
                 <input type="text" value="${link.id}" disabled class="prop-readonly">
             </div>
             <div class="property-group">
-                <label>Source Handler</label>
+                <label>Source</label>
                 <input type="text" value="${link.source}" disabled class="prop-readonly">
             </div>
             <div class="property-group">
-                <label>Target Handler</label>
+                <label>Target</label>
                 <input type="text" value="${link.target}" disabled class="prop-readonly">
             </div>
             <div class="property-actions">
@@ -243,13 +237,9 @@ export class UIController {
         `;
     }
     
-    /**
-     * Attach listeners to property inputs
-     */
     attachPropertyListeners(selectedObject) {
         const content = document.querySelector('#properties-content');
         
-        // Edit properties
         content.querySelectorAll('.prop-editable').forEach(input => {
             input.addEventListener('change', (e) => {
                 const property = e.target.dataset.property;
@@ -267,7 +257,6 @@ export class UIController {
             });
         });
         
-        // Delete actions
         content.querySelectorAll('[data-action]').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const action = e.target.dataset.action;
@@ -285,42 +274,28 @@ export class UIController {
         });
     }
     
-    /**
-     * Delete a node
-     */
     deleteNode(nodeId) {
         const node = state.nodes.find(n => n.id === nodeId);
         if (!node) return;
         
-        // Remove connected links
         const handlerIds = node.handlers.map(h => h.id);
         state.links = state.links.filter(l => 
             !handlerIds.includes(l.source) && !handlerIds.includes(l.target)
         );
         
-        // Remove node
         state.nodes = state.nodes.filter(n => n.id !== nodeId);
     }
     
-    /**
-     * Delete a link
-     */
     deleteLink(linkId) {
         state.links = state.links.filter(l => l.id !== linkId);
     }
     
-    /**
-     * Deselect all objects
-     */
     deselectAll() {
         state.ui.selectedObject = null;
         this.hidePropertiesPanel();
         render();
     }
     
-    /**
-     * Handle object selection
-     */
     onSelectionChange(selectedObject) {
         if (selectedObject) {
             this.showPropertiesPanel(selectedObject);
@@ -329,13 +304,9 @@ export class UIController {
         }
     }
     
-    /**
-     * Register callback for property changes
-     */
     onPropertyChange(callback) {
         this.callbacks.onPropertyChange = callback;
     }
 }
 
-// Export singleton instance
 export const uiController = new UIController();

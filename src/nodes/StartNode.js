@@ -3,28 +3,22 @@ import { NodeDefinition } from './NodeDefinition.js';
 import { CONFIG } from '../config.js';
 import { SourceHandlerDefinition } from '../handlers/SourceHandler.js';
 
-const DIMENSIONS = {
-    width: 60,
-    height: 60
-}
 
 export class StartNodeDefinition extends NodeDefinition {
     constructor() {
         super();
         this.type = 'start';
+        this.width = 60;
+        this.height = 60;
     }
 
-    static getDimensions() {
-        return DIMENSIONS;
-    }
-    
     getHandlers() {
         return [
             { 
                 type: 'source', 
                 label: 'output',
-                offset_x: DIMENSIONS.width,     
-                offset_y: DIMENSIONS.height / 2
+                offset_x: this.width,     
+                offset_y: this.height / 2
             }
         ];
     }
@@ -32,14 +26,14 @@ export class StartNodeDefinition extends NodeDefinition {
     getData() {
         return {
             label: 'start',
-            width: DIMENSIONS.width,
-            height: DIMENSIONS.height
+            width: this.width,
+            height: this.height
         };
     }
     
     getShapePath() {
-        const W = DIMENSIONS.width;
-        const H = DIMENSIONS.height;
+        const W = this.width;
+        const H = this.height;
         const R = CONFIG.node.largeBorderRadius;           
         const sR = CONFIG.node.smallBorderRadius;    
         const source =  H/2 - (SourceHandlerDefinition.getDimension().radius+2);

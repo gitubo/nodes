@@ -4,20 +4,21 @@ import { CONFIG } from '../config.js';
 import { SourceHandlerDefinition } from '../handlers/SourceHandler.js';
 import { TargetHandlerDefinition } from '../handlers/TargetHandler.js';
 
-const DIMENSIONS = {
-    width: 120,
-    height: 60
-}
-
 export class TaskNodeDefinition extends NodeDefinition {
     constructor() {
         super();
         this.type = 'task';
+        this.width = 120;
+        this.height = 60;
     }
 
-    static getDimensions() {
-        return DIMENSIONS;
+    getDimensions(d) {
+        return {
+            width: 120,
+            height: 60
+        };
     }
+
     
     getHandlers() {
         return [
@@ -25,14 +26,14 @@ export class TaskNodeDefinition extends NodeDefinition {
                 type: 'target', 
                 label: 'input',
                 offset_x: 0,          
-                offset_y: DIMENSIONS.height / 2       
+                offset_y: this.height / 2       
             }
             ,
             { 
                 type: 'source', 
                 label: 'output',
-                offset_x: DIMENSIONS.width,          
-                offset_y: DIMENSIONS.height / 2       
+                offset_x: this.width,          
+                offset_y: this.height / 2       
             }
         ];
     }
@@ -41,14 +42,14 @@ export class TaskNodeDefinition extends NodeDefinition {
         return {
             label: 'Task',
             sublabel: 'Name',
-            width: DIMENSIONS.width,
-            height: DIMENSIONS.height
+            width: this.width,
+            height: this.height
         };
     }
 
     getShapePath() {
-        const W = DIMENSIONS.width;
-        const H = DIMENSIONS.height;
+        const W = this.width;
+        const H = this.height;
         const sR = CONFIG.node.smallBorderRadius;
         const sourceHandler =  H/2 - (SourceHandlerDefinition.getDimension().radius+2);
         const targetHandlerWidth =  TargetHandlerDefinition.getDimension().width/2+2;

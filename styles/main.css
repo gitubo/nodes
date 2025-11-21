@@ -37,32 +37,60 @@ svg {
     user-select: none;
 }
 
-/* ========== UI PANELS ========== */
+/* ========== SHARED UI COMPONENTS ========== */
+/* Aggiorna la classe base per garantire che stia sopra a tutto */
 .ui-panel {
     position: fixed;
     background: var(--white);
     border: 1px solid var(--pale-slate);
-    border-radius: 8px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-    z-index: 1000;
-    pointer-events: auto; /* Ensure panels are clickable */
+    border-radius: 8px; /* Arrotondamento leggermente più morbido */
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2); /* Ombra più profonda per staccarlo dallo sfondo */
+    z-index: 9999; /* Z-Index altissimo per vincere sulla canvas */
+    pointer-events: auto;
 }
 
-/* Zoom Panel */
-.zoom-panel {
-    bottom: 24px;
-    right: 24px;
+/* Stile per il raggruppamento dei bottoni zoom */
+.panel-group {
     display: flex;
-    flex-direction: column;
-    gap: 8px;
-    padding: 8px;
 }
 
-.zoom-btn {
+/* Separatore tra i due gruppi */
+.panel-separator {
+    width: 1px;
+    height: 100%;
+    margin: 0 2px;
+    background-color: var(--pale-slate);
+}
+
+/* Modifica radicale del pannello Zoom */
+.zoom-panel {
+    /* POSIZIONAMENTO: Basso Centrale */
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%); /* Trucco per centrare perfettamente */
+    right: auto; /* Annulla la regola 'right' precedente */
+    
+    /* LAYOUT: Riga orizzontale */
+    display: flex;
+    flex-direction: row; /* I bottoni ora sono affiancati */
+    align-items: center;
+    
+    gap: 12px; /* Spazio tra i bottoni */
+    padding: 8px 16px; /* Un po' più largo ai lati */
+}
+
+/* Opzionale: rendi i bottoni leggermente più grandi per il layout orizzontale */
+.zoom-btn, .icon-btn {
+    width: 36px;  /* Da 32 a 36 per clic più facili */
+    height: 36px;
+}
+
+/* Stile bottone condiviso (usato sia in ZoomPanel che ContextMenu) */
+.icon-btn {
     width: 32px;
     height: 32px;
     border: none;
-    background: var(--alice-blue);
+    background: transparent; /* Sfondo trasparente di default nel context menu */
     border-radius: 6px;
     cursor: pointer;
     display: flex;
@@ -70,143 +98,36 @@ svg {
     justify-content: center;
     color: var(--dim-gray);
     transition: all 0.2s;
+    position: relative; /* Per tooltip se necessario */
 }
 
-.zoom-btn:hover {
-    background: var(--lavender);
+.icon-btn:hover {
+    background: var(--alice-blue);
     color: var(--baltic-blue);
-    transform: scale(1.05);
+    transform: scale(1.1);
 }
 
-.zoom-btn:active {
+.icon-btn:active {
     transform: scale(0.95);
 }
 
-/* Properties Panel */
-.properties-panel {
-    top: 24px;
-    right: 24px;
-    width: 320px;
-    max-height: calc(100vh - 48px);
+.icon-btn.danger:hover {
+    background: #ffecec;
+    color: var(--danger);
+}
+
+/* ========== CONTEXT MENU (HTML OVERLAY) ========== */
+.context-menu-html {
+    padding: 6px;
     display: flex;
-    flex-direction: column;
-    overflow: hidden;
+    gap: 4px;
+    min-width: auto; /* Non più largo */
+    animation: popIn 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
-.panel-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 16px;
-    border-bottom: 1px solid var(--pale-slate);
-}
-
-.panel-title {
-    font-size: 16px;
-    font-weight: 600;
-    color: var(--baltic-blue);
-    margin: 0;
-}
-
-.close-btn {
-    background: none;
-    border: none;
-    font-size: 24px;
-    color: var(--dim-gray);
-    cursor: pointer;
-    padding: 0;
-    width: 28px;
-    height: 28px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 4px;
-    transition: background 0.2s;
-}
-
-.close-btn:hover {
-    background: var(--alice-blue);
-    color: var(--baltic-blue);
-}
-
-.panel-content {
-    padding: 16px;
-    overflow-y: auto;
-    flex: 1;
-}
-
-.empty-state {
-    color: var(--pale-slate);
-    font-style: italic;
-    text-align: center;
-    padding: 32px 16px;
-}
-
-.property-group {
-    margin-bottom: 16px;
-}
-
-.property-group label {
-    display: block;
-    font-size: 12px;
-    font-weight: 600;
-    color: var(--dim-gray);
-    margin-bottom: 6px;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-.property-group input {
-    width: 100%;
-    padding: 8px 12px;
-    border: 1px solid var(--pale-slate);
-    border-radius: 4px;
-    font-size: 14px;
-    transition: border-color 0.2s;
-}
-
-.property-group input:focus {
-    outline: none;
-    border-color: var(--baltic-blue);
-}
-
-.prop-readonly {
-    background: var(--alice-blue);
-    color: var(--dim-gray);
-}
-
-.prop-editable {
-    background: var(--white);
-    color: var(--black);
-}
-
-.property-actions {
-    margin-top: 24px;
-    padding-top: 16px;
-    border-top: 1px solid var(--pale-slate);
-}
-
-.btn-danger {
-    width: 100%;
-    padding: 10px;
-    background: var(--danger);
-    color: var(--white);
-    border: none;
-    border-radius: 4px;
-    font-size: 14px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s;
-}
-
-.btn-danger:hover {
-    background: #c82333;
-    transform: translateY(-1px);
-    box-shadow: 0 2px 8px rgba(220, 53, 69, 0.3);
-}
-
-.btn-danger:active {
-    transform: translateY(0);
+@keyframes popIn {
+    from { opacity: 0; transform: scale(0.8); }
+    to { opacity: 1; transform: scale(1); }
 }
 
 /* ========== GRID ========== */
@@ -324,7 +245,7 @@ svg {
     stroke-width: 2px;
     pointer-events: stroke;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: stroke 0.2s, stroke-width 0.2s;
 }
 
 .link:hover {
@@ -454,4 +375,28 @@ svg {
 
 .context-menu-item:hover .context-menu-text {
     fill: var(--baltic-blue);
+}
+
+/* ========== LINK LABEL ========== */
+.link-label-group {
+    pointer-events: all; /* Il gruppo è cliccabile/trascinabile */
+    cursor: grab;
+    user-select: none;
+}
+
+.link-label-group.dragging {
+    cursor: grabbing;
+}
+
+.link-label-bg {
+    fill: var(--white);
+    stroke: var(--pale-slate);
+    stroke-width: 1px;
+}
+
+.link-label-text {
+    font-size: 12px;
+    font-weight: 500;
+    fill: var(--dim-gray);
+    pointer-events: none; /* Il testo non blocca il drag del gruppo */
 }

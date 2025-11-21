@@ -1,14 +1,8 @@
-// ContextMenu.js - Context menu con icone Material per nodi
-import { state } from './state.js';
+// ContextMenu.js - Refactored for HTML Overlay & Icons
 import { removeNode } from './state.js';
+import { state } from './state.js';
 import { render } from './render.js';
-
-const MENU_CONFIG = {
-    itemWidth: 180,
-    itemHeight: 40,
-    iconSize: 20,
-    cornerRadius: 8
-};
+import { getIcon } from './Icons.js';
 
 /**
  * Setup context menu per nodi
@@ -17,209 +11,147 @@ export function setupNodeContextMenu(selection) {
     selection.on("contextmenu", function(event, d) {
         event.preventDefault();
         event.stopPropagation();
-        
-        showContextMenu(event, d);
+        showContextMenu(event, 'node', d);
     });
 }
 
 /**
- * Mostra context menu
+ * Setup context menu per link
  */
-function showContextMenu(event, nodeData) {
-    // Rimuovi menu esistenti
-    d3.selectAll(".context-menu").remove();
+export function showLinkContextMenu(event, linkData) { // 'event' è l'evento D3
     
-    // Menu items
-    const menuItems = [
-        {
-            id: 'delete',
-            label: 'Delete Node',
-            icon: 'delete',
-            action: () => deleteNode(nodeData.id)
-        }
-        // Aggiungi qui altri items futuri
-    ];
+    // FIX: Controlliamo subito se l'evento è arrivato
+    if (!event) return;
+
+    // Linea 22: L'evento qui è il D3 event object.
+    event.preventDefault(); 
+    event.stopPropagation();
     
-    // Posizione menu
-    const [mouseX, mouseY] = d3.pointer(event, d3.select("svg").node());
+    // Usiamo l'evento nativo (event.sourceEvent) per posizionare l'overlay HTML.
+    // Se sourceEvent non esiste, usiamo l'evento D3 come fallback (meno preciso per HTML).
+    const eventForPosition = event.sourceEvent || event;
+
+    showContextMenu(eventForPosition, 'link', linkData);
+}
+
+/**
+ * Genera e mostra il menu HTML
+ */
+function showContextMenu(event, type, data) {
+    // Rimuovi vecchi menu
+    removeContextMenu();
+
+    // Crea container HTML (come i pannelli UI)
+    const menu = document.createElement('div');
+    menu.className = 'ui-panel context-menu-html';
     
-    // Crea menu
-    const menu = d3.select("svg")
-        .append("g")
-        .attr("class", "context-menu")
-        .attr("transform", `translate(${mouseX}, ${mouseY})`);
+    // Definisci le azioni in base al tipo
+    const actions = getActions(type, data);
     
-    const menuHeight = menuItems.length * MENU_CONFIG.itemHeight;
-    
-    // Shadow/background
-    menu.append("rect")
-        .attr("class", "context-menu-shadow")
-        .attr("x", 2)
-        .attr("y", 2)
-        .attr("width", MENU_CONFIG.itemWidth)
-        .attr("height", menuHeight)
-        .attr("rx", MENU_CONFIG.cornerRadius)
-        .attr("fill", "rgba(0,0,0,0.1)");
-    
-    menu.append("rect")
-        .attr("class", "context-menu-bg")
-        .attr("width", MENU_CONFIG.itemWidth)
-        .attr("height", menuHeight)
-        .attr("rx", MENU_CONFIG.cornerRadius);
-    
-    // Render items
-    menuItems.forEach((item, index) => {
-        const itemGroup = menu.append("g")
-            .attr("class", "context-menu-item")
-            .attr("transform", `translate(0, ${index * MENU_CONFIG.itemHeight})`)
-            .style("cursor", "pointer")
-            .on("mouseenter", function() {
-                d3.select(this).select(".item-bg").classed("item-hover", true);
-            })
-            .on("mouseleave", function() {
-                d3.select(this).select(".item-bg").classed("item-hover", false);
-            })
-            .on("click", function(e) {
-                e.stopPropagation();
-                item.action();
-                d3.selectAll(".context-menu").remove();
-            });
+    // Genera bottoni icona
+    actions.forEach(action => {
+        const btn = document.createElement('button');
+        btn.className = `icon-btn ${action.variant || ''}`;
+        btn.innerHTML = getIcon(action.icon, 20);
+        btn.title = action.label; // Tooltip nativo
         
-        // Item background
-        itemGroup.append("rect")
-            .attr("class", "item-bg")
-            .attr("width", MENU_CONFIG.itemWidth)
-            .attr("height", MENU_CONFIG.itemHeight);
+        btn.onclick = (e) => {
+            e.stopPropagation();
+            action.callback();
+            removeContextMenu();
+        };
         
-        // Material Icon
-        itemGroup.append("g")
-            .attr("transform", `translate(12, ${MENU_CONFIG.itemHeight / 2})`)
-            .html(getMaterialIcon(item.icon, MENU_CONFIG.iconSize));
-        
-        // Item text
-        itemGroup.append("text")
-            .attr("class", "context-menu-text")
-            .attr("x", 12 + MENU_CONFIG.iconSize + 12)
-            .attr("y", MENU_CONFIG.itemHeight / 2)
-            .attr("dominant-baseline", "middle")
-            .text(item.label);
+        menu.appendChild(btn);
     });
-    
-    // Chiudi menu cliccando fuori
+
+    // Posizionamento assoluto basato sul mouse
+    // event.pageX/Y funzionano bene per elementi fixed/absolute sul body
+    const x = event.pageX;
+    const y = event.pageY;
+
+    menu.style.left = `${x}px`;
+    menu.style.top = `${y}px`;
+
+    document.body.appendChild(menu);
+
+    // Chiudi cliccando fuori (usando setTimeout per evitare chiusura immediata)
     setTimeout(() => {
-        d3.select("svg").on("click.contextmenu", function() {
-            d3.selectAll(".context-menu").remove();
-            d3.select(this).on("click.contextmenu", null);
-        });
+        window.addEventListener('click', removeContextMenu, { once: true });
+        // Chiudi anche se si fa right click da un'altra parte
+        window.addEventListener('contextmenu', (e) => {
+            if (e.target.closest('.context-menu-html') !== menu) {
+                removeContextMenu();
+            }
+        }, { once: true });
     }, 10);
 }
 
-/**
- * Material Icons SVG paths
- */
-function getMaterialIcon(iconName, size) {
-    const icons = {
-        delete: `
-            <svg viewBox="0 0 24 24" width="${size}" height="${size}" class="material-icon">
-                <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
-            </svg>
-        `,
-        // Aggiungi qui altre icone Material
-    };
-    
-    return icons[iconName] || '';
+function removeContextMenu() {
+    const existing = document.querySelector('.context-menu-html');
+    if (existing) {
+        existing.remove();
+    }
+    window.removeEventListener('click', removeContextMenu);
 }
 
-/**
- * Azione: elimina nodo
- */
-function deleteNode(nodeId) {
-    removeNode(nodeId);
-    render();
-}
-
-/**
- * Mostra context menu per link
- */
-export function showLinkContextMenu(event, linkData) {
-    d3.selectAll(".context-menu").remove();
-    
-    const menuItems = [
-        {
+function getActions(type, data) {
+    if (type === 'node') {
+        return [
+            {
+                id: 'delete',
+                label: 'Delete Node',
+                icon: 'delete',
+                variant: 'danger', 
+                callback: () => {
+                    removeNode(data.id);
+                    render();
+                }
+            }
+        ];
+    } else if (type === 'link') {
+        const actions = [];
+        
+        // Azione 1: Aggiungi Label (solo se non esiste già)
+        if (!data.label) {
+            actions.push({
+                id: 'add_label',
+                label: 'Add Label',
+                icon: 'labelAdd',
+                callback: () => {
+                    data.label = {
+                        text: 'label',
+                        offset: 0.5, 
+                        offsetX: 0, 
+                        offsetY: -15
+                    };
+                    render();
+                }
+            });
+        } else {
+            actions.push({
+                id: 'delete_label',
+                label: 'Delete Label',
+                icon: 'labelDelete',
+                callback: () => {
+                    delete data.label;
+                    render();
+                }
+            }); 
+        }
+        
+        // Azione 2: Cancella Link
+        actions.push({
             id: 'delete',
             label: 'Delete Link',
             icon: 'delete',
-            action: () => deleteLink(linkData.id)
-        }
-    ];
-    
-    const [mouseX, mouseY] = d3.pointer(event, d3.select("svg").node());
-    
-    const menu = d3.select("svg")
-        .append("g")
-        .attr("class", "context-menu")
-        .attr("transform", `translate(${mouseX}, ${mouseY})`);
-    
-    const menuHeight = menuItems.length * MENU_CONFIG.itemHeight;
-    
-    menu.append("rect")
-        .attr("class", "context-menu-shadow")
-        .attr("x", 2)
-        .attr("y", 2)
-        .attr("width", MENU_CONFIG.itemWidth)
-        .attr("height", menuHeight)
-        .attr("rx", MENU_CONFIG.cornerRadius)
-        .attr("fill", "rgba(0,0,0,0.1)");
-    
-    menu.append("rect")
-        .attr("class", "context-menu-bg")
-        .attr("width", MENU_CONFIG.itemWidth)
-        .attr("height", menuHeight)
-        .attr("rx", MENU_CONFIG.cornerRadius);
-    
-    menuItems.forEach((item, index) => {
-        const itemGroup = menu.append("g")
-            .attr("class", "context-menu-item")
-            .attr("transform", `translate(0, ${index * MENU_CONFIG.itemHeight})`)
-            .style("cursor", "pointer")
-            .on("mouseenter", function() {
-                d3.select(this).select(".item-bg").classed("item-hover", true);
-            })
-            .on("mouseleave", function() {
-                d3.select(this).select(".item-bg").classed("item-hover", false);
-            })
-            .on("click", function(e) {
-                e.stopPropagation();
-                item.action();
-                d3.selectAll(".context-menu").remove();
-            });
-        
-        itemGroup.append("rect")
-            .attr("class", "item-bg")
-            .attr("width", MENU_CONFIG.itemWidth)
-            .attr("height", MENU_CONFIG.itemHeight);
-        
-        itemGroup.append("g")
-            .attr("transform", `translate(12, ${MENU_CONFIG.itemHeight / 2})`)
-            .html(getMaterialIcon(item.icon, MENU_CONFIG.iconSize));
-        
-        itemGroup.append("text")
-            .attr("class", "context-menu-text")
-            .attr("x", 12 + MENU_CONFIG.iconSize + 12)
-            .attr("y", MENU_CONFIG.itemHeight / 2)
-            .attr("dominant-baseline", "middle")
-            .text(item.label);
-    });
-    
-    setTimeout(() => {
-        d3.select("svg").on("click.contextmenu", function() {
-            d3.selectAll(".context-menu").remove();
-            d3.select(this).on("click.contextmenu", null);
+            variant: 'danger',
+            callback: () => {
+                state.links = state.links.filter(l => l.id !== data.id);
+                render();
+            }
         });
-    }, 10);
-}
-
-function deleteLink(linkId) {
-    state.links = state.links.filter(l => l.id !== linkId);
-    render();
+        
+        return actions;
+    }
+    return [];
 }
