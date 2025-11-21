@@ -13,7 +13,7 @@ function appendSourceHandler(d, label) {
         return;
     const sourceHandlerBox = (SourceHandlerDefinition.getDimension().radius+2);
     const verticalOffset = (DEFINITIONS.sourceSeparator+sourceHandlerBox) + (DEFINITIONS.sourceSeparator+sourceHandlerBox*2)*(d.sourceHandlers.length);
-    const element = {type: 'source', label: label, offset_x: d.width, offset_y: verticalOffset};
+    const element = {type: 'source', label: label, offset_x: d.width, offset_y: verticalOffset, labelPosition: 'left', labelMargin: 15};
     d.sourceHandlers.push(element);
 }
 
@@ -25,7 +25,7 @@ export class DecisionNodeDefinition extends NodeDefinition {
         this.height = 60;
         this.targetHandlers = [];
         this.targetHandlers.push(
-            { type: 'target', label: 'input', offset_x: 0, offset_y: CONFIG.node.height / 2 },
+            { type: 'target', label: 'input', offset_x: 0, offset_y: 30 },
         );
         this.sourceHandlers = [];
         DEFINITIONS.sourceHandlerLabels.forEach(sourceHandlerLabel => {appendSourceHandler(this, sourceHandlerLabel)});
@@ -34,10 +34,7 @@ export class DecisionNodeDefinition extends NodeDefinition {
     getDimensions(d) {
         const sourceHandlers = (Array.isArray(d?.handlers) ? d.handlers : []).filter(h => h.type === 'source');
         const sourceHandlerBox = (SourceHandlerDefinition.getDimension().radius+2);
-        console.log("sourceHandlerBox: "+sourceHandlerBox);
-        console.log("DEFINITIONS.sourceSeparator: "+DEFINITIONS.sourceSeparator);
         const verticalOffset = (DEFINITIONS.sourceSeparator) + (DEFINITIONS.sourceSeparator+sourceHandlerBox*2)*(sourceHandlers.length);
-        console.log("verticalOffset: "+verticalOffset);
         return {
             width: 120, 
             height: verticalOffset 
@@ -71,9 +68,10 @@ export class DecisionNodeDefinition extends NodeDefinition {
         const H = this.height;
         const sR = CONFIG.node.smallBorderRadius;
         const sourceHandler = (SourceHandlerDefinition.getDimension().radius+2)*2;
-        const targetHandlerWidth =  TargetHandlerDefinition.getDimension().width/2+2;
-        const targetHandlerHeightUp =  H/2 - TargetHandlerDefinition.getDimension().height/2 - 2;
-        const targetHandlerHeightDown =  H/2 + TargetHandlerDefinition.getDimension().height/2 + 2;
+        const targetHandlerWidth =  (TargetHandlerDefinition.getDimension().width+4)/2;
+        const targetHandlerHeight =  TargetHandlerDefinition.getDimension().height+4;
+        const targetHandlerHeightUp =  DEFINITIONS.sourceSeparator;
+        const targetHandlerHeightDown = DEFINITIONS.sourceSeparator+targetHandlerHeight; 
 
         let height = 0;
         const sourceSeparator = DEFINITIONS.sourceSeparator;

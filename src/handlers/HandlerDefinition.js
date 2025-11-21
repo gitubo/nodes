@@ -3,11 +3,12 @@
  */
 export class HandlerDefinition {
     constructor() {
-        this.name = 'base';
-        this.type = 'source';
+        this.type = 'base';
+        this.hideLabel = true;
     }
 
     getDimension() {
+        return {};
     }
     
     /**

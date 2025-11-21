@@ -131,28 +131,75 @@ function renderLinks(viewport) {
 }
 
 const labelDragBehavior = d3.drag()
-    .on("start", (event) => {
+    .on("start", function(event, d) {
         event.sourceEvent.stopPropagation();
-        d3.select(event.subject).classed("dragging", true); 
+        d3.select(this).classed("dragging", true);
+        // Salviamo la posizione corrente per calcoli durante il drag
+        const transform = d3.select(this).attr("transform");
+        // Parsing grezzo della trasformazione corrente per fluidità visiva
+        // (In produzione si può usare una regex o DOMMatrix)
     })
-    .on("drag", (event, d) => {
-        // 1. Aggiorna solo gli offset (salvati nel dato)
+    .on("drag", function(event, d) {
+        // 1. Aggiornamento visivo fluido (come fatto nel fix precedente)
         d.label.offsetX = (d.label.offsetX || 0) + event.dx;
         d.label.offsetY = (d.label.offsetY || 0) + event.dy;
-        
-        // 2. Ricalcola la posizione assoluta (Base + Offset Drag)
+
         const pathData = calculatePath(d);
         const basePosition = calculatePositionAlongPath(pathData, d.label.offset);
-
+        
         const absoluteX = basePosition.x + d.label.offsetX;
         const absoluteY = basePosition.y + d.label.offsetY;
 
-        // 3. Muovi il gruppo alla posizione assoluta
-        d3.select(event.subject).attr("transform", `translate(${absoluteX}, ${absoluteY})`);
-        
+        d3.select(this).attr("transform", `translate(${absoluteX}, ${absoluteY})`);
     })
-    .on("end", (event) => {
-        d3.select(event.subject).classed("dragging", false);
+    .on("end", function(event, d) {
+        d3.select(this).classed("dragging", false);
+
+        // === LOGICA DI RE-ANCHORING ===
+        // 1. Calcoliamo la posizione assoluta finale della label
+        const pathData = calculatePath(d);
+        const currentBase = calculatePositionAlongPath(pathData, d.label.offset);
+        const finalX = currentBase.x + d.label.offsetX;
+        const finalY = currentBase.y + d.label.offsetY;
+
+        // 2. Troviamo il nuovo 't' (offset percentuale) più vicino a questo punto.
+        //    Poiché non esiste una formula diretta semplice per Bezier cubiche,
+        //    facciamo un campionamento rapido (100 punti). È molto veloce.
+        
+        // Otteniamo l'elemento path DOM reale per usare getPointAtLength
+        // Nota: d.id è l'id del link. Usiamo una selezione specifica.
+        const linkPathNode = d3.select(`.link-group.${d.id} path.link`).node();
+        
+        if (linkPathNode) {
+            const totalLength = linkPathNode.getTotalLength();
+            let bestT = d.label.offset;
+            let minDistance = Infinity;
+            let bestPoint = { x: 0, y: 0 };
+
+            // Campioniamo la curva ogni 1%
+            for (let t = 0; t <= 1; t += 0.01) {
+                const p = linkPathNode.getPointAtLength(t * totalLength);
+                const dist = Math.hypot(p.x - finalX, p.y - finalY);
+                
+                if (dist < minDistance) {
+                    minDistance = dist;
+                    bestT = t;
+                    bestPoint = p;
+                }
+            }
+
+            // 3. Aggiorniamo i dati persistenti
+            // Il nuovo offset percentuale è il 't' che abbiamo trovato
+            d.label.offset = bestT;
+            
+            // Il nuovo offset pixel è solo la piccola differenza rimasta
+            // tra il punto esatto sulla curva e dove abbiamo lasciato la label
+            d.label.offsetX = finalX - bestPoint.x;
+            d.label.offsetY = finalY - bestPoint.y;
+            
+            // Opzionale: Stampiamo per debug
+            // console.log(`Re-anchored label to t=${bestT.toFixed(2)}`);
+        }
     });
 
 /**

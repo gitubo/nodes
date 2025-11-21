@@ -29,7 +29,11 @@ export const CONFIG = {
     handler: {
         width: 8,
         height: 16,
-        radius: 8
+        radius: 8,
+        label: {
+            margin: 10,           
+            position: 'left'     
+        }
     },
     
     // Link settings

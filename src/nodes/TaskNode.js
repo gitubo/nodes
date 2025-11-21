@@ -10,38 +10,16 @@ export class TaskNodeDefinition extends NodeDefinition {
         this.type = 'task';
         this.width = 120;
         this.height = 60;
-    }
-
-    getDimensions(d) {
-        return {
-            width: 120,
-            height: 60
-        };
-    }
-
-    
-    getHandlers() {
-        return [
-            { 
-                type: 'target', 
-                label: 'input',
-                offset_x: 0,          
-                offset_y: this.height / 2       
-            }
-            ,
-            { 
-                type: 'source', 
-                label: 'output',
-                offset_x: this.width,          
-                offset_y: this.height / 2       
-            }
+        this.handlers = [
+            { type: 'target', label: 'input', offset_x: 0, offset_y: this.height / 2 },
+            { type: 'source', label: 'output', offset_x: this.width, offset_y: this.height / 2 }
         ];
     }
     
     getData() {
         return {
-            label: 'Task',
-            sublabel: 'Name',
+            label: 'task',
+            sublabel: 'name',
             width: this.width,
             height: this.height
         };

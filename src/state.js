@@ -129,54 +129,69 @@ export function clearSelection() {
     }
 }
 
-/**
- * Serialize the entire graph state
- * @returns {Object} Serialized state
- */
+// 1. UPDATED: Serialize with specific structure
 export function serializeState() {
-    return {
-        version: '1.0',
-        nodes: state.nodes.map(node => {
-            const definition = registry.getNodeDefinition(node.type);
-            return definition ? definition.serialize(node) : node;
-        }),
-        links: state.links.map(link => ({
+    const exportData = {
+        metadata: {
+            version: "2.0.0",
+            created_at: new Date().toISOString(),
+            created_by: "DAG Editor User" 
+        },
+        nodes: {},
+        connections: {}
+    };
+
+    // Convert Nodes Array to Map (Object)
+    state.nodes.forEach(node => {
+        const definition = registry.getNodeDefinition(node.type);
+        // Use definition.serialize if available, otherwise raw node
+        const serializedNode = definition ? definition.serialize(node) : node;
+        exportData.nodes[node.id] = serializedNode;
+    });
+
+    // Convert Links Array to Map (Object)
+    state.links.forEach(link => {
+        exportData.connections[link.id] = {
             id: link.id,
             source: link.source,
-            target: link.target
-        }))
-    };
+            target: link.target,
+            label: link.label // Include label if present
+        };
+    });
+
+    return exportData;
 }
 
-/**
- * Deserialize and load a graph state
- * @param {Object} data - Serialized state data
- */
+// 2. UPDATED: Deserialize from specific structure
 export function deserializeState(data) {
-    if (!data || !data.nodes) {
-        console.error('Invalid state data');
+    if (!data || !data.nodes || !data.connections) {
+        console.error('Invalid JSON structure: missing nodes or connections object');
         return;
     }
-    
-    // Clear current state
+
+    // Reset State
     state.nodes = [];
     state.links = [];
     state.ui.ghostLink = null;
     state.ui.disconnectingLink = null;
     state.ui.selectedObject = null;
-    
-    // Deserialize nodes
-    state.nodes = data.nodes.map(nodeData => {
+
+    // Transform Nodes Map back to Array
+    // Object.values() extracts the nodes from the Key-Value structure
+    state.nodes = Object.values(data.nodes).map(nodeData => {
         const definition = registry.getNodeDefinition(nodeData.type);
         return definition ? definition.deserialize(nodeData) : nodeData;
     });
-    
-    // Deserialize links
-    state.links = (data.links || []).map(link => ({
-        id: link.id || generateId(),
+
+    // Transform Connections Map back to Array
+    state.links = Object.values(data.connections).map(link => ({
+        id: link.id,
         source: link.source,
-        target: link.target
+        target: link.target,
+        label: link.label
     }));
+    
+    console.log(`[State] Loaded ${state.nodes.length} nodes and ${state.links.length} links.`);
 }
 
 /**

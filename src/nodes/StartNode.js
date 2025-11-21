@@ -10,17 +10,7 @@ export class StartNodeDefinition extends NodeDefinition {
         this.type = 'start';
         this.width = 60;
         this.height = 60;
-    }
-
-    getHandlers() {
-        return [
-            { 
-                type: 'source', 
-                label: 'output',
-                offset_x: this.width,     
-                offset_y: this.height / 2
-            }
-        ];
+        this.handlers = [{ type: 'source', label: 'output', offset_x: this.width, offset_y: this.height / 2 }];
     }
     
     getData() {

@@ -1,8 +1,18 @@
 // ContextMenu.js - Refactored for HTML Overlay & Icons
-import { removeNode } from './state.js';
-import { state } from './state.js';
+import { removeNode, state } from './state.js';
 import { render } from './render.js';
 import { getIcon } from './Icons.js';
+import { calculatePath, calculatePositionAlongPath } from './geometry.js';
+
+
+export function showHandlerContextMenu(event, handlerData) {
+    if (!event) return;
+    event.preventDefault();
+    event.stopPropagation();
+    
+    const eventForPosition = event.sourceEvent || event;
+    showContextMenu(eventForPosition, 'handler', handlerData);
+}
 
 /**
  * Setup context menu per nodi
@@ -37,7 +47,7 @@ export function showLinkContextMenu(event, linkData) { // 'event' è l'evento D3
 /**
  * Genera e mostra il menu HTML
  */
-function showContextMenu(event, type, data) {
+export function showContextMenu(event, type, data) {
     // Rimuovi vecchi menu
     removeContextMenu();
 
@@ -97,11 +107,11 @@ function removeContextMenu() {
 function getActions(type, data) {
     if (type === 'node') {
         return [
-            {
+             {
                 id: 'delete',
                 label: 'Delete Node',
                 icon: 'delete',
-                variant: 'danger', 
+                variant: 'danger',
                 callback: () => {
                     removeNode(data.id);
                     render();
@@ -118,11 +128,21 @@ function getActions(type, data) {
                 label: 'Add Label',
                 icon: 'labelAdd',
                 callback: () => {
+                    // 1. Otteniamo le coordinate del mouse relative alla Viewport
+                    // Nota: 'event' è l'evento nativo passato dalla UI, dobbiamo trasformarlo in coordinate SVG
+                    const viewport = d3.select("g.viewport").node();
+                    const [mouseX, mouseY] = d3.pointer(event, viewport);
+
+                    // 2. Calcoliamo dove si trova il punto centrale (t=0.5) del link
+                    const pathData = calculatePath(data);
+                    const centerPoint = calculatePositionAlongPath(pathData, 0.5);
+
+                    // 3. Impostiamo l'offset iniziale come delta tra click e centro
                     data.label = {
                         text: 'label',
-                        offset: 0.5, 
-                        offsetX: 0, 
-                        offsetY: -15
+                        offset: 0.5, // Ancora logica iniziale a metà curva
+                        offsetX: mouseX - centerPoint.x,
+                        offsetY: mouseY - centerPoint.y
                     };
                     render();
                 }
@@ -151,6 +171,62 @@ function getActions(type, data) {
             }
         });
         
+        return actions;
+    } else if (type === 'handler') {
+        // === NUOVE AZIONI PER HANDLER ===
+        const actions = [];
+        
+        // Logica: Se hideLabel è true (o non definito e label esiste), mostra "Show Label"
+        // Se label è visibile, mostra "Hide Label"
+        
+        // Verifica se la label è attualmente visibile
+        const isVisible = !data.hideLabel && data.label;
+
+        if (!isVisible) {
+            actions.push({
+                id: 'add_handler_label',
+                label: 'Add Label',
+                icon: 'labelAdd', // Assicurati che questa icona esista in Icons.js
+                callback: () => {
+                    // Se la label era solo nascosta, la mostriamo
+                    data.hideLabel = false;
+                    // Se non aveva proprio un testo (caso raro), mettiamo un default
+                    if (!data.label) data.label = "...";
+                    
+                    // Reset offset opzionale: se vuoi che riappaia nella posizione di default
+                    // data.labelOffsetX = 0;
+                    // data.labelOffsetY = 0;
+                    
+                    render();
+                }
+            });
+        } else {
+            actions.push({
+                id: 'remove_handler_label',
+                label: 'Remove Label',
+                icon: 'labelDelete', // Assicurati che questa icona esista in Icons.js
+                callback: () => {
+                    // Nascondiamo la label impostando il flag
+                    data.hideLabel = true;
+                    render();
+                }
+            });
+        }
+        
+        // Opzionale: Reset posizione label
+        if (isVisible && (data.labelOffsetX || data.labelOffsetY)) {
+             actions.push({
+                id: 'reset_label_pos',
+                label: 'Reset Position',
+                icon: 'reset',
+                callback: () => {
+                    data.labelOffsetX = 0;
+                    data.labelOffsetY = 0;
+                    render();
+                }
+            });
+        }
+
         return actions;
     }
     return [];

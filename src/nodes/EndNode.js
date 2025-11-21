@@ -10,22 +10,13 @@ export class EndNodeDefinition extends NodeDefinition {
         this.type = 'end';
         this.width = 60;
         this.height = 60;
-    }
-    
-    getHandlers() {
-        return [
-            { 
-                type: 'target', 
-                label: 'Input', 
-                offset_x: 0, 
-                offset_y: this.height/2 
-            }
-        ];
+        this.handlers = [{ type: 'target', label: 'input', offset_x: 0, offset_y: this.height / 2 }];
+
     }
     
     getData() {
         return {
-            label: 'End',
+            label: 'end',
             width: this.width,
             height: this.height
         };

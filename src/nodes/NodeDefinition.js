@@ -11,13 +11,13 @@ export class NodeDefinition {
         this.name = '';
         this.width = CONFIG.node.width;
         this.height = CONFIG.node.height;
+        this.handlers = [];
     }
-
 
     getDimensions(d) {
         return {
-            width: CONFIG.node.width,
-            height: CONFIG.node.height
+            width: d.width,
+            height: d.height
         };
     }
 
@@ -26,7 +26,7 @@ export class NodeDefinition {
      * @returns {Array} Array of handler definitions
      */
     getHandlers() {
-        return [];
+        return this.handlers;
     }
     
     /**
@@ -82,7 +82,12 @@ export class NodeDefinition {
             handlers: node.handlers.map(h => ({
                 id: h.id,
                 type: h.type,
-                label: h.label
+                label: h.label,
+                offset_x: h.offset_x,
+                offset_y: h.offset_y,
+                hideLabel: h.hideLabel,      
+                labelOffsetX: h.labelOffsetX,
+                labelOffsetY: h.labelOffsetY
             }))
         };
     }

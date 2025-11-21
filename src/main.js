@@ -33,23 +33,12 @@ document.addEventListener('DOMContentLoaded', () => {
     // Create viewport with layers
     const viewport = svg.append("g").attr("class", "viewport");
     
-    // Layer 1: Grid
     const gridLayer = viewport.append("g").attr("class", "grid-layer");
     Grid.render(gridLayer, CONFIG.canvas.width, CONFIG.canvas.height);
-    console.log('[Main] ✓ Grid layer created');
-
-    // Layer 2: Helper layer (for add node helpers) - AGGIUNGI QUESTA RIGA
     viewport.append("g").attr("class", "helper-layer");
-    console.log('[Main] ✓ Helper layer created');
-
-    // Layer 3: Links (must be before nodes for proper z-ordering)
     viewport.append("g").attr("class", "link-layer");
-    console.log('[Main] ✓ Link layer created');
-
-    // Layer 4: Nodes
     viewport.append("g").attr("class", "node-layer");
-    console.log('[Main] ✓ Node layer created');
-    
+
     // Setup zoom and pan
     function zoomed({ transform }) {
         viewport.attr("transform", transform);
@@ -62,17 +51,14 @@ document.addEventListener('DOMContentLoaded', () => {
     
     svg.call(zoomBehavior);
     window.zoomBehavior = zoomBehavior; // Make available globally
-    console.log('[Main] ✓ Zoom behavior attached');
     
     // Initialize UI Controller
     uiController.initialize();
-    console.log('[Main] ✓ UI Controller initialized');
     
     // Connect selection callback
     state.ui.onSelectionChange = (selectedObject) => {
         uiController.onSelectionChange(selectedObject);
     };
-    console.log('[Main] ✓ Selection callback connected');
     
     // Register property change callback
     uiController.onPropertyChange((selectedObject, property, value) => {
@@ -89,9 +75,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     
     // Initial render
-    console.log('[Main] ✓ Performing initial render...');
     render();
-    console.log('[Main] ✓✓✓ DAG Editor ready!');
     
     // Update debug info
     setTimeout(() => {
@@ -130,6 +114,4 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
     
-    console.log('[Main] ✓ API exposed as window.DAG');
-    console.log('[Main] Try: window.DAG.debug.testSelect()');
 });
