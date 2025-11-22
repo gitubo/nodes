@@ -1,8 +1,8 @@
-// UIController.js - Centralized UI state and panel management
-import { state, serializeState, deserializeState } from './state.js';
-import { render } from './render.js';
-// 👇 QUESTA RIGA È FONDAMENTALE
-import { getStrokeIcon, getIcon } from './Icons.js'; 
+import { store } from './state.js';
+import { eventBus } from './EventBus.js';
+import { getStrokeIcon, getIcon } from './Icons.js';
+import { registry } from './Registry.js';
+import { showNodeTypeMenu } from './AddNodeHelper.js';
 
 export class UIController {
     constructor() {
@@ -10,340 +10,209 @@ export class UIController {
             zoom: { visible: true, element: null },
             properties: { visible: false, element: null }
         };
-        
-        this.callbacks = {
-            onPropertyChange: null
-        };
     }
     
     initialize() {
-        console.log('UIController: Initializing panels...');
         this.createZoomPanel();
         this.createPropertiesPanel();
+        this.attachEventListeners();
         
-        requestAnimationFrame(() => {
-            this.attachEventListeners();
-            console.log('UIController: Panels initialized successfully');
+        eventBus.on('SELECTION_CHANGED', (obj) => {
+            if (obj) this.showPropertiesPanel(obj);
+            else this.hidePropertiesPanel();
         });
     }
     
     createZoomPanel() {
-        const panel = document.createElement('div');
-        panel.id = 'zoom-panel';
-        panel.className = 'ui-panel zoom-panel';
-        panel.style.display = this.panels.zoom.visible ? 'flex' : 'none';
-        
-        // Ora getStrokeIcon è definito grazie all'import
-        panel.innerHTML = `
+        const p = document.createElement('div');
+        p.className = 'ui-panel zoom-panel';
+        p.innerHTML = `
             <div class="panel-group">
-                <button class="icon-btn" data-action="zoom-in" title="Zoom In">
-                    ${getStrokeIcon('zoomIn')}
-                </button>
-                <button class="icon-btn" data-action="zoom-out" title="Zoom Out">
-                    ${getStrokeIcon('zoomOut')}
-                </button>
-                <button class="icon-btn" data-action="zoom-fit-to-screen" title="Fit to screen">
-                    ${getStrokeIcon('zoomFitToScreen')}
-                </button>
-                <button class="icon-btn" data-action="zoom-reset-view" title="Reset view">
-                    ${getStrokeIcon('zoomResetView')}
-                </button>
+                <button class="icon-btn" data-action="zoom-in" title="Zoom In">${getStrokeIcon('zoomIn')}</button>
+                <button class="icon-btn" data-action="zoom-out" title="Zoom Out">${getStrokeIcon('zoomOut')}</button>
+                <button class="icon-btn" data-action="zoom-fit" title="Fit to Screen">${getStrokeIcon('zoomFitToScreen')}</button>
+                <button class="icon-btn" data-action="zoom-reset" title="Reset View">${getStrokeIcon('zoomResetView')}</button>
             </div>
-            <div class="panel-separator"></div> 
+            <div class="panel-separator"></div>
             <div class="panel-group">
-                <button class="icon-btn" data-action="add-node" title="Add Node">
-                    ${getStrokeIcon('addNode')}
-                </button>
+                <button class="icon-btn" data-action="add-node" title="Add Node">${getStrokeIcon('addNode')}</button>
             </div>
-            <div class="panel-separator"></div> 
+            <div class="panel-separator"></div>
             <div class="panel-group">
-                <button class="icon-btn" data-action="open-file" title="Open file">
-                    ${getStrokeIcon('openFile')}
-                </button>
-                <button class="icon-btn" data-action="save-file" title="Save file">
-                    ${getStrokeIcon('saveFile')}
-                </button>
+                <button class="icon-btn" data-action="open-file" title="Open File">${getStrokeIcon('openFile')}</button>
+                <button class="icon-btn" data-action="save-file" title="Save File">${getStrokeIcon('saveFile')}</button>
             </div>
         `;
-        
-        document.body.appendChild(panel);
-        this.panels.zoom.element = panel;
+        document.body.appendChild(p);
     }
     
     createPropertiesPanel() {
-        const panel = document.createElement('div');
-        panel.id = 'properties-panel';
-        panel.className = 'ui-panel properties-panel';
-        panel.style.display = 'none';
-        
-        panel.innerHTML = `
+        const p = document.createElement('div');
+        p.className = 'ui-panel properties-panel';
+        p.style.display = 'none';
+        p.innerHTML = `
             <div class="panel-header">
                 <h3 class="panel-title">Properties</h3>
-                <button class="close-btn icon-btn" data-action="close-properties">
-                    ${getIcon('close', 20)}
-                </button>
+                <button class="icon-btn" data-action="close-prop">${getIcon('close', 20)}</button>
             </div>
-            <div class="panel-content" id="properties-content">
-                <p class="empty-state">Select an object to view properties</p>
-            </div>
+            <div class="panel-content" id="prop-content"></div>
         `;
-        
-        document.body.appendChild(panel);
-        this.panels.properties.element = panel;
+        document.body.appendChild(p);
+        this.panels.properties.element = p;
     }
-
-    // ... (Il resto del file rimane invariato: attachEventListeners, handleAction, ecc.) ...
     
     attachEventListeners() {
-        // Zoom controls
-        document.querySelectorAll('[data-action]').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                // Usa currentTarget per prendere il bottone anche se clicchi sull'SVG interno
-                const action = e.currentTarget.dataset.action; 
-                this.handleAction(action);
-            });
+        document.body.addEventListener('click', (e) => {
+            const btn = e.target.closest('[data-action]');
+            if (!btn) return;
+            const action = btn.dataset.action;
+            const svg = d3.select('svg');
+            
+            switch(action) {
+                case 'zoom-in': svg.transition().call(window.zoomBehavior.scaleBy, 1.3); break;
+                case 'zoom-out': svg.transition().call(window.zoomBehavior.scaleBy, 0.7); break;
+                case 'zoom-reset': svg.transition().call(window.zoomBehavior.transform, d3.zoomIdentity); break;
+                case 'zoom-fit': this.fitToScreen(); break;
+                case 'close-prop': store.deselect(); break;
+                case 'save-file': 
+                    console.log(JSON.stringify(store.serialize(), null, 2)); 
+                    alert("Config dumped to console"); 
+                    break;
+                case 'open-file': this.openFile(); break;
+                case 'add-node':
+                    const rect = svg.node().getBoundingClientRect();
+                    showNodeTypeMenu({x: rect.width/2, y: rect.height/2 - 100}, null, (type) => {
+                        const t = d3.zoomTransform(svg.node());
+                        const x = (rect.width/2 - t.x) / t.k;
+                        const y = (rect.height/2 - t.y) / t.k;
+                        store.addNode(type, x, y);
+                    });
+                    break;
+            }
         });
-        
-        // Deselect on canvas click
-        const svg = document.querySelector('svg');
-        if (svg) {
-            svg.addEventListener('click', (e) => {
-                if (e.target === svg || e.target.closest('g.viewport')) {
-                    this.deselectAll();
-                }
-            });
-        }
     }
-    
-    handleAction(action) {
+
+    fitToScreen() {
+        const bounds = this.getGraphBounds();
+        if (!bounds) return;
         const svg = d3.select('svg');
-        
-        switch(action) {
-            case 'zoom-in':
-                svg.transition().call(window.zoomBehavior.scaleBy, 1.3);
-                break;
-            case 'zoom-out':
-                svg.transition().call(window.zoomBehavior.scaleBy, 0.7);
-                break;
-            case 'fit-to-screen':
-                //TODO
-                break;
-            case 'reset-view':
-                svg.transition().call(window.zoomBehavior.transform, d3.zoomIdentity);
-                break;
-            case 'add-node':
-                //TODO add new node to the canvas
-                break;
-            case 'save-file':
-                const data = serializeState();
-                const jsonString = JSON.stringify(data, null, 2);
-                const blob = new Blob([jsonString], { type: "application/json" });
-                const url = URL.createObjectURL(blob);
-                
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `dag-diagram-${new Date().getTime()}.json`;
-                document.body.appendChild(a);
-                a.click();
-                
-                // Cleanup
-                document.body.removeChild(a);
-                URL.revokeObjectURL(url);
-                break;
-
-            case 'open-file':
-                // Create a hidden file input
-                const input = document.createElement('input');
-                input.type = 'file';
-                input.accept = 'application/json';
-                
-                input.onchange = (e) => {
-                    const file = e.target.files[0];
-                    if (!file) return;
-
-                    const reader = new FileReader();
-                    reader.onload = (event) => {
-                        try {
-                            const json = JSON.parse(event.target.result);
-                            deserializeState(json);
-                            render(); // Trigger complete re-render
-                            console.log("File loaded successfully");
-                        } catch (err) {
-                            console.error("Error parsing JSON:", err);
-                            alert("Invalid JSON file.");
-                        }
-                    };
-                    reader.readAsText(file);
-                };
-                
-                input.click(); // Trigger system file dialog
-                break;
-            case 'close-properties':
-                this.hidePropertiesPanel();
-                this.deselectAll();
-                break;
-        }
+        const width = svg.node().clientWidth;
+        const height = svg.node().clientHeight;
+        const dx = bounds.maxX - bounds.minX;
+        const dy = bounds.maxY - bounds.minY;
+        const x = (bounds.minX + bounds.maxX) / 2;
+        const y = (bounds.minY + bounds.maxY) / 2;
+        const scale = Math.max(0.1, Math.min(4, 0.9 / Math.max(dx / width, dy / height)));
+        const translate = [width / 2 - scale * x, height / 2 - scale * y];
+        svg.transition().duration(750).call(
+            window.zoomBehavior.transform, 
+            d3.zoomIdentity.translate(translate[0], translate[1]).scale(scale)
+        );
     }
 
-    // ... copia qui il resto dei metodi (toggleZoomPanel, showPropertiesPanel, ecc.) ...
-    // Assicurati di mantenere tutti i metodi della classe originale!
-    
-    toggleZoomPanel(visible) {
-        this.panels.zoom.visible = visible;
-        if (this.panels.zoom.element) {
-            this.panels.zoom.element.style.display = visible ? 'flex' : 'none';
-        }
+    getGraphBounds() {
+        if (store.nodes.length === 0) return null;
+        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+        store.nodes.forEach(n => {
+            minX = Math.min(minX, n.x);
+            minY = Math.min(minY, n.y);
+            maxX = Math.max(maxX, n.x + (n.width || 100));
+            maxY = Math.max(maxY, n.y + (n.height || 50));
+        });
+        return { minX, minY, maxX, maxY };
+    }
+
+    openFile() {
+        const input = document.createElement('input');
+        input.type = 'file'; input.accept = 'application/json';
+        input.onchange = (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (evt) => {
+                try { store.deserialize(JSON.parse(evt.target.result)); } 
+                catch (err) { console.error(err); alert("Invalid JSON file"); }
+            };
+            reader.readAsText(file);
+        };
+        input.click();
     }
     
-    showPropertiesPanel(selectedObject) {
-        if (!selectedObject) return;
-        
+    showPropertiesPanel(selected) {
         const panel = this.panels.properties.element;
-        const content = panel.querySelector('#properties-content');
+        const content = panel.querySelector('#prop-content');
+        content.innerHTML = '';
         
-        if (selectedObject.type === 'node') {
-            content.innerHTML = this.generateNodeProperties(selectedObject.data);
-        } else if (selectedObject.type === 'link') {
-            content.innerHTML = this.generateLinkProperties(selectedObject.data);
+        if (selected.type === 'node') {
+            const node = selected.data;
+            content.innerHTML = `<div class="property-group"><label>ID</label><input disabled value="${node.id}" class="prop-readonly"></div>`;
+            
+            const def = registry.getNodeDefinition(node.type);
+            if (def) {
+                const container = document.createElement('div');
+                def.renderProperties(container, node, (key, val) => {
+                    node[key] = val;
+                    eventBus.emit('RENDER_REQUESTED');
+                });
+                content.appendChild(container);
+            }
+            const updBtn = document.createElement('button');
+            updBtn.className = 'btn-standard'; updBtn.textContent = 'Update Node';
+            updBtn.onclick = () => store.updateNode(node.id);
+            content.appendChild(updBtn);
+            const delBtn = document.createElement('button');
+            delBtn.className = 'btn-danger'; delBtn.textContent = 'Delete Node';
+            delBtn.onclick = () => store.removeNode(node.id);
+            content.appendChild(delBtn);
+            
+        } else if (selected.type === 'link') {
+            const link = selected.data;
+            content.innerHTML = `
+                <div class="property-group">
+                    <label>Link ID</label>
+                    <input disabled value="${link.id}" class="prop-readonly">
+                </div>
+            `;
+            
+            // Added: Label Text Input for Link
+            if (link.label) {
+                const labelGroup = document.createElement('div');
+                labelGroup.className = 'property-group';
+                labelGroup.innerHTML = `
+                    <label>Label Text</label>
+                    <input type="text" value="${link.label.text}" class="prop-input">
+                `;
+                labelGroup.querySelector('input').onchange = (e) => {
+                    link.label.text = e.target.value;
+                    eventBus.emit('RENDER_REQUESTED');
+                };
+                content.appendChild(labelGroup);
+            } else {
+                 const addBtn = document.createElement('button');
+                 addBtn.className = 'icon-btn'; 
+                 addBtn.style.width = '100%';
+                 addBtn.style.justifyContent = 'flex-start';
+                 addBtn.innerHTML = `<span>+ Add Label</span>`;
+                 addBtn.onclick = () => {
+                     link.label = { text: 'Label', offset: 0.5, offsetX: 0, offsetY: 0 };
+                     this.showPropertiesPanel(selected); // Refresh panel
+                     eventBus.emit('RENDER_REQUESTED');
+                 };
+                 content.appendChild(addBtn);
+            }
+
+            const delBtn = document.createElement('button');
+            delBtn.className = 'btn-danger'; delBtn.textContent = 'Delete Link';
+            delBtn.onclick = () => store.removeLink(link.id);
+            content.appendChild(delBtn);
         }
         
         panel.style.display = 'block';
-        this.attachPropertyListeners(selectedObject);
     }
     
     hidePropertiesPanel() {
-        if (this.panels.properties.element) {
+        if (this.panels.properties.element) 
             this.panels.properties.element.style.display = 'none';
-        }
-    }
-    
-    generateNodeProperties(node) {
-        return `
-            <div class="property-group">
-                <label>Type</label>
-                <input type="text" value="${node.type}" disabled class="prop-readonly">
-            </div>
-            <div class="property-group">
-                <label>ID</label>
-                <input type="text" value="${node.id}" disabled class="prop-readonly">
-            </div>
-            <div class="property-group">
-                <label>Label</label>
-                <input type="text" value="${node.label || ''}" 
-                       data-property="label" class="prop-editable">
-            </div>
-            ${node.sublabel !== undefined ? `
-            <div class="property-group">
-                <label>Sublabel</label>
-                <input type="text" value="${node.sublabel || ''}" 
-                       data-property="sublabel" class="prop-editable">
-            </div>
-            ` : ''}
-            <div class="property-group">
-                <label>Position X</label>
-                <input type="number" value="${Math.round(node.x)}" 
-                       data-property="x" class="prop-editable">
-            </div>
-            <div class="property-group">
-                <label>Position Y</label>
-                <input type="number" value="${Math.round(node.y)}" 
-                       data-property="y" class="prop-editable">
-            </div>
-            <div class="property-actions">
-                <button class="btn-danger" data-action="delete-node">Delete Node</button>
-            </div>
-        `;
-    }
-    
-    generateLinkProperties(link) {
-        return `
-            <div class="property-group">
-                <label>ID</label>
-                <input type="text" value="${link.id}" disabled class="prop-readonly">
-            </div>
-            <div class="property-group">
-                <label>Source</label>
-                <input type="text" value="${link.source}" disabled class="prop-readonly">
-            </div>
-            <div class="property-group">
-                <label>Target</label>
-                <input type="text" value="${link.target}" disabled class="prop-readonly">
-            </div>
-            <div class="property-actions">
-                <button class="btn-danger" data-action="delete-link">Delete Link</button>
-            </div>
-        `;
-    }
-    
-    attachPropertyListeners(selectedObject) {
-        const content = document.querySelector('#properties-content');
-        
-        content.querySelectorAll('.prop-editable').forEach(input => {
-            input.addEventListener('change', (e) => {
-                const property = e.target.dataset.property;
-                const value = e.target.type === 'number' 
-                    ? parseFloat(e.target.value) 
-                    : e.target.value;
-                
-                selectedObject.data[property] = value;
-                
-                if (this.callbacks.onPropertyChange) {
-                    this.callbacks.onPropertyChange(selectedObject, property, value);
-                }
-                
-                render();
-            });
-        });
-        
-        content.querySelectorAll('[data-action]').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const action = e.target.dataset.action;
-                
-                if (action === 'delete-node') {
-                    this.deleteNode(selectedObject.data.id);
-                } else if (action === 'delete-link') {
-                    this.deleteLink(selectedObject.data.id);
-                }
-                
-                this.hidePropertiesPanel();
-                this.deselectAll();
-                render();
-            });
-        });
-    }
-    
-    deleteNode(nodeId) {
-        const node = state.nodes.find(n => n.id === nodeId);
-        if (!node) return;
-        
-        const handlerIds = node.handlers.map(h => h.id);
-        state.links = state.links.filter(l => 
-            !handlerIds.includes(l.source) && !handlerIds.includes(l.target)
-        );
-        
-        state.nodes = state.nodes.filter(n => n.id !== nodeId);
-    }
-    
-    deleteLink(linkId) {
-        state.links = state.links.filter(l => l.id !== linkId);
-    }
-    
-    deselectAll() {
-        state.ui.selectedObject = null;
-        this.hidePropertiesPanel();
-        render();
-    }
-    
-    onSelectionChange(selectedObject) {
-        if (selectedObject) {
-            this.showPropertiesPanel(selectedObject);
-        } else {
-            this.hidePropertiesPanel();
-        }
-    }
-    
-    onPropertyChange(callback) {
-        this.callbacks.onPropertyChange = callback;
     }
 }
 

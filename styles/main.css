@@ -1,402 +1,69 @@
-/* styles/main.css - Updated with UI panels */
 :root {
-    --baltic-blue: #34639E;
-    --blue-energy: #518fdb;
-    --lavender: #d3e3fc;
-    --alice-blue: #E6EFFE;
-    --platinum: #f8fbff;
-    --pale-slate: #bfc4c9;
-    --dim-gray: #606265;
-    --black: #000000;
-    --white: #ffffff;
-    --danger: #dc3545;
+    --baltic-blue: #34639E; --blue-energy: #518fdb; --lavender: #d3e3fc;
+    --alice-blue: #E6EFFE; --platinum: #f8fbff; --pale-slate: #bfc4c9; 
+    --dim-gray: #606265; --white: #ffffff; --danger: #dc3545; --black: #000000;
 }
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { width: 100%; height: 100vh; overflow: hidden; font-family: sans-serif; }
+#app-container { width: 100%; height: 100%; background-color: var(--platinum); }
 
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-}
+.ui-panel { position: fixed; background: var(--white); border: 1px solid var(--pale-slate); border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.15); z-index: 1000; }
+.zoom-panel { bottom: 20px; left: 50%; transform: translateX(-50%); display: flex; flex-direction: row; gap: 12px; padding: 8px 16px; align-items: center; }
+.panel-group { display: flex; gap: 4px; align-items: center; }
+.panel-separator { width: 1px; height: 24px; background-color: var(--pale-slate); margin: 0 4px; }
+.properties-panel { top: 20px; right: 20px; width: 280px; max-height: 80vh; display: flex; flex-direction: column; }
+.panel-header { padding: 10px; background: #f0f0f0; display: flex; justify-content: space-between; align-items: center; }
+.panel-content { padding: 15px; overflow-y: auto; }
+.property-group { margin-bottom: 10px; }
+.property-group label { display: block; font-size: 12px; color: #666; margin-bottom: 4px; }
+.prop-input { width: 100%; padding: 5px; border: 1px solid #ccc; border-radius: 4px; }
+.prop-readonly { background: #eee; color: #888; }
+.icon-btn { width: 32px; height: 32px; border: none; background: transparent; cursor: pointer; border-radius: 4px; display: flex; align-items: center; justify-content: center; color: var(--dim-gray); }
+.icon-btn:hover { background: var(--alice-blue); color: var(--baltic-blue); }
+.btn-standard { width: 100%; padding: 8px; background: var(--alice-blue); color: var(--blue-energy); border: none; border-radius: 4px; cursor: pointer; margin-top: 10px; }
+.btn-standard:hover { background: var(--lavender); color: var(--baltic-blue); }
+.btn-danger { width: 100%; padding: 8px; background: #fee; color: var(--danger); border: none; border-radius: 4px; cursor: pointer; margin-top: 10px; }
+.btn-danger:hover { background: var(--danger); color: white; }
 
-body, html {
-    width: 100%;
-    height: 100%;
-    overflow: hidden;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-}
+.node-body { fill: var(--alice-blue); stroke: var(--dim-gray); stroke-width: 1px; cursor: grab; transition: stroke 0.15s; }
+.node:hover .node-body { stroke: var(--baltic-blue); stroke-width: 2px; }
+.node.selected .node-body { stroke: var(--baltic-blue); stroke-width: 3px; filter: drop-shadow(0 0 8px rgba(52,99,158,0.4)); }
+.handler-body { fill: var(--alice-blue); stroke: var(--blue-energy); stroke-width: 1px; }
+.handler-connector { fill: var(--alice-blue); stroke: var(--blue-energy); stroke-width: 2px; }
+.handler.source { fill: var(--alice-blue); stroke: var(--dim-gray); }
+.handler.source:hover { fill: var(--lavender); stroke: var(--baltic-blue); }
+.handler.target { fill: var(--pale-slate); stroke: var(--dim-gray); }
+.handler.target:hover { fill: var(--lavender); stroke: var(--blue-energy); }
+.link { fill: none; stroke: var(--dim-gray); stroke-width: 2px; }
+.link:hover { stroke: var(--blue-energy); }
+.link.selected { stroke: var(--baltic-blue); }
+.ghost-link { fill: none; stroke: var(--dim-gray); stroke-width: 2px; stroke-dasharray: 5,5; pointer-events: none; opacity: 0.6; }
+.link-label-group { cursor: grab; user-select: none; }
+.link-label-group.dragging { cursor: grabbing; }
+.link-label-bg { fill: var(--white); stroke: var(--pale-slate); stroke-width: 1px; rx: 4px; ry: 4px; }
+.link-label-text { font-size: 12px; font-weight: 500; fill: var(--dim-gray); pointer-events: none; }
+.handler-label-group { pointer-events: auto; }
+.handler-label-text { font-size: 10px; font-family: sans-serif; fill: var(--dim-gray); pointer-events: none; text-shadow: 0px 0px 3px rgba(255,255,255,0.8); }
 
-#app-container {
-    width: 100%;
-    height: 100vh;
-    background-color: var(--platinum);
-    position: relative;
-}
+.context-menu-html { padding: 5px; display: flex; gap: 5px; }
+.helper-link { stroke: var(--pale-slate); stroke-dasharray: 4,4; }
+.helper-box { fill: var(--white); stroke: var(--pale-slate); }
+.helper-button { cursor: pointer; }
+.helper-button:hover .helper-box { fill: var(--lavender); stroke: var(--baltic-blue); }
+.helper-button:hover .helper-plus { stroke: var(--baltic-blue); }
+.menu-background { fill: var(--white); stroke: var(--pale-slate); filter: drop-shadow(0 4px 12px rgba(0,0,0,0.15)); }
+.menu-item-text { font-size: 14px; fill: var(--dim-gray); pointer-events: none; }
+.menu-item-bg { fill: transparent; }
+.menu-item:hover .menu-item-bg { fill: var(--alice-blue); }
 
-svg {
-    display: block;
-    user-select: none;
-}
-
-/* ========== SHARED UI COMPONENTS ========== */
-/* Aggiorna la classe base per garantire che stia sopra a tutto */
-.ui-panel {
+/* INLINE EDITOR */
+.inline-editor-input {
     position: fixed;
-    background: var(--white);
-    border: 1px solid var(--pale-slate);
-    border-radius: 8px; /* Arrotondamento leggermente più morbido */
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2); /* Ombra più profonda per staccarlo dallo sfondo */
-    z-index: 9999; /* Z-Index altissimo per vincere sulla canvas */
-    pointer-events: auto;
-}
-
-/* Stile per il raggruppamento dei bottoni zoom */
-.panel-group {
-    display: flex;
-}
-
-/* Separatore tra i due gruppi */
-.panel-separator {
-    width: 1px;
-    height: 100%;
-    margin: 0 2px;
-    background-color: var(--pale-slate);
-}
-
-/* Modifica radicale del pannello Zoom */
-.zoom-panel {
-    /* POSIZIONAMENTO: Basso Centrale */
-    bottom: 30px;
-    left: 50%;
-    transform: translateX(-50%); /* Trucco per centrare perfettamente */
-    right: auto; /* Annulla la regola 'right' precedente */
-    
-    /* LAYOUT: Riga orizzontale */
-    display: flex;
-    flex-direction: row; /* I bottoni ora sono affiancati */
-    align-items: center;
-    
-    gap: 12px; /* Spazio tra i bottoni */
-    padding: 8px 16px; /* Un po' più largo ai lati */
-}
-
-/* Opzionale: rendi i bottoni leggermente più grandi per il layout orizzontale */
-.zoom-btn, .icon-btn {
-    width: 36px;  /* Da 32 a 36 per clic più facili */
-    height: 36px;
-}
-
-/* Stile bottone condiviso (usato sia in ZoomPanel che ContextMenu) */
-.icon-btn {
-    width: 32px;
-    height: 32px;
-    border: none;
-    background: transparent; /* Sfondo trasparente di default nel context menu */
-    border-radius: 6px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: var(--dim-gray);
-    transition: all 0.2s;
-    position: relative; /* Per tooltip se necessario */
-}
-
-.icon-btn:hover {
-    background: var(--alice-blue);
-    color: var(--baltic-blue);
-    transform: scale(1.1);
-}
-
-.icon-btn:active {
-    transform: scale(0.95);
-}
-
-.icon-btn.danger:hover {
-    background: #ffecec;
-    color: var(--danger);
-}
-
-/* ========== CONTEXT MENU (HTML OVERLAY) ========== */
-.context-menu-html {
-    padding: 6px;
-    display: flex;
-    gap: 4px;
-    min-width: auto; /* Non più largo */
-    animation: popIn 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-}
-
-@keyframes popIn {
-    from { opacity: 0; transform: scale(0.8); }
-    to { opacity: 1; transform: scale(1); }
-}
-
-/* ========== GRID ========== */
-.grid-dot {
-    fill: var(--alice-blue);
-}
-
-/* ========== NODES ========== */
-.node-body {
-    fill: var(--alice-blue);
-    stroke: var(--dim-gray);
-    stroke-width: 1px;
-    cursor: grab;
-    transition: stroke 0.15s;
-}
-
-.node:hover .node-body {
-    stroke: var(--baltic-blue);
-    stroke-width: 2px;
-}
-
-.node.selected .node-body {
-    stroke: var(--baltic-blue);
-    stroke-width: 3px;
-    filter: drop-shadow(0 0 8px rgba(52, 99, 158, 0.4));
-}
-
-.node.dragging .node-body {
-    cursor: grabbing;
-    opacity: 0.8;
-}
-
-.node.dragging {
-    filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.2));
-}
-
-.node-label {
-    fill: var(--baltic-blue);
-    font-size: 1rem;
-    font-family: sans-serif;
-    pointer-events: none;
-}
-
-.node-sublabel {
-    fill: var(--pale-slate);
-    font-size: 0.75rem;
-    font-family: sans-serif;
-    font-style: oblique;
-    pointer-events: none;
-}
-
-/* ========== HANDLERS ========== */
-.handler-body {
-    fill: var(--alice-blue);
-    stroke: var(--blue-energy);
-    stroke-width: 1px;
-}
-
-.handler-connector {
-    fill: var(--alice-blue);
-    stroke: var(--blue-energy);
-    stroke-width: 2px;
-}
-
-.handler.source {
-    fill: var(--alice-blue);
-    stroke: var(--dim-gray);
-    stroke-width: 1px;
-    cursor: pointer;
-    transition: all 0.2s;
-}
-
-.handler.source:hover {
-    fill: var(--lavender);
-    stroke: var(--baltic-blue);
-}
-
-.handler.source.background {
-    fill: var(--platinum);
-    cursor: pointer;
-}
-
-.handler.source.background.arc {
-    stroke: var(--dim-gray);
-    stroke-width: 1px;
-    cursor: pointer;
-}
-
-.handler.target {
-    fill: var(--pale-slate);
-    stroke: var(--dim-gray);
-    stroke-width: 1px;
-    cursor: pointer;
-    transition: all 0.2s;
-}
-
-.handler.target:hover {
-    fill: var(--lavender);
-    stroke: var(--blue-energy);
-    stroke-width: 2px;
-}
-
-.handler-g {
-    cursor: grab;
-}
-
-.handler-g:active {
-    cursor: grabbing;
-}
-
-/* ========== LINKS ========== */
-.link {
-    fill: none;
-    stroke: var(--dim-gray);
-    stroke-width: 2px;
-    pointer-events: stroke;
-    cursor: pointer;
-    transition: stroke 0.2s, stroke-width 0.2s;
-}
-
-.link:hover {
-    stroke: var(--blue-energy);
-    stroke-width: 2px;
-}
-
-.link.selected {
-    stroke: var(--baltic-blue);
-    stroke-width: 2px;
-    filter: drop-shadow(0 0 4px rgba(52, 99, 158, 0.4));
-}
-
-.ghost-link {
-    fill: none;
-    stroke: var(--dim-gray);
-    stroke-width: 2px;
-    stroke-dasharray: 5, 5;
-    pointer-events: none;
-    opacity: 0.6;
-}
-
-/* ========== ADD NODE HELPER ========== */
-.helper-link {
-    stroke: var(--pale-slate);
-    stroke-width: 2px;
-    stroke-dasharray: 4, 4;
-    pointer-events: none;
-}
-
-.helper-box {
-    fill: var(--white);
-    stroke: var(--pale-slate);
-    stroke-width: 2px;
-    stroke-dasharray: 4, 4;
-    transition: all 0.15s;
-}
-
-.helper-button:hover .helper-box {
-    fill: var(--lavender);
-    stroke: var(--baltic-blue);
-}
-
-.helper-plus {
-    stroke: var(--dim-gray);
-    stroke-linecap: round;
-    fill: none;
-    pointer-events: none;
-}
-
-.helper-button:hover .helper-plus {
-    stroke: var(--baltic-blue);
-}
-
-.helper-button {
-    cursor: pointer;
-}
-
-/* ========== NODE TYPE MENU ========== */
-.node-type-menu {
-    pointer-events: all;
-}
-
-.menu-background {
-    fill: var(--white);
-    stroke: var(--pale-slate);
-    stroke-width: 1px;
-    filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.15));
-}
-
-.menu-item-bg {
-    fill: transparent;
-    transition: fill 0.15s;
-}
-
-.menu-item-hover {
-    fill: var(--alice-blue) !important;
-}
-
-.menu-item-text {
-    font-size: 14px;
-    fill: var(--dim-gray);
-    pointer-events: none;
-    user-select: none;
-}
-
-/* ========== CONTEXT MENU ========== */
-.context-menu {
-    pointer-events: all;
-}
-
-.context-menu-shadow {
-    fill: rgba(0, 0, 0, 0.1);
-}
-
-.context-menu-bg {
-    fill: var(--white);
-    stroke: var(--pale-slate);
-    stroke-width: 1px;
-    filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.15));
-}
-
-.context-menu-item .item-bg {
-    fill: transparent;
-    transition: fill 0.15s;
-}
-
-.context-menu-item .item-hover {
-    fill: var(--alice-blue);
-}
-
-.context-menu-text {
-    font-size: 14px;
-    fill: var(--dim-gray);
-    pointer-events: none;
-    user-select: none;
-}
-
-.material-icon {
-    fill: var(--dim-gray);
-    pointer-events: none;
-}
-
-.context-menu-item:hover .material-icon {
-    fill: var(--baltic-blue);
-}
-
-.context-menu-item:hover .context-menu-text {
-    fill: var(--baltic-blue);
-}
-
-/* ========== LINK LABEL ========== */
-.link-label-group {
-    pointer-events: all; /* Il gruppo è cliccabile/trascinabile */
-    cursor: grab;
-    user-select: none;
-}
-
-.link-label-group.dragging {
-    cursor: grabbing;
-}
-
-.link-label-bg {
-    fill: var(--white);
-    stroke: var(--pale-slate);
-    stroke-width: 1px;
-}
-
-.link-label-text {
-    font-size: 12px;
-    font-weight: 500;
-    fill: var(--dim-gray);
-    pointer-events: none; /* Il testo non blocca il drag del gruppo */
+    z-index: 9999;
+    border: 1px solid var(--baltic-blue);
+    background: white;
+    padding: 0 4px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    border-radius: 4px;
+    outline: none;
 }

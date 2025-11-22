@@ -1,34 +1,25 @@
-// handlers/TargetHandler.js
 import { HandlerDefinition } from './HandlerDefinition.js';
 import { CONFIG } from '../config.js';
-import { state } from '../state.js';
-import { render } from '../render.js';
+import { linkInteractionManager } from '../LinkInteractionManager.js';
+import { store } from '../state.js';
 
-const DIMENSIONS = {
-    width: CONFIG.handler.width,
-    height: CONFIG.handler.height
-}
+const DIMENSIONS = { width: CONFIG.handler.width, height: CONFIG.handler.height };
 
 export class TargetHandlerDefinition extends HandlerDefinition {
     constructor() {
         super();
-        this.name = 'basic_target';
         this.type = 'target';
     }
 
-    static getDimension() {
-        return DIMENSIONS;
-    }
+    static getDimension() { return DIMENSIONS; }
     
     render(selection) {
         const w = DIMENSIONS.width;
         const h = DIMENSIONS.height;
         
         selection.append("rect")
-            .attr("width", w)
-            .attr("height", h)
-            .attr("x", -w/2)
-            .attr("y", -h/2)
+            .attr("width", w).attr("height", h)
+            .attr("x", -w/2).attr("y", -h/2)
             .attr("class", "handler target");
         
         this.setupDrag(selection);
@@ -39,79 +30,26 @@ export class TargetHandlerDefinition extends HandlerDefinition {
             .on("start", (event, d) => {
                 event.sourceEvent.stopPropagation();
                 
-                // Verifica se handler è già connesso
-                const existingLink = state.links.find(l => l.target === d.id);
-                
+                // Check if already connected
+                const existingLink = store.links.find(l => l.target === d.id);
                 if (existingLink) {
-                    // Disconnetti link esistente
-                    state.links = state.links.filter(l => l.id !== existingLink.id);
-                    state.ui.disconnectingLink = existingLink;
-                    
-                    const viewport = d3.select("g.viewport").node();
-                    const [mouseX, mouseY] = d3.pointer(event.sourceEvent, viewport);
-                    
-                    state.ui.ghostLink = {
-                        sourceId: existingLink.source,
-                        targetX: mouseX,
-                        targetY: mouseY
-                    };
-                    render();
+                    store.removeLink(existingLink.id); // Remove immediately from state
+                    store.setDisconnectingLink(existingLink);
+                    // Start drag from the SOURCE of the removed link
+                    linkInteractionManager.startDrag(existingLink.source, event.sourceEvent, false);
                 } else {
-                    // Permetti di iniziare nuova connessione da target vuoto
-                    const viewport = d3.select("g.viewport").node();
-                    const [mouseX, mouseY] = d3.pointer(event.sourceEvent, viewport);
-                    
-                    state.ui.ghostLink = {
-                        sourceId: d.id,
-                        targetX: mouseX,
-                        targetY: mouseY,
-                        reversed: true // Flag per sapere che parte da target
-                    };
-                    render();
+                    // Start drag from this TARGET (reversed)
+                    linkInteractionManager.startDrag(d.id, event.sourceEvent, true);
                 }
             })
             .on("drag", (event) => {
-                if (state.ui.disconnectingLink || state.ui.ghostLink) {
-                    const viewport = d3.select("g.viewport").node();
-                    const [mouseX, mouseY] = d3.pointer(event.sourceEvent, viewport);
-                    state.ui.ghostLink.targetX = mouseX;
-                    state.ui.ghostLink.targetY = mouseY;
-                    render();
-                }
+                linkInteractionManager.updateDrag(event.sourceEvent);
             })
-            .on("end", (event) => {
-                if (state.ui.disconnectingLink || state.ui.ghostLink) {
-                    const oldLink = state.ui.disconnectingLink;
-                    const targetElement = event.sourceEvent.target;
-                    const targetData = d3.select(targetElement).datum();
-                    
-                    if (targetData) {
-                        // Determina source e target in base a reversed flag
-                        if (state.ui.ghostLink.reversed) {
-                            // Partito da target, deve finire su source
-                            if (targetData.type === 'source') {
-                                state.links.push({
-                                    id: `link_${Date.now()}`,
-                                    source: targetData.id,
-                                    target: state.ui.ghostLink.sourceId
-                                });
-                            }
-                        } else {
-                            // Normale: partito da source
-                            if (targetData.type === 'target' && targetData.id !== oldLink?.target) {
-                                state.links.push({
-                                    id: `link_${Date.now()}`,
-                                    source: oldLink?.source || state.ui.ghostLink.sourceId,
-                                    target: targetData.id
-                                });
-                            }
-                        }
-                    }
-                    
-                    state.ui.disconnectingLink = null;
-                    state.ui.ghostLink = null;
-                    render();
-                }
+            .on("end", (event, d) => {
+                // Origin ID depends on whether we were reconnecting or starting new
+                const originId = store.state.ui.disconnectingLink ? store.state.ui.disconnectingLink.source : d.id;
+                const isReversed = !store.state.ui.disconnectingLink; 
+                linkInteractionManager.endDrag(event, originId, isReversed);
             })
         );
     }
