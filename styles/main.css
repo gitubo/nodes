@@ -42,13 +42,15 @@ body { width: 100%; height: 100vh; overflow: hidden; font-family: sans-serif; }
 .link-label-group.dragging { cursor: grabbing; }
 .link-label-bg { fill: var(--white); stroke: var(--pale-slate); stroke-width: 1px; rx: 4px; ry: 4px; }
 .link-label-text { font-size: 12px; font-weight: 500; fill: var(--dim-gray); pointer-events: none; }
-.handler-label-group { pointer-events: auto; }
+.handler-label-group { pointer-events: auto; cursor: grab; }
+.handler-label-group.dragging { cursor: grabbing; }
 .handler-label-text { font-size: 10px; font-family: sans-serif; fill: var(--dim-gray); pointer-events: none; text-shadow: 0px 0px 3px rgba(255,255,255,0.8); }
 
 .context-menu-html { padding: 5px; display: flex; gap: 5px; }
-.helper-link { stroke: var(--pale-slate); stroke-dasharray: 4,4; }
-.helper-box { fill: var(--white); stroke: var(--pale-slate); }
+.helper-link { stroke: var(--dim-gray); stroke-dasharray: 4,4; }
+.helper-box { fill: var(--platinum); stroke: var(--dim-gray); stroke-dasharray: 4,4; }
 .helper-button { cursor: pointer; }
+.helper-plus { stroke: var(--dim-gray); }
 .helper-button:hover .helper-box { fill: var(--lavender); stroke: var(--baltic-blue); }
 .helper-button:hover .helper-plus { stroke: var(--baltic-blue); }
 .menu-background { fill: var(--white); stroke: var(--pale-slate); filter: drop-shadow(0 4px 12px rgba(0,0,0,0.15)); }
