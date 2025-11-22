@@ -62,18 +62,22 @@ class Store {
     }
 
     /**
-     * Core Action: Update Node
+     * Updates properties of a node in the state and re-renders the editor.
+     * @param {string} nodeId - The ID of the node to update.
+     * @param {object} newProps - An object containing the new properties (e.g., { name: 'New Name', width: 200 }).
      */
-    updateNode(nodeId) {
-        const node = this.state.nodes.find(n => n.id === nodeId);
-        if (!node) return;
+    updateNode(nodeId, newProps) {
+        const nodeIndex = this.state.nodes.findIndex(n => n.id === nodeId);
+        if (nodeIndex == -1) return;
 
-        const handlerIds = node.handlers.map(h => h.id);
-        
-        //TODO update the passed node
+        this.state.nodes[nodeIndex] = {
+            ...this.state.nodes[nodeIndex],
+            ...newProps,
+        };
 
         eventBus.emit('STATE_UPDATED', this.state);
     }
+
 
     /**
      * Core Action: Remove Node

@@ -25,7 +25,8 @@ export class SwitchNodeDefinition extends NodeDefinition {
             this.sourceHandlers.push({
                 type: 'source', label: label, 
                 offset_x: this.width, offset_y: offset, 
-                labelPosition: 'left', labelMargin: 15
+                labelPosition: 'left', labelMargin: 15,
+                hideLabel: false
             });
         });
     }
