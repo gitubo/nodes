@@ -1,9 +1,9 @@
-// src/state.js - Refactored into a proper Store
+// src/state.js
 import { registry } from './Registry.js';
 import { snapToGrid } from './config.js';
 import { eventBus } from './EventBus.js';
 
-const generateId = () => `id_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
+const generateId = () => crypto.randomUUID();
 
 class Store {
     constructor() {
@@ -14,7 +14,7 @@ class Store {
             ui: {
                 ghostLink: null,
                 disconnectingLink: null,
-                selectedObject: null
+                selectedObject: null 
             }
         };
     }
@@ -25,23 +25,21 @@ class Store {
     get transform() { return this.state.transform; }
     set transform(val) { this.state.transform = val; }
 
-    /**
-     * Core Action: Add Node
-     */
+    getNode(id) { return this.state.nodes.find(n => n.id === id); }
+    getLink(id) { return this.state.links.find(l => l.id === id); }
+
     addNode(type, x, y, initialData = {}) {
         const definition = registry.getNodeDefinition(type);
-        if (!definition) {
-            console.error(`Unknown node type: ${type}`);
-            return null;
-        }
+        if (!definition) return null;
 
         const nodeId = generateId();
         const handlers = definition.getHandlers().map(h => ({
-            id: `${nodeId}_${h.type}_${generateId()}`,
+            id: generateId(),
             type: h.type,
             label: h.label,
             offset_x: h.offset_x || 0,
-            offset_y: h.offset_y || 0
+            offset_y: h.offset_y || 0,
+            ...h 
         }));
 
         const baseData = {
@@ -50,37 +48,31 @@ class Store {
             x: snapToGrid(x),
             y: snapToGrid(y),
             label: type.charAt(0).toUpperCase() + type.slice(1),
-            handlers: handlers
+            handlers: handlers,
+            note: '', 
+            custom_params: {} 
         };
 
         const node = { ...baseData, ...definition.getData(), ...initialData };
         this.state.nodes.push(node);
         
-        eventBus.emit('STATE_UPDATED', this.state);
-        return node;
+        // Granular Event
+        eventBus.emit('NODE_CREATED', { id: nodeId });
+        return node; 
     }
 
-    /**
-     * Updates properties of a node in the state and re-renders the editor.
-     * @param {string} nodeId - The ID of the node to update.
-     * @param {object} newProps - An object containing the new properties (e.g., { name: 'New Name', width: 200 }).
-     */
     updateNode(nodeId, newProps) {
         const nodeIndex = this.state.nodes.findIndex(n => n.id === nodeId);
-        if (nodeIndex == -1) return;
+        if (nodeIndex === -1) return;
 
         this.state.nodes[nodeIndex] = {
             ...this.state.nodes[nodeIndex],
             ...newProps,
         };
-
-        eventBus.emit('STATE_UPDATED', this.state);
+        // Granular Event
+        eventBus.emit('NODE_UPDATED', { id: nodeId });
     }
 
-
-    /**
-     * Core Action: Remove Node
-     */
     removeNode(nodeId) {
         const node = this.state.nodes.find(n => n.id === nodeId);
         if (!node) return;
@@ -88,76 +80,71 @@ class Store {
         const handlerIds = node.handlers.map(h => h.id);
         
         // Remove connections
-        this.state.links = this.state.links.filter(l => 
-            !handlerIds.includes(l.source) && !handlerIds.includes(l.target)
+        const linksToRemove = this.state.links.filter(l => 
+            handlerIds.includes(l.source) || handlerIds.includes(l.target)
         );
-
-        // Remove node
+        
+        this.state.links = this.state.links.filter(l => !linksToRemove.includes(l));
         this.state.nodes = this.state.nodes.filter(n => n.id !== nodeId);
 
-        // Deselect if needed
-        if (this.state.ui.selectedObject?.data?.id === nodeId) {
+        if (this.state.ui.selectedObject?.id === nodeId) {
             this.deselect();
         }
 
-        eventBus.emit('STATE_UPDATED', this.state);
+        // Granular Events
+        if (linksToRemove.length > 0) {
+            linksToRemove.forEach(l => eventBus.emit('CONNECTION_REMOVED', { id: l.id }));
+        }
+        eventBus.emit('NODE_REMOVED', { id: nodeId });
     }
 
-    /**
-     * Core Action: Add Link
-     */
     addLink(sourceId, targetId) {
         const link = {
-            id: `link_${Date.now()}`,
+            id: generateId(),
             source: sourceId,
             target: targetId
         };
         this.state.links.push(link);
-        eventBus.emit('STATE_UPDATED', this.state);
+        eventBus.emit('CONNECTION_CREATED', { id: link.id });
     }
 
-    /**
-     * Core Action: Remove Link
-     */
     removeLink(linkId) {
         this.state.links = this.state.links.filter(l => l.id !== linkId);
-        if (this.state.ui.selectedObject?.data?.id === linkId) {
+        if (this.state.ui.selectedObject?.id === linkId) {
             this.deselect();
         }
-        eventBus.emit('STATE_UPDATED', this.state);
+        eventBus.emit('CONNECTION_REMOVED', { id: linkId });
     }
 
-    /**
-     * Selection Logic
-     */
-    selectObject(type, data) {
-        this.state.ui.selectedObject = { type, data };
-        eventBus.emit('SELECTION_CHANGED', this.state.ui.selectedObject);
-        eventBus.emit('RENDER_REQUESTED'); 
+    updateLink(linkId, newProps) {
+        const idx = this.state.links.findIndex(l => l.id === linkId);
+        if (idx === -1) return;
+        this.state.links[idx] = { ...this.state.links[idx], ...newProps };
+        eventBus.emit('CONNECTION_UPDATED', { id: linkId });
+    }
+
+    selectObject(type, objectData) {
+        this.state.ui.selectedObject = { type, id: objectData.id };
+        eventBus.emit('SELECTION_CHANGED', { type, id: objectData.id });
     }
 
     deselect() {
         this.state.ui.selectedObject = null;
-        eventBus.emit('SELECTION_CHANGED', null);
-        eventBus.emit('RENDER_REQUESTED');
+        eventBus.emit('SELECTION_CHANGED', { id: null });
     }
 
-    /**
-     * Ghost Link Logic (for Dragging)
-     */
     setGhostLink(ghostData) {
         this.state.ui.ghostLink = ghostData;
-        eventBus.emit('RENDER_REQUESTED'); // Only trigger render, no state save
+        eventBus.emit('GHOST_LINK_UPDATED', ghostData); 
     }
 
     setDisconnectingLink(link) {
         this.state.ui.disconnectingLink = link;
     }
     
-    // --- Serialization (Legacy Support) ---
     serialize() {
         const exportData = {
-            metadata: { version: "2.1.0", created_at: new Date().toISOString() },
+            metadata: { version: "2.3.0", created_at: new Date().toISOString() },
             nodes: {},
             connections: {}
         };
@@ -173,17 +160,16 @@ class Store {
 
     deserialize(data) {
         if (!data || !data.nodes || !data.connections) return;
-        
         this.state.nodes = Object.values(data.nodes).map(nodeData => {
             const definition = registry.getNodeDefinition(nodeData.type);
             return definition ? definition.deserialize(nodeData) : nodeData;
         });
-        
         this.state.links = Object.values(data.connections).map(l => ({
             id: l.id, source: l.source, target: l.target, label: l.label
         }));
-
-        eventBus.emit('STATE_UPDATED', this.state);
+        
+        // Full refresh
+        eventBus.emit('NODE_CREATED', {}); 
     }
     
     initializeWithDefaults() {
@@ -191,13 +177,12 @@ class Store {
         const n2 = this.addNode('task', 350, 200);
         const n3 = this.addNode('end', 600, 150);
         
-        if (n1 && n2) this.addLink(n1.handlers[0].id, n2.handlers[0].id);
+        if (n1 && n2 && n1.handlers[0] && n2.handlers[0]) {
+            const target = n2.handlers.find(h => h.type === 'target');
+            if (target) this.addLink(n1.handlers[0].id, target.id);
+        }
     }
 }
 
 export const store = new Store();
-// Backward compatibility for older modules importing 'state' directly
-export const state = store.state; 
-// Export helpers for modules that haven't been fully refactored to use store methods
-export const createNode = (type, x, y) => store.addNode(type, x, y);
-export const removeNode = (id) => store.removeNode(id);
+export const state = store.state;

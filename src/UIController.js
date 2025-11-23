@@ -16,20 +16,26 @@ export class UIController {
         this.createZoomPanel();
         this.createPropertiesPanel();
         this.attachEventListeners();
-        
-        // REQUESTED: Only open on specific EDIT event
-        eventBus.on('EDIT_PROPERTIES', (obj) => {
-            if(obj) this.showPropertiesPanel(obj);
+
+        eventBus.on('EDIT_PROPERTIES', (payload) => {
+            const { type, id } = payload;
+            const data = type === 'node' ? store.getNode(id) : store.getLink(id);
+            if(data) this.showPropertiesPanel({ type, data });
         });
         
-        // Hide panel if selection cleared
-        eventBus.on('SELECTION_CHANGED', (obj) => {
-            if (!obj) this.hidePropertiesPanel();
+        eventBus.on('SELECTION_CHANGED', (payload) => {
+            if (!payload || !payload.id) {
+                this.hidePropertiesPanel();
+            } else {
+                if (this.panels.properties.visible) {
+                     const data = payload.type === 'node' ? store.getNode(payload.id) : store.getLink(payload.id);
+                     if(data) this.showPropertiesPanel({ type: payload.type, data });
+                }
+            }
         });
     }
     
-    // ... createZoomPanel / createPropertiesPanel (Standard) ...
-    createZoomPanel() { /* ... same as previous ... */ 
+    createZoomPanel() {
         const p = document.createElement('div');
         p.className = 'ui-panel zoom-panel';
         p.innerHTML = `
@@ -45,13 +51,14 @@ export class UIController {
             </div>
             <div class="panel-separator"></div>
             <div class="panel-group">
-                <button class="icon-btn" data-action="open-file" title="Open File">${getStrokeIcon('openFile')}</button>
+                 <button class="icon-btn" data-action="open-file" title="Open File">${getStrokeIcon('openFile')}</button>
                 <button class="icon-btn" data-action="save-file" title="Save File">${getStrokeIcon('saveFile')}</button>
             </div>
         `;
         document.body.appendChild(p);
     }
-    createPropertiesPanel() { /* ... same as previous ... */ 
+
+    createPropertiesPanel() {
          const p = document.createElement('div');
         p.className = 'ui-panel properties-panel';
         p.style.display = 'none';
@@ -79,16 +86,24 @@ export class UIController {
                 case 'zoom-reset': svg.transition().call(window.zoomBehavior.transform, d3.zoomIdentity); break;
                 case 'zoom-fit': this.fitToScreen(); break;
                 case 'close-prop': this.hidePropertiesPanel(); break;
-                case 'save-file': console.log(JSON.stringify(store.serialize(), null, 2)); alert("Check Console"); break;
+                
+                case 'save-file': 
+                    const dataStr = JSON.stringify(store.serialize(), null, 2);
+                    const blob = new Blob([dataStr], {type: "application/json"});
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `graph_${new Date().toISOString().split('T')[0]}.json`;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                    break;
+
                 case 'open-file': this.openFile(); break;
                 case 'add-node':
-                    // REQUESTED: Display close to button
                     const btnRect = btn.getBoundingClientRect();
-                    // Position above the button (y - height) or to the side
                     showNodeTypeMenu({x: btnRect.left, y: btnRect.top - 150}, null, (type) => {
                         const rect = svg.node().getBoundingClientRect();
                         const t = d3.zoomTransform(svg.node());
-                        // Center of screen logic for dropping the node itself
                         const x = (rect.width/2 - t.x) / t.k;
                         const y = (rect.height/2 - t.y) / t.k;
                         store.addNode(type, x, y);
@@ -98,9 +113,7 @@ export class UIController {
         });
     }
 
-    // ... fitToScreen, getGraphBounds, openFile ...
     fitToScreen() {
-        // (Same as previous)
         const bounds = this.getGraphBounds();
         if (!bounds) return;
         const svg = d3.select('svg');
@@ -148,46 +161,38 @@ export class UIController {
         
         if (selected.type === 'node') {
             const node = selected.data;
-            
             content.innerHTML = `
                 <div class="property-group">
                     <label>Label</label>
                     <input type="text" id="node-label-input" value="${node.label || ''}" class="prop-input">
                 </div>
                 <div class="property-group">
-                    <label>Sublabel</label>
-                    <input type="text" id="node-sublabel-input" value="${node.sublabel || ''}" class="prop-input">
+                    <label>Note</label>
+                    <input type="text" id="node-note-input" value="${node.note || ''}" class="prop-input">
                 </div>
                 
                 <div class="panel-separator" style="margin: 15px 0;"></div>
-                <label style="font-weight:bold; color:#666; font-size:12px;">Custom Data</label>
-                <div id="custom-props-container"></div>
-                <button class="btn-standard" id="add-prop-btn" style="width:auto; font-size:12px; padding:4px 8px;">+ Add Data Key</button>
+                
+                <label style="font-weight:bold; color:#666; font-size:12px;">Custom Params</label>
+                <div id="custom-params-container"></div>
+                <button class="btn-standard" id="add-param-btn" style="width:auto; font-size:12px; padding:4px 8px;">+ Add Param</button>
                 
                 <div id="def-props-container"></div>
             `;
             
-            // Render definition specific properties (like Switch conditions)
-            const def = import('./Registry.js').then(m => {
+            import('./Registry.js').then(m => {
                  const definition = m.registry.getNodeDefinition(node.type);
                  if(definition) {
                      definition.renderProperties(content.querySelector('#def-props-container'), node, (k, v) => {
-                         // Auto update for simple definition props if needed, 
-                         // typically handled inside renderProperties
                      });
                  }
-            });
+             });
 
-            // Generic KV Logic
-            const customContainer = content.querySelector('#custom-props-container');
-            // Ensure node.data exists and ignore internal keys like 'conditions' if you want 
-            // (or show them all, here we show all keys in data for generic editing)
-            const customData = node.data || {}; 
+            const customContainer = content.querySelector('#custom-params-container');
+            const customData = node.custom_params || {}; 
 
             const renderCustomProp = (key, val) => {
-                // Skip specific internal data keys if managed by Definition
                 if (key === 'conditions' && node.type === 'switch') return; 
-                
                 const row = document.createElement('div');
                 row.className = 'property-group';
                 row.style.display = 'flex';
@@ -202,39 +207,45 @@ export class UIController {
             };
 
             Object.entries(customData).forEach(([k, v]) => renderCustomProp(k, v));
+            content.querySelector('#add-param-btn').onclick = () => renderCustomProp('', '');
 
-            content.querySelector('#add-prop-btn').onclick = () => renderCustomProp('', '');
-
-            // Update Button
             const updBtn = document.createElement('button');
             updBtn.className = 'btn-standard';
             updBtn.textContent = 'Update Node';
             updBtn.onclick = () => {
                 const newLabel = content.querySelector('#node-label-input').value;
-                const newSublabel = content.querySelector('#node-sublabel-input').value;
+                const newNote = content.querySelector('#node-note-input').value;
                 
-                // Reconstruct Data Object
-                const newData = {};
-                // Preserve managed keys (like conditions)
-                if (node.data && node.data.conditions) newData.conditions = node.data.conditions;
-
+                const newParams = {};
+                if (node.custom_params && node.custom_params.conditions) newParams.conditions = node.custom_params.conditions;
+                
                 customContainer.querySelectorAll('.property-group').forEach(row => {
                     const k = row.querySelector('.prop-key').value.trim();
                     const v = row.querySelector('.prop-val').value;
-                    if(k) newData[k] = v;
+                    if(k) newParams[k] = v;
                 });
 
                 store.updateNode(node.id, {
                     label: newLabel,
-                    sublabel: newSublabel,
-                    data: newData
+                    note: newNote,
+                    custom_params: newParams
                 });
             };
             content.appendChild(updBtn);
+
+            // Added Delete Button
+            const delBtn = document.createElement('button');
+            delBtn.className = 'btn-danger'; 
+            delBtn.textContent = 'Delete Node';
+            delBtn.onclick = () => { 
+                store.removeNode(node.id); 
+                this.hidePropertiesPanel(); 
+            };
+            content.appendChild(delBtn);
+
         } else if (selected.type === 'link') {
-             // (Link logic same as previous response)
               const link = selected.data;
-            if (link.label) {
+              if (link.label) {
                 const labelGroup = document.createElement('div');
                 labelGroup.className = 'property-group';
                 labelGroup.innerHTML = `
@@ -242,8 +253,7 @@ export class UIController {
                     <input type="text" value="${link.label.text}" class="prop-input">
                 `;
                 labelGroup.querySelector('input').onchange = (e) => {
-                    link.label.text = e.target.value;
-                    eventBus.emit('RENDER_REQUESTED');
+                    store.updateLink(link.id, { label: { ...link.label, text: e.target.value } });
                 };
                 content.appendChild(labelGroup);
             } else {
@@ -253,9 +263,8 @@ export class UIController {
                  addBtn.style.justifyContent = 'flex-start';
                  addBtn.innerHTML = `<span>+ Add Label</span>`;
                  addBtn.onclick = () => {
-                     link.label = { text: 'Label', offset: 0.5, offsetX: 0, offsetY: 0 };
+                     store.updateLink(link.id, { label: { text: 'Label', offset: 0.5, offsetX: 0, offsetY: 0 } });
                      this.showPropertiesPanel(selected); 
-                     eventBus.emit('RENDER_REQUESTED');
                  };
                  content.appendChild(addBtn);
             }
@@ -276,5 +285,4 @@ export class UIController {
         }
     }
 }
-
 export const uiController = new UIController();

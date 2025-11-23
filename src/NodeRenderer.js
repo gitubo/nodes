@@ -6,7 +6,7 @@ import { eventBus } from './EventBus.js';
 import { snapToGrid } from './config.js';
 import { startInlineEditing } from './InlineEditor.js';
 
-const DIMENSIONS = { label_margin: 20, sublabel_margin: 20 };
+const DIMENSIONS = { label_margin: 20, note_margin: 20 };
 
 export class NodeRenderer {
     constructor(renderCallback) {
@@ -19,14 +19,10 @@ export class NodeRenderer {
              const definition = registry.getNodeDefinition(d.type);
              if (!definition) return;
              
-             // Remove existing body to prevent duplicates during updates
              currentSelection.selectAll("path.node-body").remove();
-             
              currentSelection.append("path")
                  .attr("class", definition.getBodyClass())
                  .attr("d", definition.getShapePath())
-                 // FIX: Lower the body to the bottom of the SVG group stack
-                 // This ensures it renders BEHIND handlers and labels
                  .lower(); 
         });
     }
@@ -62,24 +58,24 @@ export class NodeRenderer {
                         e.stopPropagation();
                         startInlineEditing(e, d.label, (val) => {
                             d.label = val;
-                            eventBus.emit('RENDER_REQUESTED');
+                            eventBus.emit('NODE_UPDATED', { id: d.id });
                         });
                     });
                 labelJoin.exit().remove();
-                yOffset += DIMENSIONS.sublabel_margin;
+                yOffset += DIMENSIONS.note_margin;
             }
             
-             if (d.sublabel) {
-                const sublabelJoin = currentSelection.selectAll("text.node-sublabel").data([d]);
-                sublabelJoin.enter()
+            if (d.note) {
+                const noteJoin = currentSelection.selectAll("text.node-note").data([d]);
+                noteJoin.enter()
                     .append("text")
-                    .attr("class", "node-sublabel") 
+                    .attr("class", "node-note") 
                     .attr("text-anchor", "middle")
-                    .merge(sublabelJoin)
+                    .merge(noteJoin)
                     .attr("x", nodeWidth / 2)
                     .attr("y", yOffset)
-                    .text(d.sublabel);
-                sublabelJoin.exit().remove();
+                    .text(d.note);
+                noteJoin.exit().remove();
             }
         });
     }
@@ -95,12 +91,10 @@ export class NodeRenderer {
                         const def = registry.getHandlerDefinition(h.type);
                         if(def) def.render(d3.select(this));
                     });
-                    // FIX: Ensure handlers sit above the body
                     return g.raise();
                 },
                 update => {
                     update.attr("transform", d => `translate(${d.offset_x||0}, ${d.offset_y||0})`);
-                    
                     update.each(function(h) {
                          const def = registry.getHandlerDefinition(h.type);
                          d3.select(this).selectAll("*").remove();
@@ -122,27 +116,35 @@ export class NodeRenderer {
             .on("drag", function(event, d) {
                 d.x = event.x;
                 d.y = event.y;
+                
+                // 1. Update Node Position
                 d3.select(this).attr("transform", `translate(${d.x}, ${d.y})`);
                 
+                // 2. Update Links
                 updateLinksOnly(); 
                 
-                // FIX: Emit event during drag to update helpers in real-time
-                eventBus.emit('NODE_DRAGGED', d);
+                // 3. Update AddNodeHelpers (Direct Sync)
+                // Select all helpers associated with this node ID
+                const helpers = d3.selectAll(`.add-node-helper[data-node-id="${d.id}"]`);
+                helpers.attr("transform", function() {
+                    // Use d3.select(this).datum() to get the specific helper's data (relX/relY)
+                    const hData = d3.select(this).datum(); 
+                    if (!hData) return "";
+                    // Calculate new global position: Node New Pos + Helper Relative Offset
+                    return `translate(${d.x + hData.relX}, ${d.y + hData.relY})`;
+                });
             })
             .on("end", function(event, d) {
                 d3.select(this).classed("dragging", false);
-                
                 const snappedX = snapToGrid(d.x);
                 const snappedY = snapToGrid(d.y);
-                
                 d.x = snappedX; 
                 d.y = snappedY;
                 d3.select(this).attr("transform", `translate(${d.x}, ${d.y})`);
-                
                 updateLinksOnly();
                 
                 eventBus.emit('NODE_MOVED', {
-                    node: d,
+                    id: d.id,
                     initialPosition: initialPos,
                     finalPosition: { x: d.x, y: d.y }
                 });
@@ -152,16 +154,14 @@ export class NodeRenderer {
     }
     
     render(selection) {
-        // FIX: Explicit Render Order: Body -> Labels -> Handlers
-        this.renderBody(selection);     // Bottom layer (due to .lower())
-        this.renderLabels(selection);   // Middle layer
-        this.renderHandlers(selection); // Top layer (due to .raise() or append order)
+        this.renderBody(selection);
+        this.renderLabels(selection);
+        this.renderHandlers(selection);
         this.setupDrag(selection);
         setupNodeContextMenu(selection);
     }
     
     update(selection) {
-        // FIX: Explicit Update Order
         this.renderBody(selection);
         this.renderLabels(selection);
         this.renderHandlers(selection);

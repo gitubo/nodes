@@ -13,26 +13,23 @@ export class NodeDefinition {
     getHandlers() { return this.handlers; }
     getData() { return {}; }
     getBodyClass() { return `node-body ${this.type}`; }
-    getShapePath() { return ''; } // (Abbreviated for brevity, same as original)
+    getShapePath() { return ''; } 
 
-    // REQUESTED: x,y into 'position' object; offset_x, offset_y into 'offset' object
     serialize(node) {
         return {
             id: node.id,
             type: node.type,
-            position: { x: node.x, y: node.y }, // Nested position
+            position: { x: node.x, y: node.y },
             label: node.label,
-            sublabel: node.sublabel,
-            customProperties: node.customProperties || [], // For KV pairs
+            // CONSTRAINT 3
+            note: node.note, 
+            // CONSTRAINT 4
+            custom_params: node.custom_params || {}, 
             handlers: node.handlers.map(h => ({
                 id: h.id, 
                 type: h.type, 
                 label: h.label,
-                // Nested offset
-                offset: { 
-                    x: h.offset_x, 
-                    y: h.offset_y 
-                },
+                offset: { x: h.offset_x, y: h.offset_y },
                 hideLabel: h.hideLabel,
                 labelOffsetX: h.labelOffsetX,
                 labelOffsetY: h.labelOffsetY
@@ -44,15 +41,15 @@ export class NodeDefinition {
         return {
             id: data.id,
             type: data.type,
-            // Extract from nested position
             x: data.position?.x || 0,
             y: data.position?.y || 0,
             label: data.label,
-            sublabel: data.sublabel,
-            customProperties: data.customProperties || [],
+            // CONSTRAINT 3
+            note: data.note,
+            // CONSTRAINT 4
+            custom_params: data.custom_params || {},
             handlers: (data.handlers || []).map(h => ({
                 ...h,
-                // Flatten offset back for internal state usage
                 offset_x: h.offset?.x || 0,
                 offset_y: h.offset?.y || 0
             })) || this.getHandlers()
@@ -60,6 +57,5 @@ export class NodeDefinition {
     }
 
     renderProperties(container, nodeData, onChange) {
-        // Base properties handled in UIController now for better Key-Value management
     }
 }
