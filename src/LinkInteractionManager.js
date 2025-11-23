@@ -4,26 +4,36 @@ import { store } from './state.js';
 class LinkInteractionManager {
     
     startDrag(sourceId, event, isReversed = false) {
-        const viewport = d3.select("g.viewport").node();
+        // FIX: Select viewport relative to the event target to ensure we get the correct SVG context
+        const svg = event.target.closest('svg');
+        if (!svg) return;
+        
+        const viewport = d3.select(svg).select("g.viewport").node();
         const [mouseX, mouseY] = d3.pointer(event, viewport);
         
-        store.setGhostLink({
+        const ghostData = {
             sourceId: sourceId,
             targetX: mouseX,
             targetY: mouseY,
             reversed: isReversed
-        });
+        };
+        
+        store.setGhostLink(ghostData);
+        this.updateGhostVisual(ghostData, d3.select(svg));
     }
 
     updateDrag(event) {
         if (store.state.ui.ghostLink) {
-            const viewport = d3.select("g.viewport").node();
+            const svg = event.target.closest('svg');
+            if (!svg) return;
+
+            const viewport = d3.select(svg).select("g.viewport").node();
             const [mouseX, mouseY] = d3.pointer(event, viewport);
             
-            // Update directly for performance, then trigger render
             store.state.ui.ghostLink.targetX = mouseX;
             store.state.ui.ghostLink.targetY = mouseY;
-            store.setGhostLink(store.state.ui.ghostLink);
+            
+            this.updateGhostVisual(store.state.ui.ghostLink, d3.select(svg));
         }
     }
 
