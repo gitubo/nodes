@@ -39,10 +39,9 @@ class Store {
         const handlers = definition.getHandlers().map(h => ({
             id: `${nodeId}_${h.type}_${generateId()}`,
             type: h.type,
-            label: h.label || h.type,
+            label: h.label,
             offset_x: h.offset_x || 0,
-            offset_y: h.offset_y || 0,
-            hideLabel: h.hideLabel
+            offset_y: h.offset_y || 0
         }));
 
         const baseData = {

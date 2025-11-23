@@ -1,6 +1,5 @@
 // geometry.js - Geometry utilities
 import { state } from './state.js';
-import { registry } from './Registry.js';
 import { CONFIG } from './config.js';
 
 /**

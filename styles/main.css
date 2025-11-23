@@ -1,5 +1,7 @@
+/* src/styles/main.css */
 :root {
-    --baltic-blue: #34639E; --blue-energy: #518fdb; --lavender: #d3e3fc;
+    --baltic-blue: #34639E; --blue-energy: #518fdb;
+    --lavender: #d3e3fc;
     --alice-blue: #E6EFFE; --platinum: #f8fbff; --pale-slate: #bfc4c9; 
     --dim-gray: #606265; --white: #ffffff; --danger: #dc3545; --black: #000000;
 }
@@ -28,6 +30,11 @@ body { width: 100%; height: 100vh; overflow: hidden; font-family: sans-serif; }
 .node-body { fill: var(--alice-blue); stroke: var(--dim-gray); stroke-width: 1px; cursor: grab; transition: stroke 0.15s; }
 .node:hover .node-body { stroke: var(--baltic-blue); stroke-width: 2px; }
 .node.selected .node-body { stroke: var(--baltic-blue); stroke-width: 3px; filter: drop-shadow(0 0 8px rgba(52,99,158,0.4)); }
+
+/* REQUESTED: Specific classes for Labels */
+.node-label { font-size: 14px; font-weight: bold; fill: var(--baltic-blue); pointer-events: none; }
+.node-sublabel { font-size: 11px; font-weight: normal; fill: var(--dim-gray); pointer-events: none; }
+
 .handler-body { fill: var(--alice-blue); stroke: var(--blue-energy); stroke-width: 1px; }
 .handler-connector { fill: var(--alice-blue); stroke: var(--blue-energy); stroke-width: 2px; }
 .handler.source { fill: var(--alice-blue); stroke: var(--dim-gray); }
@@ -58,14 +65,4 @@ body { width: 100%; height: 100vh; overflow: hidden; font-family: sans-serif; }
 .menu-item-bg { fill: transparent; }
 .menu-item:hover .menu-item-bg { fill: var(--alice-blue); }
 
-/* INLINE EDITOR */
-.inline-editor-input {
-    position: fixed;
-    z-index: 9999;
-    border: 1px solid var(--baltic-blue);
-    background: white;
-    padding: 0 4px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-    border-radius: 4px;
-    outline: none;
-}
+.inline-editor-input { position: fixed; z-index: 9999; border: 1px solid var(--baltic-blue); background: white; padding: 0 4px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); border-radius: 4px; outline: none; }

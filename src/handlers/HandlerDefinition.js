@@ -4,7 +4,7 @@
 export class HandlerDefinition {
     constructor() {
         this.type = 'base';
-        this.hideLabel = true;
+        this.label = '';
     }
 
     getDimension() {

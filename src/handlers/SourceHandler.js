@@ -31,8 +31,7 @@ export class SourceHandlerDefinition extends HandlerDefinition {
         selection.each(function(d) {
             const group = d3.select(this);
             group.selectAll(".handler-label-group").remove(); 
-            // Check "Hide" flag
-            if (!d.label || (d.hideLabel !== false)) return;
+            if (!d.label || d.label === '') return;
 
             const labelG = group.append("g")
                 .attr("class", "handler-label-group")

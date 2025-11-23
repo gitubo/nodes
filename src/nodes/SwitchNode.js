@@ -15,7 +15,7 @@ export class SwitchNodeDefinition extends NodeDefinition {
         this.type = 'switch'; // Renamed identifier
         this.width = 120;
         this.height = 60;
-        this.targetHandlers = [{ type: 'target', label: 'input', offset_x: 0, offset_y: 30 }];
+        this.targetHandlers = [{ type: 'target', label: '', offset_x: 0, offset_y: 30 }];
         this.sourceHandlers = [];
         
         // Initialize default handlers
@@ -25,8 +25,7 @@ export class SwitchNodeDefinition extends NodeDefinition {
             this.sourceHandlers.push({
                 type: 'source', label: label, 
                 offset_x: this.width, offset_y: offset, 
-                labelPosition: 'left', labelMargin: 15,
-                hideLabel: false
+                labelPosition: 'left', labelMargin: 15
             });
         });
     }

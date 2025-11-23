@@ -1,4 +1,4 @@
-// src/EventBus.js - Central event handling
+// src/EventBus.js
 class EventBus {
     constructor() {
         this.listeners = {};
@@ -17,6 +17,9 @@ class EventBus {
     }
 
     emit(event, data) {
+        // REQUESTED: Log every event
+        console.log(`[EventBus] ${event}`, data);
+
         if (!this.listeners[event]) return;
         this.listeners[event].forEach(callback => callback(data));
     }
