@@ -1,3 +1,5 @@
+// src/AddNodeHelper.js
+
 import { registry } from './Registry.js';
 import { store } from './state.js';
 import { eventBus } from './EventBus.js';
@@ -7,7 +9,7 @@ const HELPER_CONFIG = {
     linkLength: 40, 
     plusSize: 12,
     plusStrokeWidth: 2, 
-    hoverScale: 1.1, // CHANGED: Scale to 1.1
+    hoverScale: 1.1, 
     menuItemHeight: 36, 
     menuWidth: 180
 };
@@ -30,10 +32,10 @@ export function renderAddNodeHelpers(viewport) {
             }
         });
     });
-    
+
     let helperLayer = viewport.select("g.helper-layer");
     if (helperLayer.empty()) helperLayer = viewport.append("g").attr("class", "helper-layer");
-    
+
     helperLayer.selectAll("g.add-node-helper")
         .data(helpers, d => d.handlerId)
         .join(
@@ -51,24 +53,24 @@ export function renderAddNodeHelpers(viewport) {
 function renderHelper(group) {
     const cfg = HELPER_CONFIG;
     const data = group.datum();
-    
-    // Link Line (Dashed via CSS .helper-link)
+
+    // Link Line
     group.append("line").attr("class", "helper-link")
         .attr("x1", 0).attr("y1", 0).attr("x2", cfg.linkLength).attr("y2", 0);
-    
+
     const btn = group.append("g").attr("class", "helper-button")
         .attr("transform", `translate(${cfg.linkLength}, 0)`);
-    
+
     // Box
     btn.append("rect").attr("class", "helper-box")
         .attr("x", -cfg.size/2).attr("y", -cfg.size/2)
         .attr("width", cfg.size).attr("height", cfg.size).attr("rx", 4);
-        
-    // Plus Sign - Ensure it's on top and styling is correct
+
+    // Plus Sign
     btn.append("path").attr("class", "helper-plus")
         .attr("d", "M -6 0 L 6 0 M 0 -6 L 0 6")
         .attr("stroke-width", cfg.plusStrokeWidth);
-    
+
     // Interactions
     btn.on("mouseenter", function() {
             d3.select(this).transition().duration(150)
@@ -107,17 +109,17 @@ export function showNodeTypeMenu(position, filterFn, onSelect) {
             types.push({ type, label: type.charAt(0).toUpperCase() + type.slice(1) });
         }
     });
-    
+
     if (types.length === 0) return;
     
     const menu = d3.select("svg").append("g").attr("class", "node-type-menu")
         .attr("transform", `translate(${position.x + 10}, ${position.y})`);
-        
+
     const h = types.length * HELPER_CONFIG.menuItemHeight;
     
     menu.append("rect").attr("class", "menu-background")
         .attr("width", HELPER_CONFIG.menuWidth).attr("height", h).attr("rx", 6);
-        
+
     types.forEach((t, i) => {
         const g = menu.append("g").attr("class", "menu-item")
             .attr("transform", `translate(0, ${i * HELPER_CONFIG.menuItemHeight})`)
@@ -136,11 +138,10 @@ export function showNodeTypeMenu(position, filterFn, onSelect) {
         g.on("mouseenter", function() { d3.select(this).select("rect").classed("menu-item-hover", true); });
         g.on("mouseleave", function() { d3.select(this).select("rect").classed("menu-item-hover", false); });
     });
-    
+
     d3.select("svg").on("click.menu", () => d3.selectAll(".node-type-menu").remove());
 }
 
-// INTERNAL: Not exported, triggered by EventBus
 function updateAddNodeHelpers() {
     const viewport = d3.select("g.viewport");
     const helperLayer = viewport.select("g.helper-layer");
@@ -161,4 +162,7 @@ function updateAddNodeHelpers() {
     });
 }
 
+// Update on end of drag (snap)
 eventBus.on('NODE_MOVED', updateAddNodeHelpers);
+// FIX: Update during drag (smooth follow)
+eventBus.on('NODE_DRAGGED', updateAddNodeHelpers);

@@ -18,10 +18,16 @@ export class NodeRenderer {
              const currentSelection = d3.select(this);
              const definition = registry.getNodeDefinition(d.type);
              if (!definition) return;
+             
+             // Remove existing body to prevent duplicates during updates
              currentSelection.selectAll("path.node-body").remove();
+             
              currentSelection.append("path")
                  .attr("class", definition.getBodyClass())
-                 .attr("d", definition.getShapePath());
+                 .attr("d", definition.getShapePath())
+                 // FIX: Lower the body to the bottom of the SVG group stack
+                 // This ensures it renders BEHIND handlers and labels
+                 .lower(); 
         });
     }
 
@@ -33,7 +39,7 @@ export class NodeRenderer {
             let nodeHeight = d.height || 0;
 
             if (definition && typeof definition.getDimensions === 'function') {
-                const dims = definition.getDimensions(d); 
+                 const dims = definition.getDimensions(d); 
                 nodeWidth = dims.width;
                 nodeHeight = dims.height;
             }
@@ -48,7 +54,6 @@ export class NodeRenderer {
                     .attr("class", "node-label") 
                     .attr("text-anchor", "middle");
 
-                // REQUESTED: Inline editing for Node Label
                 entered.merge(labelJoin)
                     .attr("x", nodeWidth / 2)
                     .attr("y", yOffset)
@@ -60,11 +65,10 @@ export class NodeRenderer {
                             eventBus.emit('RENDER_REQUESTED');
                         });
                     });
-                
                 labelJoin.exit().remove();
                 yOffset += DIMENSIONS.sublabel_margin;
             }
-            // ... sublabel rendering (similar) ...
+            
              if (d.sublabel) {
                 const sublabelJoin = currentSelection.selectAll("text.node-sublabel").data([d]);
                 sublabelJoin.enter()
@@ -91,18 +95,18 @@ export class NodeRenderer {
                         const def = registry.getHandlerDefinition(h.type);
                         if(def) def.render(d3.select(this));
                     });
-                    return g;
+                    // FIX: Ensure handlers sit above the body
+                    return g.raise();
                 },
                 update => {
                     update.attr("transform", d => `translate(${d.offset_x||0}, ${d.offset_y||0})`);
-                    // Re-render internal handler content to ensure labels update if changed
+                    
                     update.each(function(h) {
                          const def = registry.getHandlerDefinition(h.type);
-                         // Clear old content to prevent duplicates if render is additive
                          d3.select(this).selectAll("*").remove();
                          if(def) def.render(d3.select(this));
                     });
-                    return update;
+                    return update.raise();
                 },
                 exit => exit.remove()
             );
@@ -110,19 +114,20 @@ export class NodeRenderer {
 
     setupDrag(selection) {
         let initialPos = { x: 0, y: 0 };
-
         const dragBehavior = d3.drag()
             .on("start", function(event, d) {
                 d3.select(this).raise().classed("dragging", true);
-                // Capture initial position
                 initialPos = { x: d.x, y: d.y };
             })
             .on("drag", function(event, d) {
                 d.x = event.x;
                 d.y = event.y;
                 d3.select(this).attr("transform", `translate(${d.x}, ${d.y})`);
-                // Visual update only, no logical event yet
+                
                 updateLinksOnly(); 
+                
+                // FIX: Emit event during drag to update helpers in real-time
+                eventBus.emit('NODE_DRAGGED', d);
             })
             .on("end", function(event, d) {
                 d3.select(this).classed("dragging", false);
@@ -130,15 +135,12 @@ export class NodeRenderer {
                 const snappedX = snapToGrid(d.x);
                 const snappedY = snapToGrid(d.y);
                 
-                // REQUESTED: Remove transition to fix "lag" with helpers.
-                // Immediate update provides snappier feel.
                 d.x = snappedX; 
                 d.y = snappedY;
                 d3.select(this).attr("transform", `translate(${d.x}, ${d.y})`);
                 
                 updateLinksOnly();
                 
-                // REQUESTED: Event only on drop, with initial and final pos
                 eventBus.emit('NODE_MOVED', {
                     node: d,
                     initialPosition: initialPos,
@@ -150,16 +152,18 @@ export class NodeRenderer {
     }
     
     render(selection) {
-        this.renderBody(selection);
-        this.renderHandlers(selection);
-        this.renderLabels(selection);
+        // FIX: Explicit Render Order: Body -> Labels -> Handlers
+        this.renderBody(selection);     // Bottom layer (due to .lower())
+        this.renderLabels(selection);   // Middle layer
+        this.renderHandlers(selection); // Top layer (due to .raise() or append order)
         this.setupDrag(selection);
         setupNodeContextMenu(selection);
     }
     
     update(selection) {
+        // FIX: Explicit Update Order
         this.renderBody(selection);
-        this.renderHandlers(selection);
         this.renderLabels(selection);
+        this.renderHandlers(selection);
     }
 }
