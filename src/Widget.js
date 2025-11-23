@@ -1,454 +1,211 @@
-// DAGWidget.js - Widget API for embedding and external control
-import { CONFIG } from './config.js';
-import { initializeState, state, serializeState, deserializeState, addNode, removeNode } from './state.js';
-import { render } from './render.js';
+// src/Widget.js
+import { store } from './state.js';
+import { render, initRenderer } from './render.js';
 import { Grid } from './Grid.js';
+import { eventBus } from './EventBus.js';
+import { CONFIG } from './config.js';
+import { uiController } from './UIController.js';
 
-/**
- * DAGWidget - Embeddable DAG Editor Widget
- * 
- * Usage:
- *   const widget = new DAGWidget('#container', {
- *     width: '100%',
- *     height: '600px',
- *     onNodeSelect: (node) => { ... },
- *     onNodeChange: (node, property, value) => { ... }
- *   });
- */
 export class DAGWidget {
-    constructor(containerSelector, options = {}) {
+    constructor(containerSelector, config = {}) {
         this.container = typeof containerSelector === 'string' 
-            ? document.querySelector(containerSelector)
+            ? document.querySelector(containerSelector) 
             : containerSelector;
-        
-        if (!this.container) {
-            throw new Error(`Container not found: ${containerSelector}`);
-        }
-        
-        // Configuration
-        this.options = {
-            width: options.width || '100%',
-            height: options.height || '600px',
-            backgroundColor: options.backgroundColor || CONFIG.canvas.backgroundColor,
-            showGrid: options.showGrid !== undefined ? options.showGrid : true,
-            snapToGrid: options.snapToGrid !== undefined ? options.snapToGrid : true,
-            enableZoom: options.enableZoom !== undefined ? options.enableZoom : true,
-            minZoom: options.minZoom || CONFIG.zoom.min,
-            maxZoom: options.maxZoom || CONFIG.zoom.max,
-            initialData: options.initialData || null,
-            ...options
+
+        if (!this.container) throw new Error(`Container ${containerSelector} not found`);
+
+        // Configuration Merge
+        this.config = {
+            width: '100%',
+            height: '100%',
+            ...config
         };
-        
-        // Callbacks
-        this.callbacks = {
-            onNodeSelect: options.onNodeSelect || null,
-            onNodeDeselect: options.onNodeDeselect || null,
-            onNodeChange: options.onNodeChange || null,
-            onNodeCreate: options.onNodeCreate || null,
-            onNodeDelete: options.onNodeDelete || null,
-            onLinkCreate: options.onLinkCreate || null,
-            onLinkDelete: options.onLinkDelete || null,
-            onCanvasClick: options.onCanvasClick || null
-        };
-        
-        // Internal state
-        this.svg = null;
-        this.viewport = null;
+
+        this.subscribers = new Set();
         this.zoomBehavior = null;
-        this.isInitialized = false;
-        
-        // Initialize
-        this.initialize();
+
+        this._initDOM();
+        this._initSystem();
+        this._setupEventBridge();
     }
-    
+
+    // =================================================================
+    //  PUBLIC API: Message Bridge
+    // =================================================================
+
     /**
-     * Initialize the widget
+     * INBOUND: Single entry point for all commands.
+     * @param {string} commandName - The action to perform (e.g., 'ADD_NODE')
+     * @param {any} payload - Data required for the command
      */
-    initialize() {
-        console.log('[DAGWidget] Initializing...');
-        
-        // Set container styles
-        this.container.style.position = 'relative';
-        this.container.style.width = this.options.width;
-        this.container.style.height = this.options.height;
+    dispatch(commandName, payload = {}) {
+        // console.log(`[Bridge-In] ${commandName}`, payload); // Optional Debug
+
+        switch (commandName) {
+            // --- Node Commands ---
+            case 'ADD_NODE':
+                store.addNode(payload.type || 'task', payload.x || 0, payload.y || 0, payload.data || {});
+                break;
+            case 'REMOVE_NODE':
+                if (payload.id) store.removeNode(payload.id);
+                break;
+            case 'UPDATE_NODE':
+                if (payload.id) store.updateNode(payload.id, payload);
+                break;
+
+            // --- Link Commands ---
+            case 'ADD_LINK':
+                if (payload.source && payload.target) store.addLink(payload.source, payload.target);
+                break;
+            case 'REMOVE_LINK':
+                if (payload.id) store.removeLink(payload.id);
+                break;
+            case 'UPDATE_LINK':
+                if (payload.id) store.updateLink(payload.id, payload);
+                break;
+
+            // --- Selection Commands ---
+            case 'SELECT':
+                if (payload.type && payload.id) store.selectObject(payload.type, { id: payload.id });
+                break;
+            case 'DESELECT':
+                store.deselect();
+                break;
+
+            // --- Viewport Commands ---
+            case 'ZOOM_IN':
+                this._zoomCall(1.3);
+                break;
+            case 'ZOOM_OUT':
+                this._zoomCall(0.7);
+                break;
+            case 'ZOOM_RESET':
+                this._zoomReset();
+                break;
+            case 'ZOOM_FIT':
+                uiController.fitToScreen(); // Reusing existing logic
+                break;
+
+            // --- IO Commands ---
+            case 'EXPORT':
+                // Asynchronously emits EXPORT_READY via the bridge
+                const data = store.serialize();
+                this._notifySubscribers('EXPORT_READY', data);
+                break;
+            case 'IMPORT':
+                if (payload) store.deserialize(payload);
+                break;
+
+            default:
+                console.warn(`[DAGWidget] Unknown command: ${commandName}`);
+        }
+    }
+
+    /**
+     * OUTBOUND: Single exit point for all events.
+     * @param {Function} callback - (eventType, payload) => void
+     * @returns {Function} Unsubscribe function
+     */
+    subscribe(callback) {
+        this.subscribers.add(callback);
+        // Return unsubscribe function
+        return () => this.subscribers.delete(callback);
+    }
+
+    // =================================================================
+    //  INTERNAL: System Setup
+    // =================================================================
+
+    _initDOM() {
+        this.container.innerHTML = '';
+        this.container.style.width = this.config.width;
+        this.container.style.height = this.config.height;
         this.container.style.overflow = 'hidden';
-        
-        // Initialize state
-        if (this.options.initialData) {
-            deserializeState(this.options.initialData);
-        } else {
-            initializeState();
-        }
-        
-        // Setup selection callback
-        state.ui.onSelectionChange = (selectedObject) => {
-            if (selectedObject && selectedObject.type === 'node') {
-                if (this.callbacks.onNodeSelect) {
-                    this.callbacks.onNodeSelect(selectedObject.data);
-                }
-            } else {
-                if (this.callbacks.onNodeDeselect) {
-                    this.callbacks.onNodeDeselect();
-                }
-            }
-        };
-        
-        // Create SVG
-        this.createSVG();
-        
-        // Setup zoom
-        if (this.options.enableZoom) {
-            this.setupZoom();
-        }
-        
-        // Initial render
-        render();
-        
-        this.isInitialized = true;
-        console.log('[DAGWidget] ✓ Initialized');
-        
-        return this;
-    }
-    
-    /**
-     * Create SVG canvas
-     */
-    createSVG() {
-        this.svg = d3.select(this.container)
-            .append("svg")
+        this.container.style.position = 'relative';
+        this.container.style.backgroundColor = CONFIG.canvas.backgroundColor;
+
+        // Create SVG structure
+        const svg = d3.select(this.container).append("svg")
             .attr("width", "100%")
-            .attr("height", "100%")
-            .style("background-color", this.options.backgroundColor);
-        
-        // Defs
-        this.svg.append("defs").html(`
+            .attr("height", "100%");
+
+        svg.append("defs").html(`
             <linearGradient id="node-gradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                <stop offset="0%" stop-color="#ffffff" />
-                <stop offset="100%" stop-color="#e8e8e8" />
+                <stop offset="0%" stop-color="#fff"/><stop offset="100%" stop-color="#e8e8e8"/>
             </linearGradient>
         `);
-        
-        // Viewport with layers
-        this.viewport = this.svg.append("g").attr("class", "viewport");
-        
-        // Grid layer
-        if (this.options.showGrid) {
-            const gridLayer = this.viewport.append("g").attr("class", "grid-layer");
-            Grid.render(gridLayer, CONFIG.canvas.width, CONFIG.canvas.height);
-        }
-        
-        // Link layer
-        this.viewport.append("g").attr("class", "link-layer");
-        
-        // Node layer
-        this.viewport.append("g").attr("class", "node-layer");
-        
-        // Canvas click handler
-        this.svg.on("click", (event) => {
-            if (event.target === this.svg.node()) {
-                state.ui.selectedObject = null;
-                render();
-                
-                if (this.callbacks.onCanvasClick) {
-                    this.callbacks.onCanvasClick(event);
-                }
-            }
-        });
-    }
-    
-    /**
-     * Setup zoom and pan
-     */
-    setupZoom() {
-        const zoomed = ({ transform }) => {
-            this.viewport.attr("transform", transform);
-            state.transform = transform;
-        };
-        
+
+        const viewport = svg.append("g").attr("class", "viewport");
+        viewport.append("g").attr("class", "grid-layer");
+        viewport.append("g").attr("class", "helper-layer");
+        viewport.append("g").attr("class", "link-layer");
+        viewport.append("g").attr("class", "label-layer");
+        viewport.append("g").attr("class", "node-layer");
+
+        Grid.render(viewport.select(".grid-layer"), CONFIG.canvas.width, CONFIG.canvas.height);
+
+        // Setup Zoom
         this.zoomBehavior = d3.zoom()
-            .scaleExtent([this.options.minZoom, this.options.maxZoom])
-            .on("zoom", zoomed);
+            .scaleExtent([CONFIG.zoom.min, CONFIG.zoom.max])
+            .on("zoom", ({ transform }) => {
+                viewport.attr("transform", transform);
+                store.transform = transform;
+            });
         
-        this.svg.call(this.zoomBehavior);
-    }
-    
-    // ========== PUBLIC API ==========
-    
-    /**
-     * Add a new node
-     */
-    addNode(type, x, y, additionalData = {}) {
-        const node = addNode(type, x, y);
-        if (node) {
-            Object.assign(node, additionalData);
-            render();
-            
-            if (this.callbacks.onNodeCreate) {
-                this.callbacks.onNodeCreate(node);
-            }
-        }
-        return node;
-    }
-    
-    /**
-     * Remove a node by ID
-     */
-    removeNode(nodeId) {
-        const node = state.nodes.find(n => n.id === nodeId);
-        if (node) {
-            removeNode(nodeId);
-            render();
-            
-            if (this.callbacks.onNodeDelete) {
-                this.callbacks.onNodeDelete(node);
-            }
-        }
-    }
-    
-    /**
-     * Update node properties
-     */
-    updateNode(nodeId, properties) {
-        const node = state.nodes.find(n => n.id === nodeId);
-        if (node) {
-            Object.assign(node, properties);
-            render();
-            
-            if (this.callbacks.onNodeChange) {
-                Object.keys(properties).forEach(key => {
-                    this.callbacks.onNodeChange(node, key, properties[key]);
-                });
-            }
-        }
-        return node;
-    }
-    
-    /**
-     * Get node by ID
-     */
-    getNode(nodeId) {
-        return state.nodes.find(n => n.id === nodeId);
-    }
-    
-    /**
-     * Get all nodes
-     */
-    getNodes() {
-        return [...state.nodes];
-    }
-    
-    /**
-     * Get all links
-     */
-    getLinks() {
-        return [...state.links];
-    }
-    
-    /**
-     * Select a node programmatically
-     */
-    selectNode(nodeId) {
-        const node = state.nodes.find(n => n.id === nodeId);
-        if (node) {
-            state.ui.selectedObject = { type: 'node', data: node };
-            render();
-            
-            if (this.callbacks.onNodeSelect) {
-                this.callbacks.onNodeSelect(node);
-            }
-        }
-    }
-    
-    /**
-     * Deselect current selection
-     */
-    deselectAll() {
-        state.ui.selectedObject = null;
-        render();
-        
-        if (this.callbacks.onNodeDeselect) {
-            this.callbacks.onNodeDeselect();
-        }
-    }
-    
-    /**
-     * Get current selection
-     */
-    getSelection() {
-        return state.ui.selectedObject;
-    }
-    
-    /**
-     * Zoom controls
-     */
-    zoomIn() {
-        if (this.zoomBehavior) {
-            this.svg.transition().duration(300).call(
-                this.zoomBehavior.scaleBy, 1.3
-            );
-        }
-    }
-    
-    zoomOut() {
-        if (this.zoomBehavior) {
-            this.svg.transition().duration(300).call(
-                this.zoomBehavior.scaleBy, 0.7
-            );
-        }
-    }
-    
-    zoomReset() {
-        if (this.zoomBehavior) {
-            this.svg.transition().duration(300).call(
-                this.zoomBehavior.transform,
-                d3.zoomIdentity
-            );
-        }
-    }
-    
-    zoomTo(scale, x = 0, y = 0) {
-        if (this.zoomBehavior) {
-            const transform = d3.zoomIdentity.translate(x, y).scale(scale);
-            this.svg.transition().duration(300).call(
-                this.zoomBehavior.transform,
-                transform
-            );
-        }
-    }
-    
-    /**
-     * Pan to specific coordinates
-     */
-    panTo(x, y, duration = 300) {
-        if (this.zoomBehavior) {
-            const currentTransform = state.transform || d3.zoomIdentity;
-            const newTransform = d3.zoomIdentity
-                .translate(-x * currentTransform.k, -y * currentTransform.k)
-                .scale(currentTransform.k);
-            
-            this.svg.transition().duration(duration).call(
-                this.zoomBehavior.transform,
-                newTransform
-            );
-        }
-    }
-    
-    /**
-     * Fit content to view
-     */
-    fitToView(padding = 50) {
-        if (state.nodes.length === 0) return;
-        
-        // Calculate bounding box
-        let minX = Infinity, minY = Infinity;
-        let maxX = -Infinity, maxY = -Infinity;
-        
-        state.nodes.forEach(node => {
-            const w = node.width || CONFIG.node.width;
-            const h = node.height || CONFIG.node.height;
-            minX = Math.min(minX, node.x);
-            minY = Math.min(minY, node.y);
-            maxX = Math.max(maxX, node.x + w);
-            maxY = Math.max(maxY, node.y + h);
+        svg.call(this.zoomBehavior);
+        window.zoomBehavior = this.zoomBehavior; // For UIController access
+
+        // Background Click (Deselect)
+        svg.on("click", (e) => {
+            if (e.target === svg.node()) store.deselect();
         });
-        
-        const width = maxX - minX;
-        const height = maxY - minY;
-        const containerRect = this.container.getBoundingClientRect();
-        
-        const scale = Math.min(
-            (containerRect.width - padding * 2) / width,
-            (containerRect.height - padding * 2) / height,
-            this.options.maxZoom
-        );
-        
-        const centerX = (minX + maxX) / 2;
-        const centerY = (minY + maxY) / 2;
-        
-        const x = containerRect.width / 2 - centerX * scale;
-        const y = containerRect.height / 2 - centerY * scale;
-        
-        this.zoomTo(scale, x, y);
+
+        this.svg = svg;
     }
-    
-    /**
-     * Export graph as JSON
-     */
-    exportJSON() {
-        return serializeState();
+
+    _initSystem() {
+        store.initializeWithDefaults(); // Or leave empty if preferred
+        uiController.initialize();
+        initRenderer();
+        render(); // Initial paint
     }
-    
-    /**
-     * Import graph from JSON
-     */
-    importJSON(data) {
-        deserializeState(data);
-        render();
+
+    _setupEventBridge() {
+        // List of internal events to forward to the outside world
+        const internalEvents = [
+            'NODE_CREATED', 
+            'NODE_UPDATED', 
+            'NODE_REMOVED', 
+            'NODE_MOVED',
+            'CONNECTION_CREATED', 
+            'CONNECTION_UPDATED',
+            'CONNECTION_REMOVED',
+            'SELECTION_CHANGED'
+        ];
+
+        internalEvents.forEach(evtName => {
+            eventBus.on(evtName, (payload) => {
+                // Normalize payload if necessary, or pass raw
+                this._notifySubscribers(evtName, payload);
+            });
+        });
     }
-    
-    /**
-     * Clear all nodes and links
-     */
-    clear() {
-        state.nodes = [];
-        state.links = [];
-        state.ui.selectedObject = null;
-        render();
+
+    _notifySubscribers(eventType, payload) {
+        this.subscribers.forEach(fn => fn(eventType, payload));
     }
-    
-    /**
-     * Force re-render
-     */
-    refresh() {
-        render();
-    }
-    
-    /**
-     * Destroy widget and cleanup
-     */
-    destroy() {
-        if (this.svg) {
-            this.svg.remove();
-        }
-        this.container.innerHTML = '';
-        this.isInitialized = false;
-        console.log('[DAGWidget] Destroyed');
-    }
-    
-    /**
-     * Resize widget
-     */
-    resize(width, height) {
-        if (width) {
-            this.container.style.width = width;
-            this.options.width = width;
-        }
-        if (height) {
-            this.container.style.height = height;
-            this.options.height = height;
+
+    // --- Helper Logic ---
+
+    _zoomCall(scaleFactor) {
+        if (this.svg && this.zoomBehavior) {
+            this.svg.transition().duration(300).call(this.zoomBehavior.scaleBy, scaleFactor);
         }
     }
-    
-    /**
-     * Register callback
-     */
-    on(event, callback) {
-        const eventMap = {
-            'nodeSelect': 'onNodeSelect',
-            'nodeDeselect': 'onNodeDeselect',
-            'nodeChange': 'onNodeChange',
-            'nodeCreate': 'onNodeCreate',
-            'nodeDelete': 'onNodeDelete',
-            'linkCreate': 'onLinkCreate',
-            'linkDelete': 'onLinkDelete',
-            'canvasClick': 'onCanvasClick'
-        };
-        
-        const callbackName = eventMap[event];
-        if (callbackName) {
-            this.callbacks[callbackName] = callback;
+
+    _zoomReset() {
+        if (this.svg && this.zoomBehavior) {
+            this.svg.transition().duration(300).call(this.zoomBehavior.transform, d3.zoomIdentity);
         }
-        
-        return this;
     }
 }
