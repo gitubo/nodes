@@ -233,7 +233,6 @@ export class UIController {
             };
             content.appendChild(updBtn);
 
-            // Added Delete Button
             const delBtn = document.createElement('button');
             delBtn.className = 'btn-danger'; 
             delBtn.textContent = 'Delete Node';

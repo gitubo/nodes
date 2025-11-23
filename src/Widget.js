@@ -14,7 +14,6 @@ export class DAGWidget {
 
         if (!this.container) throw new Error(`Container ${containerSelector} not found`);
 
-        // Configuration Merge
         this.config = {
             width: '100%',
             height: '100%',
@@ -29,70 +28,73 @@ export class DAGWidget {
         this._setupEventBridge();
     }
 
-    // =================================================================
-    //  PUBLIC API: Message Bridge
-    // =================================================================
-
     /**
-     * INBOUND: Single entry point for all commands.
-     * @param {string} commandName - The action to perform (e.g., 'ADD_NODE')
-     * @param {any} payload - Data required for the command
+     * INBOUND: Dispatch commands.
+     * Note: Getters will return data synchronously.
      */
     dispatch(commandName, payload = {}) {
-        // console.log(`[Bridge-In] ${commandName}`, payload); // Optional Debug
-
         switch (commandName) {
             // --- Node Commands ---
-            case 'ADD_NODE':
-                store.addNode(payload.type || 'task', payload.x || 0, payload.y || 0, payload.data || {});
-                break;
-            case 'REMOVE_NODE':
+            case 'create_node':
+                return store.addNode(payload.type || 'task', payload.x || 0, payload.y || 0, payload.data || {});
+            
+            case 'delete_node':
                 if (payload.id) store.removeNode(payload.id);
                 break;
-            case 'UPDATE_NODE':
+            
+            case 'update_node':
                 if (payload.id) store.updateNode(payload.id, payload);
                 break;
+            
+            case 'get_node':
+                return payload.id ? store.getNode(payload.id) : null;
 
             // --- Link Commands ---
-            case 'ADD_LINK':
+            case 'create_link':
                 if (payload.source && payload.target) store.addLink(payload.source, payload.target);
                 break;
-            case 'REMOVE_LINK':
+            
+            case 'delete_link':
                 if (payload.id) store.removeLink(payload.id);
                 break;
-            case 'UPDATE_LINK':
+            
+            case 'update_link':
                 if (payload.id) store.updateLink(payload.id, payload);
                 break;
+            
+            case 'get_link':
+                return payload.id ? store.getLink(payload.id) : null;
 
             // --- Selection Commands ---
-            case 'SELECT':
+            case 'select':
                 if (payload.type && payload.id) store.selectObject(payload.type, { id: payload.id });
                 break;
-            case 'DESELECT':
+            
+            case 'deselect':
                 store.deselect();
                 break;
 
             // --- Viewport Commands ---
-            case 'ZOOM_IN':
+            case 'zoom_in':
                 this._zoomCall(1.3);
                 break;
-            case 'ZOOM_OUT':
+            case 'zoom_out':
                 this._zoomCall(0.7);
                 break;
-            case 'ZOOM_RESET':
+            case 'zoom_reset':
                 this._zoomReset();
                 break;
-            case 'ZOOM_FIT':
-                uiController.fitToScreen(); // Reusing existing logic
+            case 'zoom_fit':
+                uiController.fitToScreen();
                 break;
 
             // --- IO Commands ---
-            case 'EXPORT':
-                // Asynchronously emits EXPORT_READY via the bridge
+            case 'export':
                 const data = store.serialize();
                 this._notifySubscribers('EXPORT_READY', data);
-                break;
-            case 'IMPORT':
+                return data; // Also return synchronously
+            
+            case 'import':
                 if (payload) store.deserialize(payload);
                 break;
 
@@ -101,20 +103,10 @@ export class DAGWidget {
         }
     }
 
-    /**
-     * OUTBOUND: Single exit point for all events.
-     * @param {Function} callback - (eventType, payload) => void
-     * @returns {Function} Unsubscribe function
-     */
     subscribe(callback) {
         this.subscribers.add(callback);
-        // Return unsubscribe function
         return () => this.subscribers.delete(callback);
     }
-
-    // =================================================================
-    //  INTERNAL: System Setup
-    // =================================================================
 
     _initDOM() {
         this.container.innerHTML = '';
@@ -124,7 +116,6 @@ export class DAGWidget {
         this.container.style.position = 'relative';
         this.container.style.backgroundColor = CONFIG.canvas.backgroundColor;
 
-        // Create SVG structure
         const svg = d3.select(this.container).append("svg")
             .attr("width", "100%")
             .attr("height", "100%");
@@ -144,7 +135,6 @@ export class DAGWidget {
 
         Grid.render(viewport.select(".grid-layer"), CONFIG.canvas.width, CONFIG.canvas.height);
 
-        // Setup Zoom
         this.zoomBehavior = d3.zoom()
             .scaleExtent([CONFIG.zoom.min, CONFIG.zoom.max])
             .on("zoom", ({ transform }) => {
@@ -153,9 +143,8 @@ export class DAGWidget {
             });
         
         svg.call(this.zoomBehavior);
-        window.zoomBehavior = this.zoomBehavior; // For UIController access
+        window.zoomBehavior = this.zoomBehavior;
 
-        // Background Click (Deselect)
         svg.on("click", (e) => {
             if (e.target === svg.node()) store.deselect();
         });
@@ -164,28 +153,21 @@ export class DAGWidget {
     }
 
     _initSystem() {
-        store.initializeWithDefaults(); // Or leave empty if preferred
+        store.initializeWithDefaults(); 
         uiController.initialize();
         initRenderer();
-        render(); // Initial paint
+        render(); 
     }
 
     _setupEventBridge() {
-        // List of internal events to forward to the outside world
         const internalEvents = [
-            'NODE_CREATED', 
-            'NODE_UPDATED', 
-            'NODE_REMOVED', 
-            'NODE_MOVED',
-            'CONNECTION_CREATED', 
-            'CONNECTION_UPDATED',
-            'CONNECTION_REMOVED',
-            'SELECTION_CHANGED'
+            'NODE_CREATED', 'NODE_UPDATED', 'NODE_REMOVED', 'NODE_MOVED',
+            'CONNECTION_CREATED', 'CONNECTION_UPDATED', 'CONNECTION_REMOVED',
+            'SELECTION_CHANGED', 'DESELECTION'
         ];
 
         internalEvents.forEach(evtName => {
             eventBus.on(evtName, (payload) => {
-                // Normalize payload if necessary, or pass raw
                 this._notifySubscribers(evtName, payload);
             });
         });
@@ -194,8 +176,6 @@ export class DAGWidget {
     _notifySubscribers(eventType, payload) {
         this.subscribers.forEach(fn => fn(eventType, payload));
     }
-
-    // --- Helper Logic ---
 
     _zoomCall(scaleFactor) {
         if (this.svg && this.zoomBehavior) {

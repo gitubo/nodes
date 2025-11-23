@@ -105,7 +105,21 @@ class Store {
             target: targetId
         };
         this.state.links.push(link);
-        eventBus.emit('CONNECTION_CREATED', { id: link.id });
+        const sourceNode = this.state.nodes.find(n => n.handlers.some(h => h.id === sourceId));
+        const targetNode = this.state.nodes.find(n => n.handlers.some(h => h.id === targetId));
+
+        const eventPayload = {
+            id: link.id,
+            source: {
+                node_id: sourceNode ? sourceNode.id : null,
+                handler_id: sourceId
+            },
+            target: {
+                node_id: targetNode ? targetNode.id : null,
+                handler_id: targetId
+            }
+        };
+        eventBus.emit('CONNECTION_CREATED', eventPayload);
     }
 
     removeLink(linkId) {
@@ -129,13 +143,15 @@ class Store {
     }
 
     deselect() {
-        this.state.ui.selectedObject = null;
-        eventBus.emit('SELECTION_CHANGED', { id: null });
+        if (this.state.ui.selectedObject !== null) {
+            this.state.ui.selectedObject = null;
+            eventBus.emit('DESELECTION'); 
+        }
     }
 
     setGhostLink(ghostData) {
         this.state.ui.ghostLink = ghostData;
-        eventBus.emit('GHOST_LINK_UPDATED', ghostData); 
+        //eventBus.emit('GHOST_LINK_UPDATED', ghostData); 
     }
 
     setDisconnectingLink(link) {
@@ -144,7 +160,7 @@ class Store {
     
     serialize() {
         const exportData = {
-            metadata: { version: "2.3.0", created_at: new Date().toISOString() },
+            metadata: { version: "0.1.0", created_at: new Date().toISOString() },
             nodes: {},
             connections: {}
         };
