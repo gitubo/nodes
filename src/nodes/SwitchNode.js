@@ -15,7 +15,7 @@ export class SwitchNodeDefinition extends NodeDefinition {
         this.type = 'switch'; // Renamed identifier
         this.width = 120;
         this.height = 60;
-        this.targetHandlers = [{ type: 'target', label: '', offset_x: 0, offset_y: 30 }];
+        this.targetHandlers = [{ type: 'target_vertical', label: '', offset_x: 0, offset_y: 30 }];
         this.sourceHandlers = [];
         
         // Initialize default handlers
@@ -31,7 +31,7 @@ export class SwitchNodeDefinition extends NodeDefinition {
     }
     
     getDimensions(d) {
-        const handlers = (Array.isArray(d?.handlers) ? d.handlers : []).filter(h => h.type === 'source');
+        const handlers = (Array.isArray(d?.handlers) ? d.handlers : []).filter(h => h.class === 'source');
         const radius = SourceHandlerDefinition.getDimension().radius + 2;
         const height = DEFINITIONS.sourceSeparator + (DEFINITIONS.sourceSeparator + radius * 2) * handlers.length;
         return { width: 120, height: height };

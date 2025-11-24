@@ -3,23 +3,30 @@ import { CONFIG } from '../config.js';
 import { linkInteractionManager } from '../LinkInteractionManager.js';
 import { store } from '../state.js';
 
-const DIMENSIONS = { width: CONFIG.handler.width, height: CONFIG.handler.height };
-
 export class TargetHandlerDefinition extends HandlerDefinition {
+
+    static DIMENSIONS = {
+        width: CONFIG.handler.width,
+        height: CONFIG.handler.height
+    };
+
     constructor() {
         super();
+        this.role = 'target';
         this.type = 'target';
     }
 
-    static getDimension() { return DIMENSIONS; }
-    
+    static getDimension() { return this.DIMENSIONS; }
+    getRole() { return 'target'; }
+
     render(selection) {
-        const w = DIMENSIONS.width;
-        const h = DIMENSIONS.height;
-        
+        const { width: w, height: h } = this.constructor.DIMENSIONS;
+
         selection.append("rect")
-            .attr("width", w).attr("height", h)
-            .attr("x", -w/2).attr("y", -h/2)
+            .attr("width", w)
+            .attr("height", h)
+            .attr("x", -w/2)
+            .attr("y", -h/2)
             .attr("class", "handler target");
         
         this.setupDrag(selection);

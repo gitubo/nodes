@@ -1,9 +1,12 @@
 import { StartNodeDefinition } from './nodes/StartNode.js';
 import { TaskNodeDefinition } from './nodes/TaskNode.js';
 import { EndNodeDefinition } from './nodes/EndNode.js';
-import { SwitchNodeDefinition } from './nodes/SwitchNode.js'; // Changed from Decision
+import { SwitchNodeDefinition } from './nodes/SwitchNode.js';
+import { ServiceNodeDefinition } from './nodes/ServiceNode.js';
 import { SourceHandlerDefinition } from './handlers/SourceHandler.js';
-import { TargetHandlerDefinition } from './handlers/TargetHandler.js';
+import { TargetVerticalHandlerDefinition } from './handlers/TargetVerticalHandler.js';
+import { TargetHorizontalHandlerDefinition } from './handlers/TargetHorizontalHandler.js';
+import { CallHandlerDefinition } from './handlers/CallHandler.js';
 
 class Registry {
     constructor() {
@@ -23,7 +26,11 @@ export const registry = new Registry();
 registry.registerNode('start', new StartNodeDefinition());
 registry.registerNode('task', new TaskNodeDefinition());
 registry.registerNode('end', new EndNodeDefinition());
-registry.registerNode('switch', new SwitchNodeDefinition()); // Registered as switch
+registry.registerNode('switch', new SwitchNodeDefinition());
+registry.registerNode('service', new ServiceNodeDefinition());
 
 registry.registerHandler('source', new SourceHandlerDefinition());
-registry.registerHandler('target', new TargetHandlerDefinition());
+//registry.registerHandler('target', new TargetHandlerDefinition());
+registry.registerHandler('target_vertical', new TargetVerticalHandlerDefinition());
+registry.registerHandler('target_horizontal', new TargetHorizontalHandlerDefinition());
+registry.registerHandler('call', new CallHandlerDefinition());

@@ -4,13 +4,16 @@
 export class HandlerDefinition {
     constructor() {
         this.type = 'base';
-        this.label = '';
     }
 
-    getDimension() {
+    static getDimension() {
         return {};
     }
     
+    getRole() { 
+        return ''; 
+    }
+
     /**
      * Render the handler visual elements
      * @param {d3.Selection} selection - D3 selection to render into

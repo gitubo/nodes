@@ -10,7 +10,7 @@ export class EndNodeDefinition extends NodeDefinition {
         this.type = 'end';
         this.width = 60;
         this.height = 60;
-        this.handlers = [{ type: 'target', label: 'input', offset_x: 0, offset_y: this.height / 2 }];
+        this.handlers = [{ type: 'target_vertical', label: 'input', offset_x: 0, offset_y: this.height / 2 }];
 
     }
     

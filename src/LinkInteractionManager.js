@@ -54,13 +54,13 @@ class LinkInteractionManager {
             const targetData = d3.select(targetElement).datum();
 
             if (targetData) {
-                 if (!isReversed && targetData.type === 'target') {
+                 if (!isReversed && targetData.role === 'target') {
                      store.addLink(originId, targetData.id);
                  } 
-                 else if (isReversed && targetData.type === 'source') {
+                 else if (isReversed && targetData.role === 'source') {
                      store.addLink(targetData.id, originId);
                  }
-                 else if (disconnecting && targetData.type === 'target') {
+                 else if (disconnecting && targetData.role === 'target') {
                      store.addLink(disconnecting.source, targetData.id);
                  }
             }

@@ -11,7 +11,7 @@ export class TaskNodeDefinition extends NodeDefinition {
         this.width = 120;
         this.height = 60;
         this.handlers = [
-            { type: 'target', label: '', offset_x: 0, offset_y: this.height / 2 },
+            { type: 'target_vertical', label: '', offset_x: 0, offset_y: this.height / 2 },
             { type: 'source', label: '', offset_x: this.width, offset_y: this.height / 2 }
         ];
     }

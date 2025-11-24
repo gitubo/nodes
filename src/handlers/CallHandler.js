@@ -4,31 +4,25 @@ import { linkInteractionManager } from '../LinkInteractionManager.js';
 import { eventBus } from '../EventBus.js';
 import { startInlineEditing } from '../InlineEditor.js';
 
-const DIMENSIONS = { radius: CONFIG.handler.radius };
+const DIMENSIONS = { diamiter: (CONFIG.handler.radius-2)*2 };
 
-export class SourceHandlerDefinition extends HandlerDefinition {
+export class CallHandlerDefinition extends HandlerDefinition {
     constructor() {
         super();
-        this.role = 'source';
-        this.type = 'source';
+        this.type = 'call';
     }
 
     static getDimension() { return DIMENSIONS; }
-    getRole() { return 'source'; }
-
     
     render(selection) {
-        const radius = DIMENSIONS.radius;
-        const cx = 0;
-        const cy = 0;
-
         // Handler Circle
-        selection.append("circle")
-            .attr("class", "handler source")
-            .attr("cx", cx).attr("cy", cy).attr("r", radius)
-            .on("contextmenu", (event, d) => {
-                import('../ContextMenu.js').then(m => m.showHandlerContextMenu(event, d));
-            });
+        selection.append("rect")
+            .attr("width", DIMENSIONS.diamiter)
+            .attr("height", DIMENSIONS.diamiter)
+            .attr("x", -DIMENSIONS.diamiter/2)
+            .attr("y", -DIMENSIONS.diamiter/2)
+            .attr("transform", "rotate(45)")
+            .attr("class", "handler target");
 
         // Render Label
         selection.each(function(d) {
@@ -46,7 +40,7 @@ export class SourceHandlerDefinition extends HandlerDefinition {
             // or default to 'right' if not specified.
             const position = d.labelPosition || 'left'; 
             const margin = d.labelMargin !== undefined ? d.labelMargin : CONFIG.handler.label.margin;
-            const r = radius;
+            const r = DIMENSIONS.diamiter/2;
             
             let labelAnchorX = 0; // x-coordinate relative to handler center (cx=0)
             let labelAnchorY = 0; // y-coordinate relative to handler center (cy=0)

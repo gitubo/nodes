@@ -12,7 +12,11 @@ export function renderAddNodeHelpers(viewport) {
     const helpers = [];
     store.nodes.forEach(node => {
         node.handlers.forEach(handler => {
-            if (handler.type === 'source') {
+            const def = registry.getHandlerDefinition(handler.type);
+            if (def && typeof def.getRole === 'function') {
+                handler.role = def.getRole();
+            }
+            if (handler.role === 'source') {
                 const isConnected = store.links.some(link => String(link.source) === String(handler.id));
                 if (!isConnected) {
                     const offsetX = handler.offset_x || 0;
@@ -82,11 +86,11 @@ function renderHelper(group) {
         .on("click", function(event) {
             event.stopPropagation();
             const [mx, my] = d3.pointer(event, d3.select("svg").node());
-            const filter = (def) => def.getHandlers().some(h => h.type === 'target');
+            const filter = (def) => def.getHandlers().some(h => h.role === 'target');
             showNodeTypeMenu({x: mx, y: my}, filter, (type) => {
                 const newNode = store.addNode(type, data.x + 150, data.y - 30);
                 if (newNode) {
-                    const targetHandler = newNode.handlers.find(h => h.type === 'target');
+                    const targetHandler = newNode.handlers.find(h => h.role === 'target');
                     if (targetHandler) {
                         store.addLink(data.handlerId, targetHandler.id);
                     }
