@@ -32,17 +32,23 @@ function showContextMenu(event, type, data) {
     const actions = [];
     
     if (type === 'link') {
-        // REQUESTED: Add Label OR Remove Label logic
         if (data.label) {
-             actions.push({
+            actions.push({
                 icon: 'labelDelete', label: 'Remove Label',
-                callback: () => { delete data.label; store.selectObject(null, null); }
+                // FIX: Use store.updateLink to trigger event/render, pass undefined to remove
+                callback: () => { 
+                    store.updateLink(data.id, { label: undefined }); 
+                    store.selectObject(null, null); 
+                }
             });
         } else {
-             actions.push({
+            actions.push({
                 icon: 'labelAdd', label: 'Add Label',
+                // FIX: Use store.updateLink to trigger event/render
                 callback: () => {
-                    data.label = { text: 'Label', offset: 0.5, offsetX: 0, offsetY: 0 };
+                    store.updateLink(data.id, { 
+                        label: { text: 'Label', offset: 0.5, offsetX: 0, offsetY: 0 } 
+                    });
                     store.selectObject(null, null);
                 }
             });
@@ -82,7 +88,14 @@ function showContextMenu(event, type, data) {
         btn.className = `icon-btn ${a.variant || ''}`;
         btn.innerHTML = getIcon(a.icon, 20) || getIcon('settings', 20);
         btn.title = a.label;
-        btn.onclick = (e) => { e.stopPropagation(); a.callback(); menu.remove(); };
+        btn.onclick = (e) => { 
+            e.stopPropagation(); 
+            try {
+                a.callback(); 
+            } finally {
+                menu.remove();
+            }
+        };
         menu.appendChild(btn);
     });
     document.body.appendChild(menu);

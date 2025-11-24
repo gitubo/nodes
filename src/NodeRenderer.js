@@ -125,10 +125,11 @@ export class NodeRenderer {
                 
                 // 3. Update AddNodeHelpers (Direct Sync)
                 // Select all helpers associated with this node ID
-                const helpers = d3.selectAll(`.add-node-helper[data-node-id="${d.id}"]`);
+                const helpers = d3.selectAll(`.add-node-helper[data-node-id='${d.id}']`);
+    
                 helpers.attr("transform", function() {
                     // Use d3.select(this).datum() to get the specific helper's data (relX/relY)
-                    const hData = d3.select(this).datum(); 
+                    const hData = d3.select(this).datum();
                     if (!hData) return "";
                     // Calculate new global position: Node New Pos + Helper Relative Offset
                     return `translate(${d.x + hData.relX}, ${d.y + hData.relY})`;

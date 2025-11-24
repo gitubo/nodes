@@ -2,7 +2,8 @@
 import { store } from './state.js';
 import { eventBus } from './EventBus.js';
 import { getStrokeIcon, getIcon } from './Icons.js';
-import { showNodeTypeMenu } from './AddNodeHelper.js';
+import { showNodeTypeMenu, HELPER_CONFIG } from './AddNodeHelper.js'; 
+import { registry } from './Registry.js';
 
 export class UIController {
     constructor() {
@@ -101,7 +102,19 @@ export class UIController {
                 case 'open-file': this.openFile(); break;
                 case 'add-node':
                     const btnRect = btn.getBoundingClientRect();
-                    showNodeTypeMenu({x: btnRect.left, y: btnRect.top - 150}, null, (type) => {
+                    
+                    // FIX: Calculate menu height to align bottom-to-top
+                    const typeCount = registry.getNodeTypes().length;
+                    const menuHeight = typeCount * HELPER_CONFIG.menuItemHeight;
+                    
+                    // FIX: 
+                    // x: btn.left - 10 (Offsets the +10 padding in showNodeTypeMenu)
+                    // y: btn.top - menuHeight (Aligns bottom of menu to top of button)
+                    showNodeTypeMenu({
+                        x: btnRect.left - 10, 
+                        y: btnRect.top - menuHeight
+                    }, null, (type) => {
+                        const svg = d3.select('svg');
                         const rect = svg.node().getBoundingClientRect();
                         const t = d3.zoomTransform(svg.node());
                         const x = (rect.width/2 - t.x) / t.k;

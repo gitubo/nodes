@@ -151,7 +151,7 @@ class Store {
 
     setGhostLink(ghostData) {
         this.state.ui.ghostLink = ghostData;
-        //eventBus.emit('GHOST_LINK_UPDATED', ghostData); 
+        eventBus.emit('GHOST_LINK_UPDATED', ghostData); 
     }
 
     setDisconnectingLink(link) {

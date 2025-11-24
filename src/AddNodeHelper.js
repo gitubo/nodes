@@ -3,7 +3,7 @@ import { registry } from './Registry.js';
 import { store } from './state.js';
 import { eventBus } from './EventBus.js';
 
-const HELPER_CONFIG = {
+export const HELPER_CONFIG = {
     size: 24, linkLength: 40, plusSize: 12, plusStrokeWidth: 2, 
     hoverScale: 1.1, menuItemHeight: 36, menuWidth: 180
 };

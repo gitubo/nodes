@@ -56,7 +56,8 @@ export function updateLinksOnly() {
     if (!labelLayer.empty()) {
         labelLayer.selectAll("g.link-label-group").each(function(d) {
             if (!d.label) return;
-            const oldPath = d3.select(`.link-group.${d.id} path.link`).attr("d");
+            //const oldPath = d3.select(`.link-group.${d.id} path.link`).attr("d");
+            const oldPath = d3.select(`.link-group[data-id="${d.id}"] path.link`).attr("d");
             if(!oldPath) return; 
 
             const currentPos = calculatePositionAlongPath(oldPath, d.label.offset || 0.5);
@@ -88,8 +89,10 @@ function renderLinks(viewport) {
         .data(store.links, d => d.id)
         .join(
             enter => {
-                const g = enter.append("g").attr("class", d => `link-group ${d.id}`)
-                    .on("click", (e, d) => { e.stopPropagation(); store.selectObject('link', d); })
+                const g = enter.append("g")
+                    .attr("class", "link-group") // Removed dynamic ID class here to keep it clean
+                    .attr("data-id", d => d.id)  // FIX: Add data-id for safe selection
+                    .on("click", (e, d) => { /*...*/ })
                     .on("contextmenu", (e, d) => showLinkContextMenu(e, d));
                 
                 g.append("path").attr("class", "link-hitarea")
