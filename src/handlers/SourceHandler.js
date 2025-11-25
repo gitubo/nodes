@@ -4,21 +4,16 @@ import { linkInteractionManager } from '../LinkInteractionManager.js';
 import { eventBus } from '../EventBus.js';
 import { startInlineEditing } from '../InlineEditor.js';
 
-const DIMENSIONS = { radius: CONFIG.handler.radius };
-
 export class SourceHandlerDefinition extends HandlerDefinition {
-    constructor() {
-        super();
+    constructor(x, y, label) {
+        super(x, y, label);
         this.role = 'source';
         this.type = 'source';
+        this.dimensions = { radius: CONFIG.handler.radius };
     }
-
-    static getDimension() { return DIMENSIONS; }
-    getRole() { return 'source'; }
-
     
     render(selection) {
-        const radius = DIMENSIONS.radius;
+        const radius = CONFIG.handler.radius;
         const cx = 0;
         const cy = 0;
 

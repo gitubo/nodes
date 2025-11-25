@@ -14,23 +14,30 @@ class Registry {
         this.handlerDefinitions = new Map();
     }
     
-    registerNode(type, definition) { this.nodeDefinitions.set(type, definition); }
-    registerHandler(type, definition) { this.handlerDefinitions.set(type, definition); }
+    registerNode(type, ClassRef) { this.nodeDefinitions.set(type, ClassRef); }
+    registerHandler(type, ClassRef) { this.handlerDefinitions.set(type, ClassRef); }
     getNodeDefinition(type) { return this.nodeDefinitions.get(type); }
     getHandlerDefinition(type) { return this.handlerDefinitions.get(type); }
     getNodeTypes() { return Array.from(this.nodeDefinitions.keys()); }
+    getHandlerTypes() { return Array.from(this.handlerDefinitions.keys()); }
 }
 
 export const registry = new Registry();
 
-registry.registerNode('start', new StartNodeDefinition());
-registry.registerNode('task', new TaskNodeDefinition());
-registry.registerNode('end', new EndNodeDefinition());
-registry.registerNode('switch', new SwitchNodeDefinition());
-registry.registerNode('service', new ServiceNodeDefinition());
+// Nodes
+registry.registerNode('start', StartNodeDefinition);
+registry.registerNode('end', EndNodeDefinition);
+registry.registerNode('task', TaskNodeDefinition);
+registry.registerNode('service', ServiceNodeDefinition);
+registry.registerNode('switch', SwitchNodeDefinition);
 
-registry.registerHandler('source', new SourceHandlerDefinition());
+// Handlers
+registry.registerHandler('source', SourceHandlerDefinition);
 //registry.registerHandler('target', new TargetHandlerDefinition());
-registry.registerHandler('target_vertical', new TargetVerticalHandlerDefinition());
-registry.registerHandler('target_horizontal', new TargetHorizontalHandlerDefinition());
-registry.registerHandler('call', new CallHandlerDefinition());
+registry.registerHandler('target_vertical', TargetVerticalHandlerDefinition);
+registry.registerHandler('target_horizontal', TargetHorizontalHandlerDefinition);
+
+/*
+
+registry.registerHandler('call', CallHandlerDefinition);
+*/

@@ -38,7 +38,8 @@ function showContextMenu(event, type, data) {
                 // FIX: Use store.updateLink to trigger event/render, pass undefined to remove
                 callback: () => { 
                     store.updateLink(data.id, { label: undefined }); 
-                    store.selectObject(null, null); 
+                    //store.selectObject(null, null); 
+                    store.deselect();
                 }
             });
         } else {
@@ -49,7 +50,8 @@ function showContextMenu(event, type, data) {
                     store.updateLink(data.id, { 
                         label: { text: 'Label', offset: 0.5, offsetX: 0, offsetY: 0 } 
                     });
-                    store.selectObject(null, null);
+                    //store.selectObject(null, null);
+                    store.deselect();
                 }
             });
         }

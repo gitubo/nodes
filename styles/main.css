@@ -32,8 +32,8 @@ body { width: 100%; height: 100vh; overflow: hidden; font-family: sans-serif; }
 .node.selected .node-body { stroke: var(--baltic-blue); stroke-width: 3px; filter: drop-shadow(0 0 8px rgba(52,99,158,0.4)); }
 
 /* REQUESTED: Specific classes for Labels */
-.node-label { font-size: 14px; font-weight: bold; fill: var(--baltic-blue); pointer-events: none; }
-.node-sublabel { font-size: 11px; font-weight: normal; fill: var(--dim-gray); pointer-events: none; }
+.node-label { font-size: 14px; font-weight: normal; fill: var(--baltic-blue); pointer-events: none; }
+.node-note { font-size: 11px; font-weight: normal; fill: var(--dim-gray); pointer-events: none; }
 
 .handler-body { fill: var(--alice-blue); stroke: var(--blue-energy); stroke-width: 1px; }
 .handler-connector { fill: var(--alice-blue); stroke: var(--blue-energy); stroke-width: 2px; }

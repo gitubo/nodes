@@ -1,19 +1,20 @@
-/**
- * Base HandlerDefinition class for all handler types
- */
+import { CONFIG } from '../config.js';
+
+const generateId = () => crypto.randomUUID();
+
 export class HandlerDefinition {
-    constructor() {
+    constructor(x, y, label='') {
+        this.id = generateId();
         this.type = 'base';
+        this.role = '';
+        this.offset = {x: x, y: y};
+        this.label = label;
+        this.dimensions = { width: CONFIG.handler.width, height: CONFIG.handler.height };
     }
 
-    static getDimension() {
-        return {};
-    }
-    
-    getRole() { 
-        return ''; 
-    }
-
+    static getDimension(obj) { return obj.dimensions || {}; }
+    static getRole(obj) { return obj.role || ''; }
+    static draw(obj){}
     /**
      * Render the handler visual elements
      * @param {d3.Selection} selection - D3 selection to render into

@@ -19,14 +19,11 @@ export class NodeRenderer {
              const definition = registry.getNodeDefinition(d.type);
              if (!definition) return;
              
-             currentSelection.selectAll("path.node-body").remove();
-             currentSelection.append("path")
-                 .attr("class", definition.getBodyClass())
-                 .attr("d", definition.getShapePath())
-                 .lower(); 
+            currentSelection.selectAll("path.node-body").remove();
+            definition.render(currentSelection, d);
         });
     }
-
+/*
     renderLabels(selection) {
         selection.each(function(d) {
             const currentSelection = d3.select(this);
@@ -35,7 +32,7 @@ export class NodeRenderer {
             let nodeHeight = d.height || 0;
 
             if (definition && typeof definition.getDimensions === 'function') {
-                 const dims = definition.getDimensions(d); 
+                const dims = definition.getDimensions(d); 
                 nodeWidth = dims.width;
                 nodeHeight = dims.height;
             }
@@ -79,29 +76,48 @@ export class NodeRenderer {
             }
         });
     }
-
+*/
     renderHandlers(selection) {
-         selection.selectAll("g.handler-g")
-            .data(d => d.handlers, h => h.id)
+
+        selection.selectAll("g.handler-g")
+            .data(d => {
+                    const definition = registry.getNodeDefinition(d.type);
+                    return definition ? definition.getHandlers(d) : [];
+                }, 
+                h => h.id)
             .join(
                 enter => {
-                    const g = enter.append("g").attr("class", d => `handler-g ${d.type}`)
-                        .attr("transform", d => `translate(${d.offset_x||0}, ${d.offset_y||0})`);
-                    g.each(function(h) {
-                        const def = registry.getHandlerDefinition(h.type);
-                        if(def) def.render(d3.select(this));
+                    const g = enter
+                        .append("g")
+                        .attr("class", h => `handler-g ${h.type}`)
+                        .attr("transform", h => `translate(${h.offset.x || 0}, ${h.offset.y || 0})`);
+
+                    g.each(function (h) {
+                        const HandlerClass = registry.getHandlerDefinition(h.type);
+                        const instance = new HandlerClass();
+
+                        h.instance = instance;        // salviamo l’istanza nel dato
+                        this.__handler = instance;    // opzionale: anche nel DOM
+
+                        instance.render(d3.select(this));
                     });
-                    return g.raise();
+
+                    return g;
                 },
+
                 update => {
-                    update.attr("transform", d => `translate(${d.offset_x||0}, ${d.offset_y||0})`);
-                    update.each(function(h) {
-                         const def = registry.getHandlerDefinition(h.type);
-                         d3.select(this).selectAll("*").remove();
-                         if(def) def.render(d3.select(this));
+                    update.attr("transform", h => `translate(${h.offset.x || 0}, ${h.offset.y || 0})`);
+
+                    update.each(function (h) {
+                        const instance = h.instance;
+
+                        d3.select(this).selectAll("*").remove();
+                        instance.render(d3.select(this));
                     });
-                    return update.raise();
+
+                    return update;
                 },
+
                 exit => exit.remove()
             );
     }
@@ -111,14 +127,14 @@ export class NodeRenderer {
         const dragBehavior = d3.drag()
             .on("start", function(event, d) {
                 d3.select(this).raise().classed("dragging", true);
-                initialPos = { x: d.x, y: d.y };
+                initialPos = { x: d.position.x, y: d.position.y };
             })
             .on("drag", function(event, d) {
-                d.x = event.x;
-                d.y = event.y;
+                d.position.x = event.x;
+                d.position.y = event.y;
                 
                 // 1. Update Node Position
-                d3.select(this).attr("transform", `translate(${d.x}, ${d.y})`);
+                d3.select(this).attr("transform", `translate(${d.position.x}, ${d.position.y})`);
                 
                 // 2. Update Links
                 updateLinksOnly(); 
@@ -132,22 +148,22 @@ export class NodeRenderer {
                     const hData = d3.select(this).datum();
                     if (!hData) return "";
                     // Calculate new global position: Node New Pos + Helper Relative Offset
-                    return `translate(${d.x + hData.relX}, ${d.y + hData.relY})`;
+                    return `translate(${d.position.x + hData.relX}, ${d.position.y + hData.relY})`;
                 });
             })
             .on("end", function(event, d) {
                 d3.select(this).classed("dragging", false);
-                const snappedX = snapToGrid(d.x);
-                const snappedY = snapToGrid(d.y);
-                d.x = snappedX; 
-                d.y = snappedY;
-                d3.select(this).attr("transform", `translate(${d.x}, ${d.y})`);
+                const snappedX = snapToGrid(d.position.x);
+                const snappedY = snapToGrid(d.position.y);
+                d.position.x = snappedX; 
+                d.position.y = snappedY;
+                d3.select(this).attr("transform", `translate(${d.position.x}, ${d.position.y})`);
                 updateLinksOnly();
                 
                 eventBus.emit('NODE_MOVED', {
                     id: d.id,
                     initialPosition: initialPos,
-                    finalPosition: { x: d.x, y: d.y }
+                    finalPosition: { x: d.position.x, y: d.position.y }
                 });
             });
         
@@ -156,7 +172,7 @@ export class NodeRenderer {
     
     render(selection) {
         this.renderBody(selection);
-        this.renderLabels(selection);
+        //this.renderLabels(selection);
         this.renderHandlers(selection);
         this.setupDrag(selection);
         setupNodeContextMenu(selection);
@@ -164,7 +180,7 @@ export class NodeRenderer {
     
     update(selection) {
         this.renderBody(selection);
-        this.renderLabels(selection);
+        //this.renderLabels(selection);
         this.renderHandlers(selection);
     }
 }

@@ -2,7 +2,7 @@
 import { NodeDefinition } from './NodeDefinition.js';
 import { CONFIG } from '../config.js';
 import { SourceHandlerDefinition } from '../handlers/SourceHandler.js';
-import { TargetHandlerDefinition } from '../handlers/TargetHandler.js';
+import { TargetVerticalHandlerDefinition } from '../handlers/TargetVerticalHandler.js';
 
 const DEFINITIONS = {
     sourceSeparator: 20,
@@ -10,56 +10,48 @@ const DEFINITIONS = {
 };
 
 export class SwitchNodeDefinition extends NodeDefinition {
-    constructor() {
-        super();
-        this.type = 'switch'; // Renamed identifier
+    constructor(x, y, label, note, data) {
+        super(x, y, label, note, data);
+        this.type = 'switch';
         this.width = 120;
         this.height = 60;
-        this.targetHandlers = [{ type: 'target_vertical', label: '', offset_x: 0, offset_y: 30 }];
+        this.conditions = [];
+        this.targetHandlers = [];
+        this.targetHandlers.push(new TargetVerticalHandlerDefinition(0, 30));
         this.sourceHandlers = [];
         
         // Initialize default handlers
         DEFINITIONS.sourceHandlerLabels.forEach((label, i) => {
-            const radius = SourceHandlerDefinition.getDimension().radius + 2;
+            //const radius = SourceHandlerDefinition.getDimension().radius + 2;
+            const radius = 10;
+            
             const offset = (DEFINITIONS.sourceSeparator + radius) + (DEFINITIONS.sourceSeparator + radius * 2) * i;
-            this.sourceHandlers.push({
-                type: 'source', label: label, 
-                offset_x: this.width, offset_y: offset, 
-                labelPosition: 'left', labelMargin: 15
-            });
+            this.sourceHandlers.push(new SourceHandlerDefinition(this.width, offset, label));
+            //    labelPosition: 'left', labelMargin: 15
         });
     }
     
-    getDimensions(d) {
+    static getDimensions(d) {
         const handlers = (Array.isArray(d?.handlers) ? d.handlers : []).filter(h => h.class === 'source');
         const radius = SourceHandlerDefinition.getDimension().radius + 2;
         const height = DEFINITIONS.sourceSeparator + (DEFINITIONS.sourceSeparator + radius * 2) * handlers.length;
         return { width: 120, height: height };
     }
 
-    getHandlers() { return [...this.targetHandlers, ...this.sourceHandlers]; }
-    
-    getData() {
-        return {
-            label: 'Switch',
-            condition: 'x > 0',
-            width: this.width,
-            height: this.height
-        };
-    }
+    static getHandlers(d) { return [...d.targetHandlers, ...d.sourceHandlers]; }
     
     // Reuse the Diamond shape path logic
-    getShapePath() {
-        const W = this.width;
+    static getShapePath(d) {
+        const W = d.width;
         // Calculate dynamic height based on handlers for the path
-        const radius = SourceHandlerDefinition.getDimension().radius + 2;
-        const handlerCount = Math.max(1, this.sourceHandlers.length);
+        const radius = SourceHandlerDefinition.getDimension(d.sourceHandlers[0]).radius + 2;
+        const handlerCount = Math.max(1, d.sourceHandlers.length);
         const H = DEFINITIONS.sourceSeparator + (DEFINITIONS.sourceSeparator + radius * 2) * handlerCount;
         
         const sR = CONFIG.node.smallBorderRadius;
         const srcSep = DEFINITIONS.sourceSeparator;
-        const tH = TargetHandlerDefinition.getDimension().height;
-        const tW = TargetHandlerDefinition.getDimension().width;
+        const tH = TargetVerticalHandlerDefinition.getDimension(d.targetHandlers[0]).height;
+        const tW = TargetVerticalHandlerDefinition.getDimension(d.targetHandlers[0]).width;
         
         // Simple SVG Path construction for Diamond/Complex shape
         // Simplified for brevity but maintains logic
@@ -89,16 +81,16 @@ export class SwitchNodeDefinition extends NodeDefinition {
         return path;
     }
 
-    serialize(node) {
+    static serialize(node) {
         return { ...super.serialize(node), condition: node.condition };
     }
     
-    deserialize(data) {
+    static deserialize(data) {
         return { ...super.deserialize(data), condition: data.condition || '' };
     }
 
     // --- MODULAR PROPERTIES ---
-    renderProperties(container, nodeData, onChange) {
+    static renderProperties(container, nodeData, onChange) {
         // 1. Render base properties
         super.renderProperties(container, nodeData, onChange);
 

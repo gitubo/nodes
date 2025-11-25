@@ -1,35 +1,26 @@
 // nodes/EndNode.js
 import { NodeDefinition } from './NodeDefinition.js';
 import { CONFIG } from '../config.js';
-import { TargetHandlerDefinition } from '../handlers/TargetHandler.js';
-
+import { TargetVerticalHandlerDefinition } from '../handlers/TargetVerticalHandler.js';
 
 export class EndNodeDefinition extends NodeDefinition {
-    constructor() {
-        super();
+    constructor(x, y) {
+        super(x, y, 'end');
         this.type = 'end';
-        this.width = 60;
-        this.height = 60;
-        this.handlers = [{ type: 'target_vertical', label: 'input', offset_x: 0, offset_y: this.height / 2 }];
-
+        this.width = CONFIG.node.width;
+        this.height = CONFIG.node.height;
+        this.handlers.push(new TargetVerticalHandlerDefinition(0, this.height / 2));
     }
     
-    getData() {
-        return {
-            label: 'end',
-            width: this.width,
-            height: this.height
-        };
-    }
-    
-    getShapePath() {
-        const W = this.width;
-        const H = this.height;
+    static getShapePath(d) {
+        const W = CONFIG.node.width;
+        const H = CONFIG.node.height;
         const R  = CONFIG.node.largeBorderRadius;        
         const sR = CONFIG.node.smallBorderRadius;   
-        const targetHandlerWidth =  TargetHandlerDefinition.getDimension().width/2+2;
-        const targetHandlerHeightUp =  H/2 - TargetHandlerDefinition.getDimension().height/2 - 2;
-        const targetHandlerHeightDown =  H/2 + TargetHandlerDefinition.getDimension().height/2 + 2;
+        const handlerDimensions = TargetVerticalHandlerDefinition.getDimension(d.handlers[0]);
+        const targetHandlerWidth =  handlerDimensions.width/2+2;
+        const targetHandlerHeightUp =  H/2 - handlerDimensions.height/2 - 2;
+        const targetHandlerHeightDown =  H/2 + handlerDimensions.height/2 + 2;
 
         return `
             M ${sR},0

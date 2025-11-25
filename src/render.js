@@ -172,18 +172,25 @@ export function render() {
     viewport.select("g.node-layer").selectAll("g.node")
         .data(store.nodes, d => d.id)
         .join(
-            enter => {
-                const g = enter.append("g").attr("class", d => `node ${d.type}`)
-                    .attr("transform", d => `translate(${d.x}, ${d.y})`)
-                    .on("click", (e, d) => { e.stopPropagation(); store.selectObject('node', d); });
-                g.each(function() { nodeRenderer.render(d3.select(this)); });
-                return g;
-            },
-            update => {
-                update.attr("transform", d => `translate(${d.x}, ${d.y})`)
-                    .classed("selected", d => store.state.ui.selectedObject?.id === d.id);
-                update.each(function() { nodeRenderer.update(d3.select(this)); });
-                return update;
+            enter => { 
+                const g = enter
+                    .append("g").attr("class", d => `node ${d.type}`)
+                    .attr("transform", d => `translate(${d.position.x}, ${d.position.y})`) 
+                    .on("click", (e, d) => { 
+                        e.stopPropagation(); store.selectObject('node', d); 
+                    }); 
+                g.each(function() { 
+                    nodeRenderer.render(d3.select(this)); }); 
+                    return g; 
+            }, 
+            update => { 
+                update
+                    .attr("transform", d => `translate(${d.position.x}, ${d.position.y})`) 
+                    .classed("selected", d => store.state.ui.selectedObject?.id === d.id); 
+                update.each(function() { 
+                    nodeRenderer.update(d3.select(this)); 
+                }); 
+                return update; 
             },
             exit => exit.remove()
         );

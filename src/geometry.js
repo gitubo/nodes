@@ -13,12 +13,12 @@ for (const node of state.nodes) {
         const handler = node.handlers.find(h => h.id === handlerId);
         if (handler) {
             // Use the explicit offsets on the handler instance
-            const localX = handler.offset_x || 0;
-            const localY = handler.offset_y || 0;
+            const localX = handler.offset.x || 0;
+            const localY = handler.offset.y || 0;
             
             return {
-                x: node.x + localX,
-                y: node.y + localY
+                x: node.position.x + localX,
+                y: node.position.y + localY
             };
         }
     }

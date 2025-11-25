@@ -28,48 +28,28 @@ class Store {
     getNode(id) { return this.state.nodes.find(n => n.id === id); }
     getLink(id) { return this.state.links.find(l => l.id === id); }
 
-    addNode(type, x, y, initialData = {}) {
-        const definition = registry.getNodeDefinition(type);
-        if (!definition) return null;
+    addNode(type, x=0, y=0, label='', note='', initialData = {}) {
+        const NodeClass = registry.getNodeDefinition(type);
+        if (!NodeClass || typeof NodeClass !== 'function' || !NodeClass.prototype) {
+            console.error("Adding new node: not a valid costructor for type <"+type+">")
+            return null; 
+        }
+        const newNodeInstance = new NodeClass(
+            snapToGrid(x), snapToGrid(y),
+            label, note,
+            initialData
+        );
 
-        const nodeId = generateId();
-        const handlers = definition.getHandlers().map(h => ({
-            id: generateId(),
-            type: h.type,
-            label: h.label,
-            offset_x: h.offset_x || 0,
-            offset_y: h.offset_y || 0,
-            ...h 
-        }));
-
-        const baseData = {
-            id: nodeId,
-            type: type,
-            x: snapToGrid(x),
-            y: snapToGrid(y),
-            label: type.charAt(0).toUpperCase() + type.slice(1),
-            handlers: handlers,
-            note: '', 
-            custom_params: {} 
-        };
-
-        const node = { ...baseData, ...definition.getData(), ...initialData };
-        this.state.nodes.push(node);
+        this.state.nodes.push(newNodeInstance);
         
-        // Granular Event
-        eventBus.emit('NODE_CREATED', { id: nodeId });
-        return node; 
+        eventBus.emit('NODE_CREATED', { id: NodeClass.getId(newNodeInstance) });
+        return newNodeInstance; 
     }
 
-    updateNode(nodeId, newProps) {
-        const nodeIndex = this.state.nodes.findIndex(n => n.id === nodeId);
-        if (nodeIndex === -1) return;
-
-        this.state.nodes[nodeIndex] = {
-            ...this.state.nodes[nodeIndex],
-            ...newProps,
-        };
-        // Granular Event
+    updateNode(nodeId, newObj) {
+        const nodeInstance = this.state.nodes.find(n =>  NodeClass.getId(n) === nodeId);
+        if (!nodeInstance) return;
+        Object.assign(nodeInstance, newObj);
         eventBus.emit('NODE_UPDATED', { id: nodeId });
     }
 
@@ -191,13 +171,14 @@ class Store {
     initializeWithDefaults() {
         const n1 = this.addNode('start', 100, 150);
         const n2 = this.addNode('task', 350, 200);
-        const n3 = this.addNode('service', 450, 300);
+        const n3 = this.addNode('service', 450, 300, 'HTTP Request', '[POST]');
         const n4 = this.addNode('end', 600, 150);
-        
+        /*
         if (n1 && n2 && n1.handlers[0] && n2.handlers[0]) {
             const target = n2.handlers.find(h => h.role === 'target');
             if (target) this.addLink(n1.handlers[0].id, target.id);
         }
+        */
     }
 }
 

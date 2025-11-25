@@ -14,19 +14,18 @@ export function renderAddNodeHelpers(viewport) {
         node.handlers.forEach(handler => {
             const def = registry.getHandlerDefinition(handler.type);
             if (def && typeof def.getRole === 'function') {
-                handler.role = def.getRole();
+                handler.role = def.getRole(handler);
             }
             if (handler.role === 'source') {
                 const isConnected = store.links.some(link => String(link.source) === String(handler.id));
                 if (!isConnected) {
-                    const offsetX = handler.offset_x || 0;
-                    const offsetY = handler.offset_y || 0;
+                    const offsetX = handler.offset.x || 0;
+                    const offsetY = handler.offset.y || 0;
                     helpers.push({
                         id: `helper_${handler.id}`,
                         handlerId: handler.id,
                         nodeId: node.id,
-                        x: node.x + offsetX,
-                        y: node.y + offsetY,
+                        position: { x: node.position.x + offsetX, y: node.position.y + offsetY },
                         // Crucial for drag synchronization
                         relX: offsetX, 
                         relY: offsetY
@@ -46,13 +45,13 @@ export function renderAddNodeHelpers(viewport) {
                 const g = enter.append("g").attr("class", "add-node-helper")
                     // Attribute used by NodeRenderer to find specific helpers
                     .attr("data-node-id", d => d.nodeId)
-                    .attr("transform", d => `translate(${d.x}, ${d.y})`);
+                    .attr("transform", d => `translate(${d.position.x}, ${d.position.y})`);
                 g.each(function() { renderHelper(d3.select(this)); });
                 return g;
             },
             update => update
                 .attr("data-node-id", d => d.nodeId) // Ensure ID persists
-                .attr("transform", d => `translate(${d.x}, ${d.y})`),
+                .attr("transform", d => `translate(${d.position.x}, ${d.position.y})`),
             exit => exit.remove()
         );
 }

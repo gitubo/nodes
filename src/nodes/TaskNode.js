@@ -2,37 +2,26 @@
 import { NodeDefinition } from './NodeDefinition.js';
 import { CONFIG } from '../config.js'; 
 import { SourceHandlerDefinition } from '../handlers/SourceHandler.js';
-import { TargetHandlerDefinition } from '../handlers/TargetHandler.js';
+import { TargetVerticalHandlerDefinition } from '../handlers/TargetVerticalHandler.js';
 
 export class TaskNodeDefinition extends NodeDefinition {
-    constructor() {
-        super();
+    constructor(x, y, label, note, data) {
+        super(x, y, label, note, data);
         this.type = 'task';
-        this.width = 120;
-        this.height = 60;
-        this.handlers = [
-            { type: 'target_vertical', label: '', offset_x: 0, offset_y: this.height / 2 },
-            { type: 'source', label: '', offset_x: this.width, offset_y: this.height / 2 }
-        ];
-    }
-    
-    getData() {
-        return {
-            label: 'task',
-            sublabel: 'name',
-            width: this.width,
-            height: this.height
-        };
+        this.width = CONFIG.node.width;
+        this.height = CONFIG.node.height;
+        this.handlers.push(new TargetVerticalHandlerDefinition(0, this.height / 2));
+        this.handlers.push(new SourceHandlerDefinition(this.width, this.height / 2));
     }
 
-    getShapePath() {
-        const W = this.width;
-        const H = this.height;
+    static getShapePath(d) {
+        const W = CONFIG.node.width;
+        const H = CONFIG.node.height;;
         const sR = CONFIG.node.smallBorderRadius;
-        const sourceHandler =  H/2 - (SourceHandlerDefinition.getDimension().radius+2);
-        const targetHandlerWidth =  TargetHandlerDefinition.getDimension().width/2+2;
-        const targetHandlerHeightUp =  H/2 - TargetHandlerDefinition.getDimension().height/2 - 2;
-        const targetHandlerHeightDown =  H/2 + TargetHandlerDefinition.getDimension().height/2 + 2;
+        const sourceHandler =  H/2 - (SourceHandlerDefinition.getDimension(d.handlers[1]).radius+2);
+        const targetHandlerWidth =  TargetVerticalHandlerDefinition.getDimension(d.handlers[0]).width/2+2;
+        const targetHandlerHeightUp =  H/2 - TargetVerticalHandlerDefinition.getDimension(d.handlers[0]).height/2 - 2;
+        const targetHandlerHeightDown =  H/2 + TargetVerticalHandlerDefinition.getDimension(d.handlers[0]).height/2 + 2;
 
         const vars = {
             "${sR}": sR,
@@ -71,23 +60,5 @@ export class TaskNodeDefinition extends NodeDefinition {
         }
 
         return path.replace(/\s+/g, ' ');
-    }
-
-    
-    serialize(node) {
-        // Custom serialization for task nodes
-        const base = super.serialize(node);
-        return {
-            ...base,
-            customData: node.customData || {}
-        };
-    }
-    
-    deserialize(data) {
-        const base = super.deserialize(data);
-        return {
-            ...base,
-            customData: data.customData || {}
-        };
     }
 }

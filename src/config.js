@@ -22,7 +22,9 @@ export const CONFIG = {
         height: 60,
         smallBorderRadius: 5,
         borderRadius: 10,
-        largeBorderRadius: 20
+        largeBorderRadius: 20,
+        labelTopMargin: 20,
+        noteTopMargin: 15
     },
     
     // Handler settings

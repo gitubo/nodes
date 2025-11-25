@@ -3,30 +3,21 @@ import { NodeDefinition } from './NodeDefinition.js';
 import { CONFIG } from '../config.js';
 import { SourceHandlerDefinition } from '../handlers/SourceHandler.js';
 
-
 export class StartNodeDefinition extends NodeDefinition {
-    constructor() {
-        super();
+    constructor(x, y) {
+        super(x, y, 'start');
         this.type = 'start';
-        this.width = 60;
-        this.height = 60;
-        this.handlers = [{ type: 'source', label: '', offset_x: this.width, offset_y: this.height / 2 }];
+        this.width = CONFIG.node.width;
+        this.height = CONFIG.node.height;
+        this.handlers.push(new SourceHandlerDefinition(this.width, this.height / 2));
     }
-    
-    getData() {
-        return {
-            label: 'start',
-            width: this.width,
-            height: this.height
-        };
-    }
-    
-    getShapePath() {
-        const W = this.width;
-        const H = this.height;
+
+    static getShapePath(d) {
+        const W = CONFIG.node.width;
+        const H = CONFIG.node.height;
         const R = CONFIG.node.largeBorderRadius;           
-        const sR = CONFIG.node.smallBorderRadius;    
-        const source =  H/2 - (SourceHandlerDefinition.getDimension().radius+2);
+        const sR = CONFIG.node.smallBorderRadius;
+        const source =  H/2 - (SourceHandlerDefinition.getDimension(d.handlers[0]).radius+2);
 
         return `
             M ${R},0

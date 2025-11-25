@@ -5,22 +5,19 @@ import { store } from '../state.js';
 
 export class TargetHandlerDefinition extends HandlerDefinition {
 
-    static DIMENSIONS = {
-        width: CONFIG.handler.width,
-        height: CONFIG.handler.height
-    };
-
-    constructor() {
-        super();
-        this.role = 'target';
-        this.type = 'target';
+    constructor(x, y, label) {
+        super(x, y, label);
+        this.type = "target";
+        this.role = "target";
+        this.dimensions = {
+            width: CONFIG.handler.width,
+            height: CONFIG.handler.height
+        };
     }
 
-    static getDimension() { return this.DIMENSIONS; }
-    getRole() { return 'target'; }
-
     render(selection) {
-        const { width: w, height: h } = this.constructor.DIMENSIONS;
+        const w = CONFIG.handler.width;
+        const h = CONFIG.handler.height;
 
         selection.append("rect")
             .attr("width", w)
