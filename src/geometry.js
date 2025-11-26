@@ -1,13 +1,17 @@
 // src/geometry.js
 import { state } from './state.js'; 
 import { CONFIG } from './config.js';
+import { registry } from './Registry.js';
 
 /**
  * Find the global position of a handler by its ID
  */
 export function findGlobalHandlerPos(handlerId) {
     for (const node of state.nodes) { 
-        const handler = node.handlers.find(h => h.id === handlerId);
+        const definition = registry.getNodeDefinition(node.type);
+        const handlers = definition ? definition.getHandlers(node) : [];
+        
+        const handler = handlers.find(h => h.id === handlerId);
         if (handler) {
             const localX = handler.offset.x || 0;
             const localY = handler.offset.y || 0;

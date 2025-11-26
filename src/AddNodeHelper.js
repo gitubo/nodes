@@ -4,7 +4,7 @@ import { store } from './state.js';
 import { eventBus } from './EventBus.js';
 
 export const HELPER_CONFIG = {
-    size: 24, linkLength: 40, plusSize: 12, plusStrokeWidth: 2, 
+    size: 36, linkLength: 48, plusSize: 24, plusStrokeWidth: 3, 
     hoverScale: 1.1, menuItemHeight: 36, menuWidth: 180
 };
 
@@ -71,7 +71,7 @@ function renderHelper(group) {
         .attr("width", cfg.size).attr("height", cfg.size).attr("rx", 4);
 
     btn.append("path").attr("class", "helper-plus")
-        .attr("d", "M -6 0 L 6 0 M 0 -6 L 0 6")
+        .attr("d", "M -10 0 L 10 0 M 0 -10 L 0 10")
         .attr("stroke-width", cfg.plusStrokeWidth);
 
     btn.on("mouseenter", function() {

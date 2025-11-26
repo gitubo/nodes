@@ -54,6 +54,7 @@ class LinkInteractionManager {
             const targetData = d3.select(targetElement).datum();
 
             if (targetData) {
+                console.log('Drop on:', targetData.role, targetData.id, 'from:', originId, 'reversed:', isReversed);
                  if (!isReversed && targetData.role === 'target') {
                      store.addLink(originId, targetData.id);
                  } 

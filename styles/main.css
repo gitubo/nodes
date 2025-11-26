@@ -27,23 +27,22 @@ body { width: 100%; height: 100vh; overflow: hidden; font-family: sans-serif; }
 .btn-danger { width: 100%; padding: 8px; background: #fee; color: var(--danger); border: none; border-radius: 4px; cursor: pointer; margin-top: 10px; }
 .btn-danger:hover { background: var(--danger); color: white; }
 
-.node-body { fill: var(--alice-blue); stroke: var(--dim-gray); stroke-width: 1px; cursor: grab; transition: stroke 0.15s; }
-.node:hover .node-body { stroke: var(--baltic-blue); stroke-width: 2px; }
-.node.selected .node-body { stroke: var(--baltic-blue); stroke-width: 3px; filter: drop-shadow(0 0 8px rgba(52,99,158,0.4)); }
+.node-body { fill: var(--alice-blue); stroke: var(--dim-gray); stroke-width: 2px; cursor: grab; transition: stroke 0.15s; }
+.node:hover .node-body { stroke: var(--baltic-blue); stroke-width: 4px; }
+.node.selected .node-body { stroke: var(--baltic-blue); stroke-width: 4px; filter: drop-shadow(0 0 8px rgba(52,99,158,0.4)); }
+.node-icon { fill: var(--baltic-blue); stroke-width: 2px; }
+.node-label { font-size: 24px; font-weight: bold; fill: var(--baltic-blue); pointer-events: none; }
+.node-note { font-size: 16px; font-weight: normal; fill: var(--dim-gray); pointer-events: none; }
 
-/* REQUESTED: Specific classes for Labels */
-.node-label { font-size: 14px; font-weight: normal; fill: var(--baltic-blue); pointer-events: none; }
-.node-note { font-size: 11px; font-weight: normal; fill: var(--dim-gray); pointer-events: none; }
-
-.handler-body { fill: var(--alice-blue); stroke: var(--blue-energy); stroke-width: 1px; }
+.handler-body { fill: var(--alice-blue); stroke: var(--blue-energy); stroke-width: 2px; }
 .handler-connector { fill: var(--alice-blue); stroke: var(--blue-energy); stroke-width: 2px; }
 .handler.source { fill: var(--alice-blue); stroke: var(--dim-gray); }
 .handler.source:hover { fill: var(--lavender); stroke: var(--baltic-blue); }
 .handler.target { fill: var(--pale-slate); stroke: var(--dim-gray); }
 .handler.target:hover { fill: var(--lavender); stroke: var(--blue-energy); }
 .link { fill: none; stroke: var(--dim-gray); stroke-width: 2px; }
-.link:hover { stroke: var(--blue-energy); }
-.link.selected { stroke: var(--baltic-blue); }
+.link:hover { stroke: var(--blue-energy);  stroke-width: 4px; }
+.link.selected { stroke: var(--baltic-blue);  stroke-width: 4px; }
 .ghost-link { fill: none; stroke: var(--dim-gray); stroke-width: 2px; stroke-dasharray: 5,5; pointer-events: none; opacity: 0.6; }
 .link-label-group { cursor: grab; user-select: none; }
 .link-label-group.dragging { cursor: grabbing; }
@@ -54,8 +53,8 @@ body { width: 100%; height: 100vh; overflow: hidden; font-family: sans-serif; }
 .handler-label-text { font-size: 12px; font-weight: 500; fill: var(--dim-gray); pointer-events: none; }
 
 .context-menu-html { padding: 5px; display: flex; gap: 5px; }
-.helper-link { stroke: var(--dim-gray); stroke-dasharray: 4,4; }
-.helper-box { fill: var(--platinum); stroke: var(--dim-gray); stroke-dasharray: 4,4; }
+.helper-link { stroke: var(--dim-gray); stroke-dasharray: 6,6; stroke-width: 2px; }
+.helper-box { fill: var(--platinum); stroke: var(--dim-gray); stroke-dasharray: 6,6; stroke-width: 2px; }
 .helper-button { cursor: pointer; }
 .helper-plus { stroke: var(--dim-gray); }
 .helper-button:hover .helper-box { fill: var(--lavender); stroke: var(--baltic-blue); }

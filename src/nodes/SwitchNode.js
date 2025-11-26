@@ -41,23 +41,21 @@ export class SwitchNodeDefinition extends NodeDefinition {
     static getHandlers(d) { return [...d.targetHandlers, ...d.sourceHandlers]; }
     
     // Reuse the Diamond shape path logic
-    static getShapePath(d) {
-        const W = d.width;
+    getShapePath() {
+        const W = this.width;
         // Calculate dynamic height based on handlers for the path
-        const radius = SourceHandlerDefinition.getDimension(d.sourceHandlers[0]).radius + 2;
-        const handlerCount = Math.max(1, d.sourceHandlers.length);
+        const radius = SourceHandlerDefinition.getDimension(this.sourceHandlers[0]).radius + 2;
+        const handlerCount = Math.max(1, this.sourceHandlers.length);
         const H = DEFINITIONS.sourceSeparator + (DEFINITIONS.sourceSeparator + radius * 2) * handlerCount;
         
         const sR = CONFIG.node.smallBorderRadius;
         const srcSep = DEFINITIONS.sourceSeparator;
-        const tH = TargetVerticalHandlerDefinition.getDimension(d.targetHandlers[0]).height;
-        const tW = TargetVerticalHandlerDefinition.getDimension(d.targetHandlers[0]).width;
+        const tH = TargetVerticalHandlerDefinition.getDimension(this.targetHandlers[0]).height;
+        const tW = TargetVerticalHandlerDefinition.getDimension(this.targetHandlers[0]).width;
         
-        // Simple SVG Path construction for Diamond/Complex shape
-        // Simplified for brevity but maintains logic
         let path = `M ${sR},0 L ${W-sR},0 A ${sR},${sR} 0 0 1 ${W},${sR}`;
         
-        // Right side (handlers)
+        // Right side (source handlers)
         let currentY = 0;
         for(let i=0; i<handlerCount; i++) {
             currentY += srcSep;
@@ -71,11 +69,10 @@ export class SwitchNodeDefinition extends NodeDefinition {
         // Bottom
         path += ` L ${sR},${H} A ${sR},${sR} 0 0 1 0,${H-sR}`;
         
-        // Left side (Input)
+        // Left side (target handler)
         const inputY = 30;
         path += ` L 0,${inputY + tH/2 + 2} L ${tW/2 + 2},${inputY + tH/2 + 2}`;
         path += ` L ${tW/2 + 2},${inputY - tH/2 - 2} L 0,${inputY - tH/2 - 2}`;
-        
         path += ` L 0,${sR} A ${sR},${sR} 0 0 1 ${sR},0 Z`;
         
         return path;

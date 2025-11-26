@@ -169,10 +169,10 @@ class Store {
     }
     
     initializeWithDefaults() {
-        const n1 = this.addNode('start', 100, 150);
-        const n2 = this.addNode('task', 350, 200);
-        const n3 = this.addNode('service', 450, 300, 'HTTP Request', '[POST]');
-        const n4 = this.addNode('end', 600, 150);
+        const n1 = this.addNode('start', 0, 0);
+        const n2 = this.addNode('task', 400, 0);
+        const n3 = this.addNode('service', 600, 400, 'HTTP Request', '[POST]');
+        const n4 = this.addNode('end', 800, 0);
         /*
         if (n1 && n2 && n1.handlers[0] && n2.handlers[0]) {
             const target = n2.handlers.find(h => h.role === 'target');

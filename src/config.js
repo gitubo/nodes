@@ -10,7 +10,7 @@ export const CONFIG = {
     // Grid settings
     grid: {
         enabled: true,
-        spacing: 30,
+        spacing: 32,
         dotRadius: 1.5,
         dotColor: '#e0e0e0',
         snapToGrid: true
@@ -18,24 +18,26 @@ export const CONFIG = {
     
     // Node settings
     node: {
-        width: 60,
-        height: 60,
-        smallBorderRadius: 5,
-        borderRadius: 10,
-        largeBorderRadius: 20,
-        labelTopMargin: 20,
-        noteTopMargin: 15
+        width: 128,
+        height: 128,
+        smallBorderRadius: 16,
+        borderRadius: 32,
+        largeBorderRadius: 64,
+        labelTopMargin: 32,
+        noteTopMargin: 24,
+        iconSize: 64
     },
     
     // Handler settings
     handler: {
-        width: 8,
-        height: 16,
-        radius: 8,
+        width: 16,
+        height: 32,
+        radius: 16,
         label: {
             margin: 10,           
             position: 'left'     
-        }
+        },
+        margin: 4
     },
     
     // Link settings

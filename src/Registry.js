@@ -1,6 +1,7 @@
 import { StartNodeDefinition } from './nodes/StartNode.js';
 import { TaskNodeDefinition } from './nodes/TaskNode.js';
 import { EndNodeDefinition } from './nodes/EndNode.js';
+import { NodeDefinition } from './nodes/NodeDefinition.js';
 import { SwitchNodeDefinition } from './nodes/SwitchNode.js';
 import { ServiceNodeDefinition } from './nodes/ServiceNode.js';
 import { SourceHandlerDefinition } from './handlers/SourceHandler.js';
@@ -25,6 +26,7 @@ class Registry {
 export const registry = new Registry();
 
 // Nodes
+registry.registerNode('base', NodeDefinition);
 registry.registerNode('start', StartNodeDefinition);
 registry.registerNode('end', EndNodeDefinition);
 registry.registerNode('task', TaskNodeDefinition);

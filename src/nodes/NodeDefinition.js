@@ -20,16 +20,53 @@ export class NodeDefinition {
     static getDimensions(d) { return d.dimensions || {}; }
     static getHandlers(d) { return d.handlers || []; }
     static getData(d) { return d.data || {}; }
-//    static getBodyClass(d) { return `node-body ${d.type}`; }
-    static getShapePath(_d) { return ''; } 
 
+    getIconPath() { return ''; }
+
+    getShapePath() { 
+        const W = CONFIG.node.width;
+        const H = CONFIG.node.height;
+        const sR = CONFIG.node.smallBorderRadius;
+
+        return `
+            M ${sR},0
+            L ${W - sR},0
+            A ${sR},${sR} 0 0 1 ${W},${sR}
+            L ${W},${H - sR}
+            A ${sR},${sR} 0 0 1 ${W},${H - sR}
+            L ${W},${H - sR}
+            A ${sR},${sR} 0 0 1 ${W - sR},${H}
+            L ${sR},${H}
+            A ${sR},${sR} 0 0 1 0,${H - sR}
+            L 0,${sR}
+            A ${sR},${sR} 0 0 1 ${sR},0
+            Z
+        `.replace(/\s+/g, ' ');
+    }
+        
     static render(currentSelection, d){
         currentSelection.append("path")
             .attr("class", `node-body ${d.type}`)
-            .attr("d", this.getShapePath(d))
+            .attr("d", d.getShapePath())
             .lower(); 
 
-        
+        const icon = d.getIconPath();
+        if(icon && icon !== ''){
+            const size = CONFIG.node.iconSize;
+            const path = currentSelection.append("path")
+            .attr("class", "node-icon")
+            .attr("d", icon)
+
+            const bbox = path.node().getBBox();
+
+            const scale = size / Math.max(bbox.width, bbox.height);
+
+            const tx = (d.width - bbox.width * scale) / 2 - bbox.x * scale;
+            const ty = (d.height - bbox.height * scale) / 2 - bbox.y * scale;
+
+            path.attr("transform", `translate(${tx}, ${ty}) scale(${scale})`);
+        }
+
         let yOffset = d.height + CONFIG.node.labelTopMargin;
         if (d.label) {
             const capitalized = d.label.charAt(0).toUpperCase() + d.label.slice(1);
