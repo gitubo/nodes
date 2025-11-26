@@ -2,31 +2,23 @@
 import { CONFIG } from './config.js';
 
 export class Grid {
-    static render(selection, width, height) {
-        if (!CONFIG.grid.enabled) return;
+    static render(selection, width, height) { // width/height ignored for pattern
+        const defs = selection.select("defs").empty() ? selection.append("defs") : selection.select("defs");
         
-        const spacing = CONFIG.grid.spacing;
-        const radius = CONFIG.grid.dotRadius;
-        const color = CONFIG.grid.dotColor;
-        
-        const dots = [];
-        for (let x = 0; x <= width; x += spacing) {
-            for (let y = 0; y <= height; y += spacing) {
-                dots.push({ x, y });
-            }
-        }
-        
-        selection.selectAll("circle.grid-dot")
-            .data(dots)
-            .join(
-                enter => enter.append("circle")
-                    .attr("class", "grid-dot")
-                    .attr("r", radius)
-                    .attr("cx", d => d.x)
-                    .attr("cy", d => d.y)
-                    .attr("fill", color),
-                update => update,
-                exit => exit.remove()
-            );
+        defs.append("pattern")
+            .attr("id", "grid-pattern")
+            .attr("width", CONFIG.grid.spacing)
+            .attr("height", CONFIG.grid.spacing)
+            .attr("patternUnits", "userSpaceOnUse")
+            .append("circle")
+            .attr("cx", CONFIG.grid.dotRadius)
+            .attr("cy", CONFIG.grid.dotRadius)
+            .attr("r", CONFIG.grid.dotRadius)
+            .attr("fill", CONFIG.grid.dotColor);
+
+        selection.append("rect")
+            .attr("width", "100%") // Fills the infinite canvas
+            .attr("height", "100%")
+            .attr("fill", "url(#grid-pattern)");
     }
 }

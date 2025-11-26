@@ -1,23 +1,18 @@
-// geometry.js - Geometry utilities
-import { state } from './state.js';
-import { registry } from './Registry.js';
+// src/geometry.js
+import { state } from './state.js'; 
 import { CONFIG } from './config.js';
 
 /**
  * Find the global position of a handler by its ID
- * @param {string} handlerId - Handler ID
- * @returns {Object} {x, y} global coordinates
  */
 export function findGlobalHandlerPos(handlerId) {
-for (const node of state.nodes) {
+    for (const node of state.nodes) { 
         const handler = node.handlers.find(h => h.id === handlerId);
         if (handler) {
-            // Use the explicit offsets on the handler instance
             const localX = handler.offset.x || 0;
             const localY = handler.offset.y || 0;
-            
             return {
-                x: node.position.x + localX,
+                x: node.position.x + localX, 
                 y: node.position.y + localY
             };
         }
@@ -26,65 +21,111 @@ for (const node of state.nodes) {
 }
 
 /**
- * Calculate bezier path between two points
- * @param {Object} link - Link object with sourceId/targetId or sourceId/targetX/targetY
- * @returns {string} SVG path 'd' attribute
+ * Helper: extracts geometry points for a link
+ * Returns { sx, sy, tx, ty, c1x, c1y, c2x, c2y }
  */
-export function calculatePath(link) {
+function getLinkBezierPoints(link) {
     let sourcePos, targetPos;
-    
+
+    // 1. Resolve Start/End positions
     if (link.source && link.target) {
-        sourcePos = findGlobalHandlerPos(link.source);
+        sourcePos = findGlobalHandlerPos(link.source); 
         targetPos = findGlobalHandlerPos(link.target);
     } else if (link.sourceId && link.targetX !== undefined) {
-        sourcePos = findGlobalHandlerPos(link.sourceId);
+        // Ghost link handling
+        sourcePos = findGlobalHandlerPos(link.sourceId); 
         targetPos = { x: link.targetX, y: link.targetY };
     } else {
-        return "";
+        return null;
     }
-    
+
     const startX = sourcePos.x;
     const startY = sourcePos.y;
     const endX = targetPos.x;
     const endY = targetPos.y;
-    
+
+    // 2. Calculate Control Points
     const controlOffset = CONFIG.link.controlOffset;
+    // Adaptive control distance ensures curves don't look weird on short distances
     const midX = (startX + endX) / 2;
     const controlDistance = Math.max(controlOffset, Math.abs(midX - startX));
-    
+
     let c1x, c2x;
+    // Logic for forward vs backward connections (S-curves)
     if (startX <= endX) {
-        c1x = startX + controlDistance;
+        c1x = startX + controlDistance; 
         c2x = endX - controlDistance;
     } else {
-        c1x = startX + controlDistance;
+        c1x = startX + controlDistance; 
         c2x = endX - controlDistance;
     }
-    
-    return `M ${startX},${startY} C ${c1x},${startY} ${c2x},${endY} ${endX},${endY}`;
+
+    return { sx: startX, sy: startY, tx: endX, ty: endY, c1x, c1y: startY, c2x, c2y: endY };
 }
 
 /**
- * Calcola la posizione (x, y) lungo un path SVG
- * @param {string} pathString - Il path SVG 'd'
- * @param {number} offset - Posizione normalizzata (0.0 a 1.0)
- * @returns {Object} {x, y} coordinate
+ * Calculate pure SVG path string
  */
-export function calculatePositionAlongPath(pathString, offset) {
-    // 1. Crea un elemento SVG temporaneo per il percorso
-    const tempPath = document.createElementNS("http://www.w3.org/2000/svg", "path");
-    tempPath.setAttribute("d", pathString);
+export function calculatePath(link) {
+    const points = getLinkBezierPoints(link);
+    if (!points) return "";
+    return `M ${points.sx},${points.sy} C ${points.c1x},${points.c1y} ${points.c2x},${points.c2y} ${points.tx},${points.ty}`; 
+}
+
+/**
+ * Pure Math Cubic Bezier function
+ * B(t) = (1-t)^3 P0 + 3(1-t)^2 t P1 + 3(1-t) t^2 P2 + t^3 P3
+ */
+function cubicBezier(t, p0, p1, p2, p3) {
+    const k = 1 - t;
+    const k2 = k * k;
+    const k3 = k2 * k;
+    const t2 = t * t;
+    const t3 = t2 * t;
+    return k3 * p0 + 3 * k2 * t * p1 + 3 * k * t2 * p2 + t3 * p3;
+}
+
+/**
+ * Optimized position calculator - No DOM access
+ * @param {Object} link - The Link Object (NOT path string)
+ * @param {number} t - Normalized distance (0.0 to 1.0)
+ */
+export function calculatePositionAlongPath(link, t) {
+    const p = getLinkBezierPoints(link);
+    if (!p) return { x: 0, y: 0 };
+
+    const x = cubicBezier(t, p.sx, p.c1x, p.c2x, p.tx);
+    const y = cubicBezier(t, p.sy, p.c1y, p.c2y, p.ty);
     
-    // 2. Ottieni la lunghezza totale del percorso
-    const length = tempPath.getTotalLength();
-    
-    // 3. Calcola il punto lungo il percorso alla distanza richiesta
-    const point = tempPath.getPointAtLength(length * offset);
-    
-    // 4. Cleanup (importante per le performance)
-    // Non possiamo eliminare l'elemento perché non è attaccato al DOM in questo esempio,
-    // ma `getPointAtLength` funziona ugualmente. Se si usa D3 in modo più tradizionale
-    // (es. `d3.select(".link").node().getPointAtLength(...)`), non serve creare l'elemento.
-    
-    return { x: point.x, y: point.y };
+    return { x, y };
+}
+
+/**
+ * Find t where point is closest to curve (Mathematical Approximation)
+ * Replaces the heavy iteration in render.js
+ */
+export function findClosestTOnPath(link, targetPoint, samples = 20) {
+   const p = getLinkBezierPoints(link);
+   if(!p) return 0.5;
+
+   let bestT = 0.5;
+   let minDst = Infinity;
+
+   // Coarse search
+   for(let i = 0; i <= samples; i++) {
+       const t = i / samples;
+       const x = cubicBezier(t, p.sx, p.c1x, p.c2x, p.tx);
+       const y = cubicBezier(t, p.sy, p.c1y, p.c2y, p.ty);
+       const dx = x - targetPoint.x;
+       const dy = y - targetPoint.y;
+       const dst = dx*dx + dy*dy;
+       
+       if(dst < minDst) {
+           minDst = dst;
+           bestT = t;
+       }
+   }
+   
+   // Optional: Refine search around bestT could be added here for precision
+   return bestT;
 }

@@ -78,46 +78,39 @@ export class NodeRenderer {
     }
 */
     renderHandlers(selection) {
-
         selection.selectAll("g.handler-g")
             .data(d => {
-                    const definition = registry.getNodeDefinition(d.type);
-                    return definition ? definition.getHandlers(d) : [];
-                }, 
-                h => h.id)
+                const definition = registry.getNodeDefinition(d.type);
+                return definition ? definition.getHandlers(d) : [];
+            }, h => h.id)
             .join(
                 enter => {
-                    const g = enter
-                        .append("g")
+                    const g = enter.append("g")
                         .attr("class", h => `handler-g ${h.type}`)
-                        .attr("transform", h => `translate(${h.offset.x || 0}, ${h.offset.y || 0})`);
+                        .attr("transform", h => `translate(${h.offset.x || 0}, ${h.offset.y || 0})`); 
 
                     g.each(function (h) {
                         const HandlerClass = registry.getHandlerDefinition(h.type);
                         const instance = new HandlerClass();
-
-                        h.instance = instance;        // salviamo l’istanza nel dato
-                        this.__handler = instance;    // opzionale: anche nel DOM
-
+                        h.instance = instance;        
+                        // Initial Render
                         instance.render(d3.select(this));
                     });
-
                     return g;
                 },
-
                 update => {
-                    update.attr("transform", h => `translate(${h.offset.x || 0}, ${h.offset.y || 0})`);
-
+                    // Just update position
+                    update.attr("transform", h => `translate(${h.offset.x || 0}, ${h.offset.y || 0})`); 
+                    
+                    // Call render again - BUT the handler must handle updates now!
                     update.each(function (h) {
-                        const instance = h.instance;
-
-                        d3.select(this).selectAll("*").remove();
-                        instance.render(d3.select(this));
+                        if (h.instance) {
+                            // REMOVED: d3.select(this).selectAll("*").remove(); 
+                            h.instance.render(d3.select(this));
+                        }
                     });
-
                     return update;
                 },
-
                 exit => exit.remove()
             );
     }

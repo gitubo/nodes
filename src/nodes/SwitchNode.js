@@ -33,7 +33,7 @@ export class SwitchNodeDefinition extends NodeDefinition {
     
     static getDimensions(d) {
         const handlers = (Array.isArray(d?.handlers) ? d.handlers : []).filter(h => h.class === 'source');
-        const radius = SourceHandlerDefinition.getDimension().radius + 2;
+        const radius = SourceHandlerDefinition.getDimension(d.sourceHandlers[0]).radius + 2;
         const height = DEFINITIONS.sourceSeparator + (DEFINITIONS.sourceSeparator + radius * 2) * handlers.length;
         return { width: 120, height: height };
     }
