@@ -1,4 +1,3 @@
-// src/ContextMenu.js
 import { store } from './state.js';
 import { getIcon } from './Icons.js';
 import { eventBus } from './EventBus.js';
@@ -35,22 +34,18 @@ function showContextMenu(event, type, data) {
         if (data.label) {
             actions.push({
                 icon: 'labelDelete', label: 'Remove Label',
-                // FIX: Use store.updateLink to trigger event/render, pass undefined to remove
                 callback: () => { 
                     store.updateLink(data.id, { label: undefined }); 
-                    //store.selectObject(null, null); 
                     store.deselect();
                 }
             });
         } else {
             actions.push({
                 icon: 'labelAdd', label: 'Add Label',
-                // FIX: Use store.updateLink to trigger event/render
                 callback: () => {
                     store.updateLink(data.id, { 
                         label: { text: 'Label', offset: 0.5, offsetX: 0, offsetY: 0 } 
                     });
-                    //store.selectObject(null, null);
                     store.deselect();
                 }
             });

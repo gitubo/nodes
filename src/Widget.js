@@ -88,6 +88,14 @@ export class DAGWidget {
                 uiController.fitToScreen();
                 break;
 
+            // --- History Commands ---
+            case 'undo':
+                store.undo();
+                break;
+            case 'redo':
+                store.redo();
+                break;
+
             // --- IO Commands ---
             case 'export':
                 const data = store.serialize();
@@ -163,7 +171,7 @@ export class DAGWidget {
         const internalEvents = [
             'NODE_CREATED', 'NODE_UPDATED', 'NODE_REMOVED', 'NODE_MOVED',
             'CONNECTION_CREATED', 'CONNECTION_UPDATED', 'CONNECTION_REMOVED',
-            'SELECTION_CHANGED', 'DESELECTION'
+            'SELECTION_CHANGED', 'DESELECTION', 'HISTORY_CHANGED'
         ];
 
         internalEvents.forEach(evtName => {

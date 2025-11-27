@@ -1,4 +1,5 @@
 import { CONFIG } from '../config.js';
+import { eventBus } from '../EventBus.js';
 
 const generateId = () => crypto.randomUUID();
 
@@ -13,14 +14,13 @@ export class NodeDefinition {
         this.handlers = [];
         this.position = {x: x, y: y};
         this.data = data;
-        this.dimensions = {};
     }
 
     static getId(d) { return d.id; }
-    static getDimensions(d) { return d.dimensions || {}; }
     static getHandlers(d) { return d.handlers || []; }
     static getData(d) { return d.data || {}; }
 
+    getDimensions() { return { width: this.width, height: this.height }; }
     getIconPath() { return ''; }
 
     getShapePath() { 
@@ -45,6 +45,9 @@ export class NodeDefinition {
     }
         
     static render(currentSelection, d){
+
+        const dimensions = d.getDimensions(); 
+
         currentSelection.append("path")
             .attr("class", `node-body ${d.type}`)
             .attr("d", d.getShapePath())
@@ -61,13 +64,13 @@ export class NodeDefinition {
 
             const scale = size / Math.max(bbox.width, bbox.height);
 
-            const tx = (d.width - bbox.width * scale) / 2 - bbox.x * scale;
-            const ty = (d.height - bbox.height * scale) / 2 - bbox.y * scale;
+            const tx = (dimensions.width - bbox.width * scale) / 2 - bbox.x * scale;
+            const ty = (dimensions.height - bbox.height * scale) / 2 - bbox.y * scale;
 
             path.attr("transform", `translate(${tx}, ${ty}) scale(${scale})`);
         }
 
-        let yOffset = d.height + CONFIG.node.labelTopMargin;
+        let yOffset = dimensions.height + CONFIG.node.labelTopMargin;
         if (d.label) {
             const capitalized = d.label.charAt(0).toUpperCase() + d.label.slice(1);
             const labelJoin = currentSelection.selectAll("text.node-label").data([d]);
@@ -77,7 +80,7 @@ export class NodeDefinition {
                 .attr("text-anchor", "middle");
 
             entered.merge(labelJoin)
-                .attr("x", d.width / 2)
+                .attr("x", dimensions.width / 2)
                 .attr("y", yOffset)
                 .text(capitalized)
                 .on("dblclick", (e, d) => {
@@ -97,26 +100,30 @@ export class NodeDefinition {
                 .attr("class", "node-note") 
                 .attr("text-anchor", "middle")
                 .merge(noteJoin)
-                .attr("x", d.width / 2)
+                .attr("x", dimensions.width / 2)
                 .attr("y", yOffset)
                 .text(d.note);
             noteJoin.exit().remove();
         }
     }
 
-    static serialize(node) {
+    /**
+     * FIX: Convertito a metodo di istanza. Usa 'this' per accedere ai dati.
+     */
+    serialize() {
         return {
-            id: node.id,
-            type: node.type,
-            position: { x: node.position.x, y: node.position.y },
-            label: node.label,
-            note: node.note, 
-            data: node.data || {}, 
-            handlers: node.handlers.map(h => ({
+            id: this.id,
+            type: this.type,
+            position: { x: this.position.x, y: this.position.y },
+            label: this.label,
+            note: this.note, 
+            data: this.data || {}, 
+            handlers: this.handlers.map(h => ({
                 id: h.id, 
                 type: h.type, 
                 label: h.label,
-                offset: { x: h.offset.x, y: h.offset.y },
+                // Serializza solo l'oggetto offset, il deserializzatore aggiungerà i campi piatti
+                offset: { x: h.offset.x, y: h.offset.y }, 
                 hideLabel: h.hideLabel,
                 labelOffsetX: h.labelOffsetX,
                 labelOffsetY: h.labelOffsetY
@@ -124,21 +131,37 @@ export class NodeDefinition {
         };
     }
     
+    /**
+     * Mantenuto statico. Assicura che i nodi ripristinati siano istanze di classe con campi corretti.
+     */
     static deserialize(data) {
-        return {
-            id: data.id,
-            type: data.type,
-            x: data.position?.x || 0,
-            y: data.position?.y || 0,
-            label: data.label,
-            note: data.note,
-            data: data.data || {},
-            handlers: (data.handlers || []).map(h => ({
-                ...h,
-                offset_x: h.offset?.x || 0,
-                offset_y: h.offset?.y || 0
-            })) || this.getHandlers()
-        };
+        const instance = new this(data.position?.x || 0, data.position?.y || 0);
+
+        instance.id = data.id;
+        instance.type = data.type;
+        instance.position = { x: data.position?.x || 0, y: data.position?.y || 0 };
+        instance.label = data.label;
+        instance.note = data.note;
+        instance.data = data.data || {};
+
+        instance.handlers = (data.handlers || []).map(h => {
+            const offsetX = h.offset?.x || 0;
+            const offsetY = h.offset?.y || 0;
+            
+            return {
+                id: h.id,
+                type: h.type,
+                label: h.label,
+                offset: { x: offsetX, y: offsetY },
+                offset_x: offsetX, // FIX: Ripristina i campi piatti per il renderer D3 (risolve l'errore 'NaN')
+                offset_y: offsetY, // FIX: Ripristina i campi piatti per il renderer D3 (risolve l'errore 'NaN')
+                hideLabel: h.hideLabel,
+                labelOffsetX: h.labelOffsetX,
+                labelOffsetY: h.labelOffsetY,
+            };
+        });
+        
+        return instance;
     }
 
     static renderProperties(container, nodeData, onChange) {

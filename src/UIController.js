@@ -34,12 +34,32 @@ export class UIController {
                 }
             }
         });
+
+        // Listen for history changes to update button states (opacity/disabled)
+        eventBus.on('HISTORY_CHANGED', (status) => {
+            const undoBtn = document.querySelector('[data-action="undo"]');
+            const redoBtn = document.querySelector('[data-action="redo"]');
+            
+            if (undoBtn) {
+                undoBtn.style.opacity = status.canUndo ? '1' : '0.3';
+                undoBtn.style.pointerEvents = status.canUndo ? 'auto' : 'none';
+            }
+            if (redoBtn) {
+                redoBtn.style.opacity = status.canRedo ? '1' : '0.3';
+                redoBtn.style.pointerEvents = status.canRedo ? 'auto' : 'none';
+            }
+        });
     }
     
     createZoomPanel() {
         const p = document.createElement('div');
         p.className = 'ui-panel zoom-panel';
         p.innerHTML = `
+            <div class="panel-group">
+                <button class="icon-btn" data-action="undo" title="Undo" style="opacity:0.3; pointer-events:none;">${getIcon('undo')}</button>
+                <button class="icon-btn" data-action="redo" title="Redo" style="opacity:0.3; pointer-events:none;">${getIcon('redo')}</button>
+            </div>
+            <div class="panel-separator"></div>
             <div class="panel-group">
                 <button class="icon-btn" data-action="zoom-in" title="Zoom In">${getStrokeIcon('zoomIn')}</button>
                 <button class="icon-btn" data-action="zoom-out" title="Zoom Out">${getStrokeIcon('zoomOut')}</button>
@@ -82,6 +102,8 @@ export class UIController {
             const svg = d3.select('svg');
             
             switch(action) {
+                case 'undo': store.undo(); break;
+                case 'redo': store.redo(); break;
                 case 'zoom-in': svg.transition().call(window.zoomBehavior.scaleBy, 1.3); break;
                 case 'zoom-out': svg.transition().call(window.zoomBehavior.scaleBy, 0.7); break;
                 case 'zoom-reset': svg.transition().call(window.zoomBehavior.transform, d3.zoomIdentity); break;
@@ -102,14 +124,9 @@ export class UIController {
                 case 'open-file': this.openFile(); break;
                 case 'add-node':
                     const btnRect = btn.getBoundingClientRect();
-                    
-                    // FIX: Calculate menu height to align bottom-to-top
                     const typeCount = registry.getNodeTypes().length;
                     const menuHeight = typeCount * HELPER_CONFIG.menuItemHeight;
                     
-                    // FIX: 
-                    // x: btn.left - 10 (Offsets the +10 padding in showNodeTypeMenu)
-                    // y: btn.top - menuHeight (Aligns bottom of menu to top of button)
                     showNodeTypeMenu({
                         x: btnRect.left - 10, 
                         y: btnRect.top - menuHeight

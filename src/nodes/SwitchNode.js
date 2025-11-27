@@ -5,85 +5,79 @@ import { SourceHandlerDefinition } from '../handlers/SourceHandler.js';
 import { TargetVerticalHandlerDefinition } from '../handlers/TargetVerticalHandler.js';
 
 const DEFINITIONS = {
-    sourceSeparator: 20,
-    sourceHandlerLabels: ["yes", "no"]
+    sourceHandlerLabels: ["yes", "no", "maybe"]
 };
 
 export class SwitchNodeDefinition extends NodeDefinition {
     constructor(x, y, label, note, data) {
         super(x, y, label, note, data);
         this.type = 'switch';
-        this.width = 120;
-        this.height = 60;
         this.conditions = [];
         this.targetHandlers = [];
-        this.targetHandlers.push(new TargetVerticalHandlerDefinition(0, 30));
+        this.targetHandlers.push(new TargetVerticalHandlerDefinition(0, CONFIG.node.handlerSeparator*2));
         this.sourceHandlers = [];
+        this.width = CONFIG.node.width*2;
         
         // Initialize default handlers
         DEFINITIONS.sourceHandlerLabels.forEach((label, i) => {
-            //const radius = SourceHandlerDefinition.getDimension().radius + 2;
-            const radius = 10;
-            
-            const offset = (DEFINITIONS.sourceSeparator + radius) + (DEFINITIONS.sourceSeparator + radius * 2) * i;
+            const offset = (CONFIG.node.handlerSeparator*2) + (CONFIG.node.handlerSeparator*2 )*i;
             this.sourceHandlers.push(new SourceHandlerDefinition(this.width, offset, label));
-            //    labelPosition: 'left', labelMargin: 15
         });
+
+        this.height = CONFIG.node.handlerSeparator*2*( this.sourceHandlers.length+1);
     }
     
-    static getDimensions(d) {
-        const handlers = (Array.isArray(d?.handlers) ? d.handlers : []).filter(h => h.class === 'source');
-        const radius = SourceHandlerDefinition.getDimension(d.sourceHandlers[0]).radius + 2;
-        const height = DEFINITIONS.sourceSeparator + (DEFINITIONS.sourceSeparator + radius * 2) * handlers.length;
-        return { width: 120, height: height };
+    getDimensions() {
+        const w = this.width;
+        const h = CONFIG.node.handlerSeparator*2*( this.sourceHandlers.length+1);
+        return { width: w, height: h};
     }
+
+    getIconPath() { return 'M465 342l42 42q14-13 37-28t48-24l-15-59q-35 11-64.5 31.5T465 342Zm171-84 14 58q21-4 49.5-5t66.5 1l-90 90 42 42L880 282 718 120l-42 42 89 89q-42-2-76.5.5T636 258ZM80 450v60H280q46 0 79 15.5T432 585q63 69 135.5 98.5T766 708l-90 90 42 42L880 678 718 516l-42 42 90 90q-108 6-174.5-19.5T478 545q-13-15-32-31.5T401 480q16-10 35-24.5T466 428l-43-43q-33 33-64 49t-79 16H80Z'; }
 
     static getHandlers(d) { return [...d.targetHandlers, ...d.sourceHandlers]; }
     
     // Reuse the Diamond shape path logic
     getShapePath() {
         const W = this.width;
-        // Calculate dynamic height based on handlers for the path
-        const radius = SourceHandlerDefinition.getDimension(this.sourceHandlers[0]).radius + 2;
-        const handlerCount = Math.max(1, this.sourceHandlers.length);
-        const H = DEFINITIONS.sourceSeparator + (DEFINITIONS.sourceSeparator + radius * 2) * handlerCount;
-        
         const sR = CONFIG.node.smallBorderRadius;
-        const srcSep = DEFINITIONS.sourceSeparator;
-        const tH = TargetVerticalHandlerDefinition.getDimension(this.targetHandlers[0]).height;
-        const tW = TargetVerticalHandlerDefinition.getDimension(this.targetHandlers[0]).width;
         
+        // Top
         let path = `M ${sR},0 L ${W-sR},0 A ${sR},${sR} 0 0 1 ${W},${sR}`;
         
         // Right side (source handlers)
-        let currentY = 0;
+        const handleFootprint = (SourceHandlerDefinition.getDimension(this.sourceHandlers[0]).radius + CONFIG.handler.margin) * 2;
+        const handlerCount = Math.max(1, this.sourceHandlers.length);
+        let currentY = CONFIG.node.handlerSeparator-sR;
         for(let i=0; i<handlerCount; i++) {
-            currentY += srcSep;
-            path += ` L ${W},${currentY}`; // Line to top of handler
-            currentY += radius * 2;
-            // Arc for handler
+            currentY += CONFIG.node.handlerSeparator - CONFIG.handler.margin;
+            path += ` L ${W},${currentY}`;
+            currentY += handleFootprint;
             path += ` A 1,1 0 0 0 ${W},${currentY}`; 
+            currentY -= CONFIG.handler.margin;
         }
+        const H = CONFIG.node.handlerSeparator*2*( this.sourceHandlers.length+1);
         path += ` L ${W},${H-sR} A ${sR},${sR} 0 0 1 ${W-sR},${H}`;
         
         // Bottom
         path += ` L ${sR},${H} A ${sR},${sR} 0 0 1 0,${H-sR}`;
         
         // Left side (target handler)
-        const inputY = 30;
-        path += ` L 0,${inputY + tH/2 + 2} L ${tW/2 + 2},${inputY + tH/2 + 2}`;
-        path += ` L ${tW/2 + 2},${inputY - tH/2 - 2} L 0,${inputY - tH/2 - 2}`;
+        const tH = TargetVerticalHandlerDefinition.getDimension(this.targetHandlers[0]).height / 2 + CONFIG.handler.margin;
+        const tW = TargetVerticalHandlerDefinition.getDimension(this.targetHandlers[0]).width / 2 + CONFIG.handler.margin;
+        const inputY = CONFIG.node.handlerSeparator*2;
+        path += ` L 0,${inputY + tH} L ${tW},${inputY + tH}`;
+        path += ` L ${tW},${inputY - tH} L 0,${inputY - tH}`;
         path += ` L 0,${sR} A ${sR},${sR} 0 0 1 ${sR},0 Z`;
-        
         return path;
     }
 
-    static serialize(node) {
-        return { ...super.serialize(node), condition: node.condition };
+    serialize() {
+        return { ...super.serialize(), condition: this.condition };
     }
     
     static deserialize(data) {
-        return { ...super.deserialize(data), condition: data.condition || '' };
+        return { ...super.deserialize(), condition: data.condition || '' };
     }
 
     // --- MODULAR PROPERTIES ---

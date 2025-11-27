@@ -1,25 +1,23 @@
-// src/LinkInteractionManager.js
 import { store } from './state.js';
 import { updateLinksOnly } from './render.js';
+import { eventBus } from './EventBus.js';
 
 class LinkInteractionManager {
     constructor() {
-        this.activeViewport = null; // Cache the viewport during drag
+        this.activeViewport = null; 
     }
     
-    startDrag(sourceId, event, isReversed = false) {
-        // Ensure we have a valid DOM event
+    startDrag(sourceHandlerId, event, isReversed = false) {
         const domEvent = event.sourceEvent || event; 
         const svg = domEvent.target.closest('svg');
         if (!svg) return;
         
-        // Cache the viewport node for the duration of the drag
         this.activeViewport = d3.select(svg).select("g.viewport").node();
         
         const [mouseX, mouseY] = d3.pointer(domEvent, this.activeViewport);
         
         const ghostData = {
-            sourceId: sourceId,
+            sourceHandlerId: sourceHandlerId,
             targetX: mouseX,
             targetY: mouseY,
             reversed: isReversed
@@ -34,27 +32,30 @@ class LinkInteractionManager {
             const domEvent = event.sourceEvent || event;
             const [mouseX, mouseY] = d3.pointer(domEvent, this.activeViewport);
             
-            store.state.ui.ghostLink.targetX = mouseX;
-            store.state.ui.ghostLink.targetY = mouseY;
-            
-            updateLinksOnly();
+            const newGhostData = {
+                ...store.state.ui.ghostLink,
+                targetX: mouseX,
+                targetY: mouseY
+            };
+            // Call the setter to emit 'GHOST_LINK_UPDATED'
+            store.setGhostLink(newGhostData); 
+            eventBus.emit('UI_REDRAW_GHOST_LINK', null);
         }
     }
 
+
     endDrag(event, originId, isReversed = false) {
-        const ghost = store.state.ui.ghostLink;
-        const disconnecting = store.state.ui.disconnectingLink;
+        // Recupera lo stato attuale del ghostLink
+        const ghost = store.ui.ghostLink;
+        const disconnecting = store.ui.disconnectingLink;
+        store.setGhostLink(null);
+        store.setDisconnectingLink(null);
 
         if (ghost || disconnecting) {
-            // Note: event here is the D3 drag event wrapper
-            // event.sourceEvent.target gives the DOM element under cursor
             const targetElement = event.sourceEvent.target;
-            
-            // Check if we dropped on a valid target (must handle D3 selection data)
             const targetData = d3.select(targetElement).datum();
 
             if (targetData) {
-                console.log('Drop on:', targetData.role, targetData.id, 'from:', originId, 'reversed:', isReversed);
                  if (!isReversed && targetData.role === 'target') {
                      store.addLink(originId, targetData.id);
                  } 
@@ -67,9 +68,7 @@ class LinkInteractionManager {
             }
         }
 
-        store.setGhostLink(null);
-        store.setDisconnectingLink(null);
-        this.activeViewport = null; // Clear cache
+        eventBus.emit('STATE_UPDATED'); 
     }
 }
 

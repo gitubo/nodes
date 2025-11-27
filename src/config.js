@@ -1,16 +1,23 @@
-// config.js - Centralized configuration
+const MODULE = 8;
+const MODULE_0_5 = MODULE / 2; //4
+const MODULE_2 = MODULE * 2;  //16
+const MODULE_3 = MODULE * 3;  //24
+const MODULE_4 = MODULE * 4;  //32
+const MODULE_8 = MODULE * 8;  //64
+const MODULE_16 = MODULE * 16;  //128
+
 export const CONFIG = {
     // Canvas settings
     canvas: {
-        width: 1000,
-        height: 800,
+        width: 1024,
+        height: 1024,
         backgroundColor: '#f8fbff'
     },
     
     // Grid settings
     grid: {
         enabled: true,
-        spacing: 32,
+        spacing: MODULE_4,
         dotRadius: 1.5,
         dotColor: '#e0e0e0',
         snapToGrid: true
@@ -18,26 +25,27 @@ export const CONFIG = {
     
     // Node settings
     node: {
-        width: 128,
-        height: 128,
-        smallBorderRadius: 16,
-        borderRadius: 32,
-        largeBorderRadius: 64,
-        labelTopMargin: 32,
-        noteTopMargin: 24,
-        iconSize: 64
+        width: MODULE_16,
+        height: MODULE_16,
+        smallBorderRadius: MODULE_2,
+        borderRadius: MODULE_4,
+        largeBorderRadius: MODULE_8,
+        labelTopMargin: MODULE_4,
+        noteTopMargin: MODULE_3,
+        iconSize: MODULE_8,
+        handlerSeparator: MODULE_4
     },
     
     // Handler settings
     handler: {
-        width: 16,
-        height: 32,
-        radius: 16,
+        width: MODULE_2,
+        height: MODULE_4,
+        radius: MODULE_2,
         label: {
-            margin: 10,           
+            margin: MODULE,           
             position: 'left'     
         },
-        margin: 4
+        margin: MODULE_0_5
     },
     
     // Link settings

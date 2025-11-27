@@ -5,8 +5,8 @@ import { store } from '../state.js';
 
 export class TargetHandlerDefinition extends HandlerDefinition {
 
-    constructor(x, y, label) {
-        super(x, y, label);
+    constructor(x, y, label, direction='left') {
+        super(x, y, label, direction);
         this.type = "target";
         this.role = "target";
         this.dimensions = {

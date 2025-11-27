@@ -2,6 +2,7 @@
 import { registry } from './Registry.js';
 import { snapToGrid } from './config.js';
 import { eventBus } from './EventBus.js';
+import { HistoryManager } from './HistoryManager.js';
 
 const generateId = () => crypto.randomUUID();
 
@@ -13,10 +14,16 @@ class Store {
             transform: d3.zoomIdentity,
             ui: {
                 ghostLink: null,
-                disconnectingLink: null,
+                disconnectingLink: null, 
                 selectedObject: null 
+            },
+            cache: {
+                nodeLinks: new Map() 
             }
         };
+        
+        this.history = new HistoryManager(30);
+        this._saveHistory(); 
     }
 
     get nodes() { return this.state.nodes; }
@@ -26,127 +33,159 @@ class Store {
     set transform(val) { this.state.transform = val; }
 
     getNode(id) { return this.state.nodes.find(n => n.id === id); }
-    getLink(id) { return this.state.links.find(l => l.id === id); }
+    getLink(id) { return this.state.links.find(l => l.id === id); } 
 
-    addNode(type, x=0, y=0, label='', note='', initialData = {}) {
-        const NodeClass = registry.getNodeDefinition(type);
-        if (!NodeClass || typeof NodeClass !== 'function' || !NodeClass.prototype) {
-            console.error("Adding new node: not a valid costructor for type <"+type+">")
-            return null; 
-        }
-        const newNodeInstance = new NodeClass(
-            snapToGrid(x), snapToGrid(y),
-            label, note,
-            initialData
-        );
-
-        this.state.nodes.push(newNodeInstance);
-        
-        eventBus.emit('NODE_CREATED', { id: NodeClass.getId(newNodeInstance) });
-        return newNodeInstance; 
+    getLinksForNode(nodeId) {
+        return Array.from(this.state.cache.nodeLinks.get(nodeId) || []);
     }
 
-    updateNode(nodeId, newObj) {
-        const nodeInstance = this.state.nodes.find(n =>  NodeClass.getId(n) === nodeId);
-        if (!nodeInstance) return;
-        Object.assign(nodeInstance, newObj);
-        eventBus.emit('NODE_UPDATED', { id: nodeId });
+    _rebuildCache() {
+        this.state.cache.nodeLinks.clear();
+        this.state.links.forEach(link => {
+            const { source, target } = link;
+            if (!this.state.cache.nodeLinks.has(source)) {
+                this.state.cache.nodeLinks.set(source, new Set());
+            }
+            if (!this.state.cache.nodeLinks.has(target)) {
+                this.state.cache.nodeLinks.set(target, new Set());
+            }
+            this.state.cache.nodeLinks.get(source).add(link);
+            this.state.cache.nodeLinks.get(target).add(link);
+        });
+    }
+
+    _saveHistory() {
+        this.history.save(this.serialize()); 
+    }
+    
+    // --- MUTATORS ---
+
+    addNode(type, x, y, label='', note='', data = {}) {
+        this._saveHistory();
+        const definition = registry.getNodeDefinition(type);
+        if (!definition) {
+            console.error(`Node type ${type} not registered.`);
+            return null;
+        }
+
+        const node = new definition(snapToGrid(x), snapToGrid(y), label, note, data);
+        this.state.nodes.push(node);
+        eventBus.emit('NODE_CREATED', node);
+        return node;
     }
 
     removeNode(nodeId) {
-        const node = this.state.nodes.find(n => n.id === nodeId);
-        if (!node) return;
-
-        const handlerIds = node.handlers.map(h => h.id);
-        
-        // Remove connections
-        const linksToRemove = this.state.links.filter(l => 
-            handlerIds.includes(l.source) || handlerIds.includes(l.target)
+        this._saveHistory(); 
+        this.state.links = this.state.links.filter(link => 
+            link.source !== nodeId && link.target !== nodeId
         );
-        
-        this.state.links = this.state.links.filter(l => !linksToRemove.includes(l));
         this.state.nodes = this.state.nodes.filter(n => n.id !== nodeId);
 
-        if (this.state.ui.selectedObject?.id === nodeId) {
-            this.deselect();
-        }
-
-        // Granular Events
-        if (linksToRemove.length > 0) {
-            linksToRemove.forEach(l => eventBus.emit('CONNECTION_REMOVED', { id: l.id }));
-        }
-        eventBus.emit('NODE_REMOVED', { id: nodeId });
+        this._rebuildCache();
+        eventBus.emit('NODE_REMOVED', nodeId);
+        eventBus.emit('STATE_UPDATED'); 
     }
 
-    addLink(sourceId, targetId) {
+    addLink(sourceHandlerId, targetHandlerId) {
+        // AGGIUNTO CONTROLLO DI VALIDITÀ DEI PARAMETRI
+        if (!sourceHandlerId || !targetHandlerId) {
+             console.error("Cannot add link: Missing source or target IDs.", 
+                           {sourceHandlerId, targetHandlerId});
+             return null;
+        }
+
+        this._saveHistory(); 
+        const id = generateId();
         const link = {
-            id: generateId(),
-            source: sourceId,
-            target: targetId
+            id,
+            sourceHandlerId,
+            targetHandlerId,
+            label: ''
         };
+        
         this.state.links.push(link);
-        const sourceNode = this.state.nodes.find(n => n.handlers.some(h => h.id === sourceId));
-        const targetNode = this.state.nodes.find(n => n.handlers.some(h => h.id === targetId));
-
-        const eventPayload = {
-            id: link.id,
-            source: {
-                node_id: sourceNode ? sourceNode.id : null,
-                handler_id: sourceId
-            },
-            target: {
-                node_id: targetNode ? targetNode.id : null,
-                handler_id: targetId
-            }
-        };
-        eventBus.emit('CONNECTION_CREATED', eventPayload);
+        this._rebuildCache();
+        eventBus.emit('LINK_CREATED', link);
+        return link;
     }
-
+    
     removeLink(linkId) {
+        this._saveHistory(); 
         this.state.links = this.state.links.filter(l => l.id !== linkId);
-        if (this.state.ui.selectedObject?.id === linkId) {
-            this.deselect();
+        this._rebuildCache();
+        eventBus.emit('LINK_REMOVED', linkId);
+        eventBus.emit('STATE_UPDATED');
+    }
+
+    moveNode(nodeId, newX, newY) {
+        const node = this.getNode(nodeId);
+        if (node) {
+            node.position.x = snapToGrid(newX);
+            node.position.y = snapToGrid(newY);
+
+            eventBus.emit('NODE_MOVED', node);
         }
-        eventBus.emit('CONNECTION_REMOVED', { id: linkId });
     }
-
-    updateLink(linkId, newProps) {
-        const idx = this.state.links.findIndex(l => l.id === linkId);
-        if (idx === -1) return;
-        this.state.links[idx] = { ...this.state.links[idx], ...newProps };
-        eventBus.emit('CONNECTION_UPDATED', { id: linkId });
+    
+    // --- UI/TOOLS ---
+    // ... (select, deselect, setGhostLink omessi per brevità, sono già corretti)
+    select(object) {
+        this.state.ui.selectedObject = object;
+        eventBus.emit('OBJECT_SELECTED', object);
     }
-
-    selectObject(type, objectData) {
-        this.state.ui.selectedObject = { type, id: objectData.id };
-        eventBus.emit('SELECTION_CHANGED', { type, id: objectData.id });
-    }
-
+    
     deselect() {
-        if (this.state.ui.selectedObject !== null) {
-            this.state.ui.selectedObject = null;
-            eventBus.emit('DESELECTION'); 
-        }
+        this.state.ui.selectedObject = null;
+        eventBus.emit('OBJECT_DESELECTED');
     }
 
     setGhostLink(ghostData) {
         this.state.ui.ghostLink = ghostData;
-        eventBus.emit('GHOST_LINK_UPDATED', ghostData); 
     }
 
-    setDisconnectingLink(link) {
-        this.state.ui.disconnectingLink = link;
+    setDisconnectingLink(linkId) {
+        this.state.ui.disconnectingLink = linkId;
+    }
+
+    // --- HISTORY ---
+    // ... (undo, redo omessi per brevità, sono già corretti)
+    undo() {
+        if (!this.history.canUndo()) return;
+        const previousStateData = this.history.undo(); 
+        if (previousStateData) {
+            this.deserialize(previousStateData); 
+            eventBus.emit('STATE_UPDATED'); 
+        } else {
+             console.warn("Undo: Fallito o saltato un elemento della cronologia corrotto.");
+        }
     }
     
+    redo() {
+        if (!this.history.canRedo()) return;
+        const nextStateData = this.history.redo();
+        if (nextStateData) {
+            this.deserialize(nextStateData);
+            eventBus.emit('STATE_UPDATED'); 
+        } else {
+             console.warn("Redo: Fallito o saltato un elemento della cronologia corrotto.");
+        }
+    }
+
+
+    // --- SERIALIZATION/DESERIALIZATION ---
+
     serialize() {
         const exportData = {
-            metadata: { version: "0.1.0", created_at: new Date().toISOString() },
             nodes: {},
             connections: {}
         };
+        
         this.state.nodes.forEach(node => {
-            const definition = registry.getNodeDefinition(node.type);
-            exportData.nodes[node.id] = definition ? definition.serialize(node) : node;
+            if (typeof node.serialize === 'function') {
+                exportData.nodes[node.id] = node.serialize(); 
+            } else {
+                 console.warn(`Node ${node.id} (${node.type}) missing serialize function.`);
+            }
         });
         this.state.links.forEach(link => {
             exportData.connections[link.id] = { ...link };
@@ -156,29 +195,36 @@ class Store {
 
     deserialize(data) {
         if (!data || !data.nodes || !data.connections) return;
-        this.state.nodes = Object.values(data.nodes).map(nodeData => {
-            const definition = registry.getNodeDefinition(nodeData.type);
-            return definition ? definition.deserialize(nodeData) : nodeData;
-        });
-        this.state.links = Object.values(data.connections).map(l => ({
-            id: l.id, source: l.source, target: l.target, label: l.label
-        }));
         
-        // Full refresh
-        eventBus.emit('NODE_CREATED', {}); 
+        const newNodes = Object.values(data.nodes).map(nodeData => {
+            const definition = registry.getNodeDefinition(nodeData.type);
+            return definition ? definition.deserialize(nodeData) : nodeData; 
+        });
+        
+        const newLinks = Object.values(data.connections).map(l => ({
+            id: l.id, source: l.source, sourceHandler: l.sourceHandler, target: l.target, targetHandler: l.targetHandler, label: l.label
+        }));
+
+        this.state = {
+            ...this.state,
+            nodes: newNodes,
+            links: newLinks
+        };
+        
+        this._rebuildCache();
+        eventBus.emit('STATE_LOADED', this.state); 
+        this.deselect();
     }
     
     initializeWithDefaults() {
-        const n1 = this.addNode('start', 0, 0);
-        const n2 = this.addNode('task', 400, 0);
-        const n3 = this.addNode('service', 600, 400, 'HTTP Request', '[POST]');
-        const n4 = this.addNode('end', 800, 0);
-        /*
-        if (n1 && n2 && n1.handlers[0] && n2.handlers[0]) {
-            const target = n2.handlers.find(h => h.role === 'target');
-            if (target) this.addLink(n1.handlers[0].id, target.id);
-        }
-        */
+        const n1 = this.addNode('start', 128, 0);
+        const n2 = this.addNode('task', 416, 0);
+        const n3 = this.addNode('switch', 736, 0, 'Switch', 'device.type');
+        const n4 = this.addNode('service', 1152, 352, 'HTTP', '[POST]');
+        const n5 = this.addNode('service', 1344, 352, 'HTTP', '[GET]');
+        const n6 = this.addNode('end', 1504, 0);
+
+        
     }
 }
 

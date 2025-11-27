@@ -1,5 +1,3 @@
-// src/handlers/SourceHandler.js
-
 import { HandlerDefinition } from './HandlerDefinition.js';
 import { CONFIG } from '../config.js';
 import { linkInteractionManager } from '../LinkInteractionManager.js';
@@ -7,24 +5,18 @@ import { eventBus } from '../EventBus.js';
 import { startInlineEditing } from '../InlineEditor.js';
 
 export class SourceHandlerDefinition extends HandlerDefinition {
-    constructor(x, y, label) {
-        super(x, y, label);
+    constructor(x, y, label, direction='right') {
+        super(x, y, label, direction);
         this.role = 'source';
         this.type = 'source';
         this.dimensions = { radius: CONFIG.handler.radius };
     }
     
-    /**
-     * Renderizza o aggiorna l'handler.
-     * Utilizza .join() per aggiornare gli elementi esistenti invece di ricrearli.
-     */
     render(selection) {
         const radius = CONFIG.handler.radius;
         const cx = 0;
         const cy = 0;
 
-        // 1. CERCHIO DELL'HANDLER (Il punto di connessione)
-        // Usiamo data([this]) per legare l'istanza corrente all'elemento SVG
         selection.selectAll("circle.handler.source")
             .data([this])
             .join(
@@ -33,22 +25,18 @@ export class SourceHandlerDefinition extends HandlerDefinition {
                     .attr("cx", cx)
                     .attr("cy", cy)
                     .attr("r", radius)
-                    // Il menu contestuale si attacca solo alla creazione
                     .on("contextmenu", (event, d) => {
                         import('../ContextMenu.js').then(m => m.showHandlerContextMenu(event, d));
                     }),
                 update => update
-                    .attr("r", radius) // Aggiorna raggio se config cambia
+                    .attr("r", radius)
             );
 
-        // 2. ETICHETTA (LABEL)
-        // Determiniamo se dobbiamo disegnare l'etichetta
         const labelData = (this.label && this.label !== '') ? [this] : [];
 
         selection.selectAll("g.handler-label-group")
             .data(labelData)
             .join(
-                // ENTER: Crea il gruppo label solo se non esiste
                 enter => {
                     const g = enter.append("g")
                         .attr("class", "handler-label-group")
@@ -57,21 +45,15 @@ export class SourceHandlerDefinition extends HandlerDefinition {
                     g.append("text")
                         .attr("class", "handler-label-text");
 
-                    // Comportamento Drag dell'etichetta
                     g.call(d3.drag()
                         .on("start", (e) => e.sourceEvent.stopPropagation())
                         .on("drag", (e, d) => {
                             d.labelOffsetX = (d.labelOffsetX || 0) + e.dx;
-                            d.labelOffsetY = (d.labelOffsetY || 0) + e.dy;
-                            
-                            // Richiediamo un render per aggiornare la posizione visiva
-                            // Nota: Potremmo aggiornare direttamente il transform qui per performance estrema,
-                            // ma usare l'eventBus mantiene il flusso dati pulito.
+                            d.labelOffsetY = (d.labelOffsetY || 0) + e.dy;                            
                             eventBus.emit('RENDER_REQUESTED'); 
                         })
                     );
 
-                    // Inline Editing
                     g.on("dblclick", (e, d) => {
                         e.stopPropagation();
                         startInlineEditing(e, d.label, (val) => {
@@ -82,8 +64,6 @@ export class SourceHandlerDefinition extends HandlerDefinition {
 
                     return g;
                 },
-                
-                // UPDATE: Aggiorna posizione e testo su elementi esistenti
                 update => {
                     update.each(function(d) {
                         const g = d3.select(this);
@@ -148,11 +128,8 @@ export class SourceHandlerDefinition extends HandlerDefinition {
                                 break;
                         }
 
-                        // Calcolo finale con offset manuale (dal drag)
                         const x = labelAnchorX + (d.labelOffsetX || 0);
                         const y = labelAnchorY + (d.labelOffsetY || 0);
-
-                        // Applica trasformazioni
                         g.attr("transform", `translate(${x}, ${y})`);
                         
                         const text = g.select("text")
@@ -166,32 +143,22 @@ export class SourceHandlerDefinition extends HandlerDefinition {
                         }
                     });
                     return update;
-                },
-                
-                // EXIT: Rimuovi se l'etichetta viene cancellata
+                },                
                 exit => exit.remove()
             );
-
-        // Setup Drag per creare connessioni (dal cerchio dell'handler)
         this.setupDrag(selection);
     }
     
     setupDrag(selection) {
-        // Applichiamo il drag listener al gruppo contenitore
-        // Nota: d3.drag gestisce internamente la sostituzione dei listener, 
-        // quindi richiamarlo non crea duplicati dannosi.
         selection.call(d3.drag()
             .on("start", (event, d) => {
                 event.sourceEvent.stopPropagation();
-                // Avvia trascinamento Link
                 linkInteractionManager.startDrag(d.id, event.sourceEvent, false);
             })
             .on("drag", (event) => {
-                // Aggiorna posizione Ghost Link
                 linkInteractionManager.updateDrag(event.sourceEvent);
             })
             .on("end", (event, d) => {
-                // Finalizza connessione
                 linkInteractionManager.endDrag(event, d.id, false);
             })
         );

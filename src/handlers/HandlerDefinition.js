@@ -3,12 +3,13 @@ import { CONFIG } from '../config.js';
 const generateId = () => crypto.randomUUID();
 
 export class HandlerDefinition {
-    constructor(x, y, label='') {
+    constructor(x, y, label='', direction = 'right') {
         this.id = generateId();
         this.type = 'base';
         this.role = '';
         this.offset = {x: x, y: y};
         this.label = label;
+        this.direction = direction;
         this.dimensions = { width: CONFIG.handler.width, height: CONFIG.handler.height };
     }
 

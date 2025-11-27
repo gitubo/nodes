@@ -3,7 +3,7 @@ import { TargetHandlerDefinition } from './TargetHandler.js';
 
 export class TargetHorizontalHandlerDefinition extends TargetHandlerDefinition {
     constructor(x, y, label) {
-        super(x, y, label);
+        super(x, y, label, 'top');
         this.type = "target_horizontal";
         const _w = this.dimensions.height;
         const _h = this.dimensions.width;

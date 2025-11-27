@@ -11,11 +11,11 @@ export class TaskNodeDefinition extends NodeDefinition {
         this.label = 'task';
         this.width = CONFIG.node.width;
         this.height = CONFIG.node.height;
-        this.handlers.push(new TargetVerticalHandlerDefinition(0, this.height / 2));
-        this.handlers.push(new SourceHandlerDefinition(this.width, this.height / 2));
+        this.handlers.push(new TargetVerticalHandlerDefinition(0, CONFIG.node.handlerSeparator * 2));
+        this.handlers.push(new SourceHandlerDefinition(this.width, CONFIG.node.handlerSeparator * 2));
     }
 
-    getIconPath() { return 'M180-180h44l472-471-44-44-472 471v44Zm-60 60v-128l575-574q8-8 19-12.5t23-4.5q11 0 22 4.5t20 12.5l44 44q9 9 13 20t4 22q0 11-4.5 22.5T823-694L248-120H120Zm659-617-41-41 41 41Zm-105 64-22-22 44 44-22-22Z'; }
+    getIconPath() { return 'M705-128 447-388q-23 8-46 13t-47 5q-97.08 0-165.04-67.67Q121-505.33 121-602q0-31 8.16-60.39T152-718l145 145 92-86-149-149q25.91-15.16 54.96-23.58Q324-840 354-840q99.17 0 168.58 69.42Q592-701.17 592-602q0 24-5 47t-13 46l259 258q11 10.96 11 26.48T833-198l-76 70q-10.7 11-25.85 11Q716-117 705-128Zm28-57 40-40-273-273q16-21 24-49.5t8-54.5q0-75-55.5-127T350-782l102 104q9 9 8.5 21.5T451-635L318-510q-9.27 8-21.64 8-12.36 0-20.36-8l-98-97q3 77 54.67 127T354-430q25 0 53-8t49-24l277 277ZM476-484Z'; }
 
     getShapePath() {
         const W = CONFIG.node.width;
