@@ -1,5 +1,5 @@
-import { store } from './state.js';
-import { eventBus } from './EventBus.js';
+//import { store } from './state.js';
+import { EventBus } from './EventBus.js';
 
 /**
  * Spawns an input box over an SVG element to edit text inline.
@@ -41,7 +41,7 @@ export function startInlineEditing(event, initialValue, onCommit) {
         input.remove();
         if (val !== initialValue) {
             onCommit(val);
-            eventBus.emit('RENDER_REQUESTED'); // Force update
+            EventBus.emit('RENDER_REQUESTED'); // Force update
         }
     };
     

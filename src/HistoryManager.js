@@ -2,13 +2,14 @@
 
 /**
  * Manages the undo/redo stack using serialized state snapshots.
- * Uses the efficient stack/current pointer model.
  */
 export class HistoryManager {
-    constructor(limit = 30) {
+    constructor(limit = 30, serializeFn, deserializeFn) {
         this.stack = [];
         this.current = -1; // Pointer to the current state in the stack
         this.limit = limit;
+        this.serialize = serializeFn;
+        this.deserialize = deserializeFn;
     }
 
     canUndo() {
@@ -21,7 +22,7 @@ export class HistoryManager {
 
     /**
      * Saves a new state snapshot. Clears the redo stack.
-     * @param {object} state - L'oggetto stato da salvare.
+     * @param {object} state - The raw state object to save.
      */
     save(state) {
         if (!state || typeof state !== 'object') {
@@ -29,7 +30,9 @@ export class HistoryManager {
         }
 
         try {
-            const serializedState = JSON.stringify(state);
+            // Use the injected serializer
+            const serializedData = this.serialize(state);
+            const serializedState = JSON.stringify(serializedData);
             
             this.current++;
             
@@ -40,8 +43,7 @@ export class HistoryManager {
 
             this.stack[this.current] = serializedState;
             
-            this.stack.splice(this.current + 1); 
-
+            this.stack.splice(this.current + 1);
         } catch (e) {
             console.error("History save failed during JSON serialization.", e);
             this.current--;
@@ -49,7 +51,7 @@ export class HistoryManager {
     }
 
     /**
-     * Moves pointer backward and returns the previous state object.
+     * Moves pointer backward and returns the previous deserialized state.
      */
     undo() {
         if (!this.canUndo()) return null;
@@ -57,14 +59,15 @@ export class HistoryManager {
         this.current--;
         const stateString = this.stack[this.current];
         
-        // FIX CRITICO: Intercetta valori nulli, undefined o stringhe corrotte
         if (!stateString || stateString === "undefined") {
             console.warn("History corrupted: Skipping invalid state entry on undo.");
             return this.undo(); 
         }
         
         try {
-            return JSON.parse(stateString);
+            // Use the injected deserializer
+            const data = JSON.parse(stateString);
+            return this.deserialize(data);
         } catch (e) {
             console.error("History corrupted: Failed to parse JSON on undo.", e);
             return null; 
@@ -72,7 +75,7 @@ export class HistoryManager {
     }
 
     /**
-     * Moves pointer forward and returns the next state object.
+     * Moves pointer forward and returns the next deserialized state.
      */
     redo() {
         if (!this.canRedo()) return null;
@@ -80,14 +83,15 @@ export class HistoryManager {
         this.current++;
         const stateString = this.stack[this.current];
         
-        // FIX CRITICO: Intercetta valori nulli, undefined o stringhe corrotte
         if (!stateString || stateString === "undefined") {
              console.warn("History corrupted: Skipping invalid state entry on redo.");
              return this.redo(); 
         }
 
         try {
-            return JSON.parse(stateString);
+            // Use the injected deserializer
+            const data = JSON.parse(stateString);
+            return this.deserialize(data);
         } catch (e) {
             console.error("History corrupted: Failed to parse JSON on redo.", e);
             return null;

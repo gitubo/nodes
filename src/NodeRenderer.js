@@ -1,44 +1,120 @@
 // src/NodeRenderer.js
-import { registry } from './Registry.js';
-import { updateLinksOnly } from './render.js';
-import { setupNodeContextMenu } from './ContextMenu.js';
-import { eventBus } from './EventBus.js';
-import { snapToGrid } from './config.js';
+//import { Registry } from './Registry.js';
+//import { updateLinksOnly } from './render.js';
+// import { setupNodeContextMenu } from './ContextMenu.js'; // REMOVED
+//import { eventBus } from './EventBus.js';
+import { CONFIG } from './config.js'; // Import CONFIG
+// import { startInlineEditing } from './InlineEditor.js'; // REMOVED
 
 export class NodeRenderer {
-    constructor(renderCallback) {
+    constructor(renderCallback, registry) { // Added registry
         this.renderCallback = renderCallback;
+        this.registry = registry;
     }
     
-    renderBody(selection) {
-        selection.each(function(d) {
+    /**
+     * Renders the node body, icon, and labels.
+     * Logic moved from NodeDefinition.static.render
+     */
+    renderBody(selection, d) {
+        const renderer = this;
+        selection.each(function() {
              const currentSelection = d3.select(this);
-             const definition = registry.getNodeDefinition(d.type);
+             const definition = renderer.registry.getNodeDefinition(d.type);
              if (!definition) return;
              
-            currentSelection.selectAll("path.node-body").remove();
-            definition.render(currentSelection, d);
+             const dimensions = d.getDimensions();
+             
+             // 1. Render Shape
+             currentSelection.selectAll("path.node-body").data([d])
+                .join("path")
+                .attr("class", `node-body ${d.type}`)
+                .attr("d", d.getShapePath())
+                .lower();
+
+             // 2. Render Icon
+             const icon = d.getIconPath();
+             currentSelection.selectAll("path.node-icon").remove();
+             if(icon && icon !== ''){
+                const size = CONFIG.node.iconSize;
+                const path = currentSelection.append("path")
+                    .attr("class", "node-icon")
+                    .attr("d", icon);
+    
+                const bbox = path.node().getBBox();
+                const scale = size / Math.max(bbox.width, bbox.height);
+                const tx = (dimensions.width - bbox.width * scale) / 2 - bbox.x * scale;
+                const ty = (dimensions.height - bbox.height * scale) / 2 - bbox.y * scale;
+                path.attr("transform", `translate(${tx}, ${ty}) scale(${scale})`);
+             }
+
+             // 3. Render Labels
+             let yOffset = dimensions.height + CONFIG.node.labelTopMargin;
+             
+             if (d.label) {
+                const capitalized = d.label.charAt(0).toUpperCase() + d.label.slice(1);
+                const labelJoin = currentSelection.selectAll("text.node-label").data([d]);
+                
+                labelJoin.enter()
+                    .append("text")
+                    .attr("class", "node-label") 
+                    .attr("text-anchor", "middle")
+                    .merge(labelJoin)
+                    .attr("x", dimensions.width / 2)
+                    .attr("y", yOffset)
+                    .text(capitalized);
+                    // REMOVED: .on("dblclick", ...)
+                    
+                labelJoin.exit().remove();
+                yOffset += CONFIG.node.noteTopMargin;
+             } else {
+                currentSelection.selectAll("text.node-label").remove();
+             }
+             
+             if (d.note) {
+                const noteJoin = currentSelection.selectAll("text.node-note").data([d]);
+                noteJoin.enter()
+                    .append("text")
+                    .attr("class", "node-note") 
+                    .attr("text-anchor", "middle")
+                    .merge(noteJoin)
+                    .attr("x", dimensions.width / 2)
+                    .attr("y", yOffset)
+                    .text(d.note);
+                noteJoin.exit().remove();
+             } else {
+                currentSelection.selectAll("text.node-note").remove();
+             }
         });
+        //}.bind(this)); // Bind 'this' to access this.registry
     }
 
-    renderHandlers(selection) {
+    renderHandlers(selection, d) {
+        const renderer = this;
         selection.selectAll("g.handler-g")
-            .data(d => {
-                const definition = registry.getNodeDefinition(d.type);
+            .data(() => {
+                const definition = renderer.registry.getNodeDefinition(d.type);
                 return definition ? definition.getHandlers(d) : [];
             }, h => h.id)
             .join(
                 enter => {
                     const g = enter.append("g")
-                        .attr("class", h => `handler-g ${h.type}`)
+                        .attr("class", h => `handler-g ${h.type} ${h.role}`)
+                        .attr("data-id", h => h.id) // Add data-id for InputSystem
                         .attr("transform", h => `translate(${h.offset.x || 0}, ${h.offset.y || 0})`); 
 
                     g.each(function (h) {
-                        const HandlerClass = registry.getHandlerDefinition(h.type);
+                        const HandlerClass = renderer.registry.getHandlerDefinition(h.type);
+                        if (!HandlerClass) return;
+                        
+                        // Handler logic is now data-driven, not class-driven
+                        // The HandlerDefinition classes just contain render logic
+                        
                         const instance = new HandlerClass();
-                        h.instance = instance;        
+                        h.instance = instance; 
+                       
                         instance.render(d3.select(this));
-                    });
+                    });//}.bind(this)); // Bind 'this'
                     return g;
                 },
                 update => {
@@ -54,68 +130,17 @@ export class NodeRenderer {
             );
     }
 
-    setupDrag(selection) {
-        let initialPos = { x: 0, y: 0 };
-        const dragBehavior = d3.drag()
-            .on("start", function(event, d) {
-                d3.select(this).raise().classed("dragging", true);
-                initialPos = { x: d.position.x, y: d.position.y };
-            })
-            .on("drag", function(event, d) {
-                // Apply drag
-                d.position.x = event.x;
-                d.position.y = event.y;
-                
-                // 1. Update Node DOM (Fast)
-                d3.select(this).attr("transform", `translate(${d.position.x}, ${d.position.y})`);
-                
-                // 2. Update Links (OPTIMIZED)
-                // We pass the ID so the renderer only updates connections to THIS node.
-                // We do NOT update the whole graph.
-                updateLinksOnly(d.id); 
-                
-                // 3. Update AddNodeHelpers (Direct Sync)
-                const helpers = d3.selectAll(`.add-node-helper[data-node-id='${d.id}']`);
-                helpers.attr("transform", function() {
-                    const hData = d3.select(this).datum();
-                    if (!hData) return "";
-                    return `translate(${d.position.x + hData.relX}, ${d.position.y + hData.relY})`;
-                });
-            })
-            .on("end", function(event, d) {
-                d3.select(this).classed("dragging", false);
-                const snappedX = snapToGrid(d.position.x);
-                const snappedY = snapToGrid(d.position.y);
-                
-                // Only trigger update if position actually changed
-                if(snappedX !== initialPos.x || snappedY !== initialPos.y) {
-                    d.position.x = snappedX; 
-                    d.position.y = snappedY;
-                    d3.select(this).attr("transform", `translate(${d.position.x}, ${d.position.y})`);
-                    
-                    // Final update of links
-                    updateLinksOnly(d.id);
-                    
-                    eventBus.emit('NODE_MOVED', {
-                        id: d.id,
-                        initialPosition: initialPos,
-                        finalPosition: { x: d.position.x, y: d.position.y }
-                    });
-                }
-            });
-        
-        selection.call(dragBehavior);
+    // REMOVED: setupDrag(selection)
+    
+    render(selection, d) {
+        this.renderBody(selection, d);
+        this.renderHandlers(selection, d);
+        // REMOVED: this.setupDrag(selection);
+        // REMOVED: setupNodeContextMenu(selection);
     }
     
-    render(selection) {
-        this.renderBody(selection);
-        this.renderHandlers(selection);
-        this.setupDrag(selection);
-        setupNodeContextMenu(selection);
-    }
-    
-    update(selection) {
-        this.renderBody(selection);
-        this.renderHandlers(selection);
+    update(selection, d) {
+        this.renderBody(selection, d);
+        this.renderHandlers(selection, d);
     }
 }

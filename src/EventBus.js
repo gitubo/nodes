@@ -1,5 +1,4 @@
-// src/EventBus.js
-class EventBus {
+export class EventBus {
     constructor() {
         this.listeners = {};
     }
@@ -17,12 +16,12 @@ class EventBus {
     }
 
     emit(event, data) {
-        // REQUESTED: Log every event
-        console.log(`[EventBus] ${event}`, data);
+        // Filter noisy events from logs if needed
+        if (event !== 'GHOST_LINK_UPDATED' && event !== 'NODE_MOVED_HIGH_FREQ') {
+            // console.log(`[EventBus] ${event}`, data);
+        }
 
         if (!this.listeners[event]) return;
         this.listeners[event].forEach(callback => callback(data));
     }
 }
-
-export const eventBus = new EventBus();

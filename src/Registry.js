@@ -7,9 +7,8 @@ import { ServiceNodeDefinition } from './nodes/ServiceNode.js';
 import { SourceHandlerDefinition } from './handlers/SourceHandler.js';
 import { TargetVerticalHandlerDefinition } from './handlers/TargetVerticalHandler.js';
 import { TargetHorizontalHandlerDefinition } from './handlers/TargetHorizontalHandler.js';
-import { CallHandlerDefinition } from './handlers/CallHandler.js';
 
-class Registry {
+export class Registry {
     constructor() {
         this.nodeDefinitions = new Map();
         this.handlerDefinitions = new Map();
@@ -23,23 +22,18 @@ class Registry {
     getHandlerTypes() { return Array.from(this.handlerDefinitions.keys()); }
 }
 
-export const registry = new Registry();
+// Helper to populate a registry instance with defaults
+export function registerDefaultDefinitions(registry) {
+    // Nodes
+    registry.registerNode('base', NodeDefinition);
+    registry.registerNode('start', StartNodeDefinition);
+    registry.registerNode('end', EndNodeDefinition);
+    registry.registerNode('task', TaskNodeDefinition);
+    registry.registerNode('service', ServiceNodeDefinition);
+    registry.registerNode('switch', SwitchNodeDefinition);
 
-// Nodes
-registry.registerNode('base', NodeDefinition);
-registry.registerNode('start', StartNodeDefinition);
-registry.registerNode('end', EndNodeDefinition);
-registry.registerNode('task', TaskNodeDefinition);
-registry.registerNode('service', ServiceNodeDefinition);
-registry.registerNode('switch', SwitchNodeDefinition);
-
-// Handlers
-registry.registerHandler('source', SourceHandlerDefinition);
-//registry.registerHandler('target', new TargetHandlerDefinition());
-registry.registerHandler('target_vertical', TargetVerticalHandlerDefinition);
-registry.registerHandler('target_horizontal', TargetHorizontalHandlerDefinition);
-
-/*
-
-registry.registerHandler('call', CallHandlerDefinition);
-*/
+    // Handlers
+    registry.registerHandler('source', SourceHandlerDefinition);
+    registry.registerHandler('target_vertical', TargetVerticalHandlerDefinition);
+    registry.registerHandler('target_horizontal', TargetHorizontalHandlerDefinition);
+}

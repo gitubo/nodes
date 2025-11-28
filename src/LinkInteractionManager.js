@@ -39,7 +39,7 @@ class LinkInteractionManager {
             };
             // Call the setter to emit 'GHOST_LINK_UPDATED'
             store.setGhostLink(newGhostData); 
-            eventBus.emit('UI_REDRAW_GHOST_LINK', null);
+            eventBus.emit('GHOST_LINK_UPDATED', null);
         }
     }
 
@@ -58,12 +58,12 @@ class LinkInteractionManager {
             if (targetData) {
                  if (!isReversed && targetData.role === 'target') {
                      store.addLink(originId, targetData.id);
-                 } 
+                 }
                  else if (isReversed && targetData.role === 'source') {
                      store.addLink(targetData.id, originId);
                  }
                  else if (disconnecting && targetData.role === 'target') {
-                     store.addLink(disconnecting.source, targetData.id);
+                     store.addLink(disconnecting.sourceHandlerId, targetData.id);
                  }
             }
         }

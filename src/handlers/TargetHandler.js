@@ -1,7 +1,7 @@
 import { HandlerDefinition } from './HandlerDefinition.js';
 import { CONFIG } from '../config.js';
-import { linkInteractionManager } from '../LinkInteractionManager.js';
-import { store } from '../state.js';
+//import { linkInteractionManager } from '../LinkInteractionManager.js';
+//import { store } from '../state.js';
 
 export class TargetHandlerDefinition extends HandlerDefinition {
 
@@ -26,21 +26,21 @@ export class TargetHandlerDefinition extends HandlerDefinition {
             .attr("y", -h/2)
             .attr("class", "handler target");
         
-        this.setupDrag(selection);
+        //this.setupDrag(selection);
     }
-    
+    /*
     setupDrag(selection) {
         selection.call(d3.drag()
             .on("start", (event, d) => {
                 event.sourceEvent.stopPropagation();
                 
                 // Check if already connected
-                const existingLink = store.links.find(l => l.target === d.id);
+                const existingLink = store.links.find(l => l.targetHandlerId === d.id);
                 if (existingLink) {
                     store.removeLink(existingLink.id); // Remove immediately from state
                     store.setDisconnectingLink(existingLink);
                     // Start drag from the SOURCE of the removed link
-                    linkInteractionManager.startDrag(existingLink.source, event.sourceEvent, false);
+                    linkInteractionManager.startDrag(existingLink.sourceHandlerId, event.sourceEvent, false);
                 } else {
                     // Start drag from this TARGET (reversed)
                     linkInteractionManager.startDrag(d.id, event.sourceEvent, true);
@@ -51,10 +51,11 @@ export class TargetHandlerDefinition extends HandlerDefinition {
             })
             .on("end", (event, d) => {
                 // Origin ID depends on whether we were reconnecting or starting new
-                const originId = store.state.ui.disconnectingLink ? store.state.ui.disconnectingLink.source : d.id;
+                const originId = store.state.ui.disconnectingLink ? store.state.ui.disconnectingLink.sourceHandlerId : d.id;
                 const isReversed = !store.state.ui.disconnectingLink; 
                 linkInteractionManager.endDrag(event, originId, isReversed);
             })
         );
     }
+    */
 }

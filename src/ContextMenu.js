@@ -101,3 +101,8 @@ function showContextMenu(event, type, data) {
         window.addEventListener('contextmenu', (e) => { if (!e.target.closest('.context-menu-html')) menu.remove(); }, { once: true });
     }, 10);
 }
+
+export function showNodeContextMenu(event, data) {
+    event.preventDefault(); event.stopPropagation();
+    showContextMenu(event, 'node', data);
+}

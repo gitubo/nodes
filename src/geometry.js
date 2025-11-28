@@ -1,19 +1,16 @@
 // src/geometry.js
-import { store } from './state.js'; 
 import { CONFIG } from './config.js';
-import { registry } from './Registry.js';
 
 /**
  * Find the global position of a handler by its ID
- * Uses the new O(1) lookup if available, or falls back to iteration
+ * @param {string} handlerId - The ID of the handler to find.
+ * @param {Array} nodes - The array of node objects (from store.state.nodes).
+ * @param {Registry} registry - The node definition registry.
  */
-export function findGlobalHandlerPos(handlerId) {
-    // Optimization: If state has a handler map, use it (we will add this to state.js)
-    // For now, we stick to the iteration but break early for performance
-    for (const node of store.state.nodes) {
-        // Quick check: optimization to skip nodes that definitely don't have this handler
-        // (If we had a map node_id -> [handler_ids], it would be O(1))
-        
+export function findGlobalHandlerPos(handlerId, nodes, registry) {
+    if (!nodes || !registry) return { x: 0, y: 0, dir: 'right' };
+
+    for (const node of nodes) {
         const definition = registry.getNodeDefinition(node.type);
         const handlers = definition ? definition.getHandlers(node) : [];
         
@@ -49,8 +46,8 @@ function cubicBezier(t, p0, p1, p2, p3) {
  * Calculates a point {x,y} along the curve at t (0..1)
  * Completely math-based, no DOM access.
  */
-export function calculatePositionAlongPath(link, t) {
-    const p = getLinkBezierPoints(link);
+export function calculatePositionAlongPath(link, t, nodes, registry) {
+    const p = getLinkBezierPoints(link, nodes, registry);
     if (!p) return { x: 0, y: 0 };
 
     const x = cubicBezier(t, p.sx, p.c1x, p.c2x, p.tx);
@@ -75,28 +72,26 @@ function getControlVector(direction, distance) {
 /**
  * Helper: extracts geometry points for a link
  */
-export function getLinkBezierPoints(link) {
+export function getLinkBezierPoints(link, nodes, registry) {
 
     const sourceHandlerId =
         link.sourceHandlerId ||
         link.sourceHandler ||
-        link.sourceId ||
-        link.source;
+        link.sourceId;
 
     const targetHandlerId =
         link.targetHandlerId ||
         link.targetHandler ||
-        link.targetId ||
-        link.target;
-
+        link.targetId;
+        
     let sourcePos, targetPos;
 
     if (sourceHandlerId && targetHandlerId) {
-        sourcePos = findGlobalHandlerPos(link.source); 
-        targetPos = findGlobalHandlerPos(link.target);
+        sourcePos = findGlobalHandlerPos(sourceHandlerId, nodes, registry);
+        targetPos = findGlobalHandlerPos(targetHandlerId, nodes, registry);
     } else if (sourceHandlerId && link.targetX !== undefined) {
         // Ghost Link
-        sourcePos = findGlobalHandlerPos(link.sourceId); 
+        sourcePos = findGlobalHandlerPos(sourceHandlerId, nodes, registry);
         targetPos = { x: link.targetX, y: link.targetY, dir: 'left' };
     } else {
         return null;
@@ -114,7 +109,7 @@ export function getLinkBezierPoints(link) {
 
     const srcVec = getControlVector(sourcePos.dir, controlDistance);
     const tgtVec = getControlVector(targetPos.dir, controlDistance);
-
+    
     return { 
         sx: startX, sy: startY, 
         tx: endX, ty: endY, 
@@ -126,8 +121,8 @@ export function getLinkBezierPoints(link) {
 /**
  * Calculate pure SVG path string
  */
-export function calculatePath(link) {
-    const points = getLinkBezierPoints(link);
+export function calculatePath(link, nodes, registry) {
+    const points = getLinkBezierPoints(link, nodes, registry);
     if (!points) return "";
     return `M ${points.sx},${points.sy} C ${points.c1x},${points.c1y} ${points.c2x},${points.c2y} ${points.tx},${points.ty}`; 
 }
@@ -135,12 +130,11 @@ export function calculatePath(link) {
 /**
  * Optimized T-search.
  * Instead of checking the DOM, we compute samples mathematically.
- * This is 100x faster than getPointAtLength.
  */
-export function findClosestTOnPath(link, targetPoint, samples = 20) {
-   const p = getLinkBezierPoints(link);
+export function findClosestTOnPath(link, targetPoint, nodes, registry, samples = 20) {
+   const p = getLinkBezierPoints(link, nodes, registry);
    if(!p) return 0.5;
-
+   
    let bestT = 0.5;
    let minDst = Infinity;
 

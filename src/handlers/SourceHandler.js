@@ -1,8 +1,8 @@
 import { HandlerDefinition } from './HandlerDefinition.js';
 import { CONFIG } from '../config.js';
-import { linkInteractionManager } from '../LinkInteractionManager.js';
-import { eventBus } from '../EventBus.js';
-import { startInlineEditing } from '../InlineEditor.js';
+//import { linkInteractionManager } from '../LinkInteractionManager.js';
+//import { eventBus } from '../EventBus.js';
+//import { startInlineEditing } from '../InlineEditor.js';
 
 export class SourceHandlerDefinition extends HandlerDefinition {
     constructor(x, y, label, direction='right') {
@@ -45,6 +45,7 @@ export class SourceHandlerDefinition extends HandlerDefinition {
                     g.append("text")
                         .attr("class", "handler-label-text");
 
+                    /*
                     g.call(d3.drag()
                         .on("start", (e) => e.sourceEvent.stopPropagation())
                         .on("drag", (e, d) => {
@@ -61,6 +62,7 @@ export class SourceHandlerDefinition extends HandlerDefinition {
                             eventBus.emit('RENDER_REQUESTED');
                         });
                     });
+                    */
 
                     return g;
                 },
@@ -146,9 +148,9 @@ export class SourceHandlerDefinition extends HandlerDefinition {
                 },                
                 exit => exit.remove()
             );
-        this.setupDrag(selection);
+        //this.setupDrag(selection);
     }
-    
+    /*
     setupDrag(selection) {
         selection.call(d3.drag()
             .on("start", (event, d) => {
@@ -163,4 +165,5 @@ export class SourceHandlerDefinition extends HandlerDefinition {
             })
         );
     }
+    */
 }

@@ -1,12 +1,17 @@
 // src/UIController.js
-import { store } from './state.js';
-import { eventBus } from './EventBus.js';
 import { getStrokeIcon, getIcon } from './Icons.js';
-import { showNodeTypeMenu, HELPER_CONFIG } from './AddNodeHelper.js'; 
-import { registry } from './Registry.js';
+//import { showNodeTypeMenu, HELPER_CONFIG } from './AddNodeHelper.js'; 
+import { AddNodeHelperSystem } from './AddNodeHelper.js';
+
+// Note: AddNodeHelper still uses singletons, a future refactor.
 
 export class UIController {
-    constructor() {
+    constructor(store, eventBus, serializationService, registry) {
+        this.store = store;
+        this.eventBus = eventBus;
+        this.serializationService = serializationService;
+        this.registry = registry;
+        
         this.panels = {
             zoom: { visible: true, element: null },
             properties: { visible: false, element: null }
@@ -17,26 +22,26 @@ export class UIController {
         this.createZoomPanel();
         this.createPropertiesPanel();
         this.attachEventListeners();
-
-        eventBus.on('EDIT_PROPERTIES', (payload) => {
+        
+        this.eventBus.on('EDIT_PROPERTIES', (payload) => {
             const { type, id } = payload;
-            const data = type === 'node' ? store.getNode(id) : store.getLink(id);
+            const data = type === 'node' ? this.store.getNode(id) : this.store.getLink(id);
             if(data) this.showPropertiesPanel({ type, data });
         });
         
-        eventBus.on('SELECTION_CHANGED', (payload) => {
+        this.eventBus.on('SELECTION_CHANGED', (payload) => {
             if (!payload || !payload.id) {
                 this.hidePropertiesPanel();
             } else {
                 if (this.panels.properties.visible) {
-                     const data = payload.type === 'node' ? store.getNode(payload.id) : store.getLink(payload.id);
+                     const data = payload.type === 'node' ? this.store.getNode(payload.id) : this.store.getLink(payload.id);
                      if(data) this.showPropertiesPanel({ type: payload.type, data });
                 }
             }
         });
 
         // Listen for history changes to update button states (opacity/disabled)
-        eventBus.on('HISTORY_CHANGED', (status) => {
+        this.eventBus.on('HISTORY_CHANGED', (status) => {
             const undoBtn = document.querySelector('[data-action="undo"]');
             const redoBtn = document.querySelector('[data-action="redo"]');
             
@@ -80,7 +85,7 @@ export class UIController {
     }
 
     createPropertiesPanel() {
-         const p = document.createElement('div');
+        const p = document.createElement('div');
         p.className = 'ui-panel properties-panel';
         p.style.display = 'none';
         p.innerHTML = `
@@ -111,7 +116,7 @@ export class UIController {
                 case 'close-prop': this.hidePropertiesPanel(); break;
                 
                 case 'save-file': 
-                    const dataStr = JSON.stringify(store.serialize(), null, 2);
+                    const dataStr = JSON.stringify(this.serializationService.serialize(this.store.state), null, 2);
                     const blob = new Blob([dataStr], {type: "application/json"});
                     const url = URL.createObjectURL(blob);
                     const a = document.createElement('a');
@@ -124,9 +129,9 @@ export class UIController {
                 case 'open-file': this.openFile(); break;
                 case 'add-node':
                     const btnRect = btn.getBoundingClientRect();
-                    const typeCount = registry.getNodeTypes().length;
+                    const typeCount = this.registry.getNodeTypes().length;
                     const menuHeight = typeCount * HELPER_CONFIG.menuItemHeight;
-                    
+                    /* TODO rewrite this part in order to integrate the AddNodeHelper menu
                     showNodeTypeMenu({
                         x: btnRect.left - 10, 
                         y: btnRect.top - menuHeight
@@ -136,8 +141,9 @@ export class UIController {
                         const t = d3.zoomTransform(svg.node());
                         const x = (rect.width/2 - t.x) / t.k;
                         const y = (rect.height/2 - t.y) / t.k;
-                        store.addNode(type, x, y);
+                        this.store.addNode(type, x, y);
                     });
+                    */
                     break;
             }
         });
@@ -157,6 +163,7 @@ export class UIController {
         const translate = [width / 2 - scale * x, height / 2 - scale * y];
         svg.transition().duration(750).call(window.zoomBehavior.transform, d3.zoomIdentity.translate(translate[0], translate[1]).scale(scale));
     }
+
     getGraphBounds() {
          if (store.nodes.length === 0) return null;
         let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
@@ -168,15 +175,20 @@ export class UIController {
         });
         return { minX, minY, maxX, maxY };
     }
+
     openFile() {
-         const input = document.createElement('input');
+        const input = document.createElement('input');
         input.type = 'file'; input.accept = 'application/json';
         input.onchange = (e) => {
             const file = e.target.files[0];
             if (!file) return;
             const reader = new FileReader();
             reader.onload = (evt) => {
-                try { store.deserialize(JSON.parse(evt.target.result)); } 
+                try { 
+                    const data = JSON.parse(evt.target.result);
+                    const { nodes, links } = this.serializationService.deserialize(data);
+                    this.store.loadState({ nodes, links });
+                } 
                 catch (err) { console.error(err); alert("Invalid JSON file"); }
             };
             reader.readAsText(file);
@@ -255,7 +267,7 @@ export class UIController {
                     if(k) newParams[k] = v;
                 });
 
-                store.updateNode(node.id, {
+                this.store.updateNode(node.id, {
                     label: newLabel,
                     note: newNote,
                     custom_params: newParams
@@ -267,7 +279,7 @@ export class UIController {
             delBtn.className = 'btn-danger'; 
             delBtn.textContent = 'Delete Node';
             delBtn.onclick = () => { 
-                store.removeNode(node.id); 
+                this.store.removeNode(node.id); 
                 this.hidePropertiesPanel(); 
             };
             content.appendChild(delBtn);
@@ -292,14 +304,14 @@ export class UIController {
                  addBtn.style.justifyContent = 'flex-start';
                  addBtn.innerHTML = `<span>+ Add Label</span>`;
                  addBtn.onclick = () => {
-                     store.updateLink(link.id, { label: { text: 'Label', offset: 0.5, offsetX: 0, offsetY: 0 } });
-                     this.showPropertiesPanel(selected); 
+                    this.store.updateLink(link.id, { label: { text: 'Label', offset: 0.5, offsetX: 0, offsetY: 0 } });
+                    this.showPropertiesPanel(selected); 
                  };
                  content.appendChild(addBtn);
             }
             const delBtn = document.createElement('button');
             delBtn.className = 'btn-danger'; delBtn.textContent = 'Delete Link';
-            delBtn.onclick = () => { store.removeLink(link.id); this.hidePropertiesPanel(); };
+            delBtn.onclick = () => { this.store.removeLink(link.id); this.hidePropertiesPanel(); };
             content.appendChild(delBtn);
         }
         
@@ -314,4 +326,4 @@ export class UIController {
         }
     }
 }
-export const uiController = new UIController();
+//export const uiController = new UIController();

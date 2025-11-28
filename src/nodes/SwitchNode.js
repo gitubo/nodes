@@ -10,6 +10,7 @@ const DEFINITIONS = {
 
 export class SwitchNodeDefinition extends NodeDefinition {
     constructor(x, y, label, note, data) {
+        // ... (constructor logic)
         super(x, y, label, note, data);
         this.type = 'switch';
         this.conditions = [];
@@ -17,14 +18,15 @@ export class SwitchNodeDefinition extends NodeDefinition {
         this.targetHandlers.push(new TargetVerticalHandlerDefinition(0, CONFIG.node.handlerSeparator*2));
         this.sourceHandlers = [];
         this.width = CONFIG.node.width*2;
-        
         // Initialize default handlers
         DEFINITIONS.sourceHandlerLabels.forEach((label, i) => {
             const offset = (CONFIG.node.handlerSeparator*2) + (CONFIG.node.handlerSeparator*2 )*i;
             this.sourceHandlers.push(new SourceHandlerDefinition(this.width, offset, label));
         });
-
         this.height = CONFIG.node.handlerSeparator*2*( this.sourceHandlers.length+1);
+        
+        // Combine handlers for the base class
+        this.handlers = [...this.targetHandlers, ...this.sourceHandlers];
     }
     
     getDimensions() {
@@ -70,14 +72,6 @@ export class SwitchNodeDefinition extends NodeDefinition {
         path += ` L ${tW},${inputY - tH} L 0,${inputY - tH}`;
         path += ` L 0,${sR} A ${sR},${sR} 0 0 1 ${sR},0 Z`;
         return path;
-    }
-
-    serialize() {
-        return { ...super.serialize(), condition: this.condition };
-    }
-    
-    static deserialize(data) {
-        return { ...super.deserialize(), condition: data.condition || '' };
     }
 
     // --- MODULAR PROPERTIES ---
