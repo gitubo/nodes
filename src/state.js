@@ -216,9 +216,10 @@ export class Store {
     _findNodeByHandlerId(handlerId) {
         for (const node of this.state.nodes) {
             // USO DI REGISTRY: Usa 'this.registry' per ottenere le definizioni
-            const def = this.registry.getNodeDefinition(node.type);
-            const handlers = def ? def.getHandlers(node) : [];
-            const handler = handlers.find(h => h.id === handlerId);
+//            const def = this.registry.getNodeDefinition(node.type);
+//            const handlers = def ? def.getHandlers(node) : [];
+
+            const handler = node.getHandlers().find(h => h.id === handlerId);
             if (handler) return { nodeId: node.id, handler };
         }
         return null;
@@ -263,10 +264,10 @@ export class Store {
     initializeWithDefaults() {
         // Logica invariata, ma addNode ora usa internamente this.registry
         const n1 = this.addNode('start', 128, 0);
-        const n2 = this.addNode('task', 416, 0);
-        const n3 = this.addNode('switch', 736, 0, 'Switch', 'device.type');
-        const n4 = this.addNode('service', 1152, 352, 'HTTP', '[POST]');
-        const n5 = this.addNode('service', 1344, 352, 'HTTP', '[GET]');
+//        const n2 = this.addNode('task', 416, 0);
+//        const n3 = this.addNode('switch', 736, 0, 'Switch', 'device.type');
+//        const n4 = this.addNode('service', 1152, 352, 'HTTP', '[POST]');
+//        const n5 = this.addNode('service', 1344, 352, 'HTTP', '[GET]');
         const n6 = this.addNode('end', 1504, 0);
     }
 }

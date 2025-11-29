@@ -7,13 +7,14 @@ export class StartNodeDefinition extends NodeDefinition {
     constructor(x, y) {
         super(x, y, 'start');
         this.type = 'start';
-        this.width = CONFIG.node.width;
-        this.height = CONFIG.node.height;
-        this.handlers.push(new SourceHandlerDefinition(this.width, CONFIG.node.handlerSeparator * 2));
+        this.width = 192;
+        this.height = 96;
+//        this.handlers.push(new SourceHandlerDefinition(this.width, CONFIG.node.handlerSeparator * 2));
+        this.handlers.push(new SourceHandlerDefinition(this.width, this.height/2));
     }
 
-    getIconPath() { return 'm187-551 106 45q18-36 38.5-71t43.5-67l-79-16-109 109Zm154 81 133 133q57-26 107-59t81-64q81-81 119-166t41-192q-107 3-192 41T464-658q-31 31-64 81t-59 107Zm229-96q-20-20-20-49.5t20-49.5q20-20 49.5-20t49.5 20q20 20 20 49.5T669-566q-20 20-49.5 20T570-566Zm-15 383 109-109-16-79q-32 23-67 43.5T510-289l45 106Zm326-694q9 136-34 248T705-418l-2 2-2 2 22 110q3 15-1.5 29T706-250L535-78l-85-198-170-170-198-85 172-171q11-11 25-15.5t29-1.5l110 22q1-1 2-1.5t2-1.5q99-99 211-142.5T881-877ZM149-325q35-35 85.5-35.5T320-326q35 35 34.5 85.5T319-155q-26 26-80.5 43T75-80q15-109 31.5-164t42.5-81Zm42 43q-14 15-25 47t-19 82q50-8 82-19t47-25q19-17 19.5-42.5T278-284q-19-18-44.5-17.5T191-282Z'; }
-
+    getIconPath() { return 'M112 336 218 381Q236 345 256.5 310T300 243L221 227 112 336ZM266 417 399 550Q456 524 506 491T587 427Q668 346 706 261T747 69Q640 72 555 110T389 229Q358 260 325 310T266 417ZM495 321Q475 301 475 271.5T495 222 544.5 202 594 222 614 271.5 594 321 544.5 341 495 321ZM480 704 589 595 573 516Q541 539 506 559.5T435 598L480 704ZM806 10Q815 146 772 258T630 469L628 471 626 473 648 583Q651 598 646.5 612T631 637L460 809 375 611 205 441 7 356 179 185Q190 174 204 169.5T233 168L343 190Q344 189 345 188.5T347 187Q446 88 558 44.5T806 10ZM74 562Q109 527 159.5 526.5T245 561 279.5 646.5 244 732Q218 758 163.5 775T0 807Q15 698 31.5 643T74 562ZM116 605Q102 620 91 652T72 734Q122 726 154 715T201 690Q220 673 220.5 647.5T203 603Q184 585 158.5 585.5T116 605Z'; }
+    
     getShapePath() {
         const W = CONFIG.node.width;
         const H = CONFIG.node.height;
@@ -21,6 +22,7 @@ export class StartNodeDefinition extends NodeDefinition {
         const sR = CONFIG.node.smallBorderRadius;
         const source =  H/2 - (SourceHandlerDefinition.getDimension(this.handlers[0]).radius+CONFIG.handler.margin);
 
+        return 'M32 0 176 0A16 16 90 01192 16L192 28A20 20 90 00192 68L192 80A16 16 90 01176 96L32 96A32 32 90 010 64L0 32A32 32 90 0132 0Z';
         return `
             M ${R},0
             L ${W - sR},0

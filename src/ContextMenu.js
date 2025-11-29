@@ -1,15 +1,14 @@
-import { store } from './state.js';
+//import { store } from './state.js';
 import { getIcon } from './Icons.js';
-import { eventBus } from './EventBus.js';
 
-export function showHandlerContextMenu(event, data) {
+export function showHandlerContextMenu(event, data, eventBus, store) {
     event.preventDefault(); event.stopPropagation();
-    showContextMenu(event, 'handler', data);
+    showContextMenu(event, 'handler', data, eventBus, store);
 }
 
-export function showLinkContextMenu(event, data) {
+export function showLinkContextMenu(event, data, eventBus, store) {
     event.preventDefault(); event.stopPropagation();
-    showContextMenu(event, 'link', data);
+    showContextMenu(event, 'link', data, eventBus, store);
 }
 
 export function setupNodeContextMenu(selection) {
@@ -19,7 +18,7 @@ export function setupNodeContextMenu(selection) {
     });
 }
 
-function showContextMenu(event, type, data) {
+function showContextMenu(event, type, data, eventBus, store) {
     document.querySelectorAll('.context-menu-html').forEach(e => e.remove());
     
     const menu = document.createElement('div');
@@ -56,7 +55,9 @@ function showContextMenu(event, type, data) {
             icon: 'settings', label: 'Edit', 
             callback: () => {
                 store.selectObject(type, data);
-                eventBus.emit('EDIT_PROPERTIES', { type, data });
+                if (eventBus) {
+                    eventBus.emit('EDIT_PROPERTIES', { type, data }); // Was: EventBus.emit
+                }
             }
         });
 
@@ -66,7 +67,9 @@ function showContextMenu(event, type, data) {
     else if (type === 'node') {
         actions.push({ icon: 'settings', label: 'Edit', callback: () => {
              store.selectObject(type, data);
-             eventBus.emit('EDIT_PROPERTIES', { type, data });
+             if (eventBus) {
+                eventBus.emit('EDIT_PROPERTIES', { type, data }); // Was: EventBus.emit
+             }
         }});
         actions.push({ icon: 'delete', label: 'Delete Node', variant: 'danger', callback: () => store.removeNode(data.id) });
     }
@@ -102,7 +105,7 @@ function showContextMenu(event, type, data) {
     }, 10);
 }
 
-export function showNodeContextMenu(event, data) {
+export function showNodeContextMenu(event, data, eventBus, store) {
     event.preventDefault(); event.stopPropagation();
-    showContextMenu(event, 'node', data);
+    showContextMenu(event, 'node', data, eventBus, store);
 }

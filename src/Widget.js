@@ -36,9 +36,14 @@ export class DAGWidget {
         // --- 3. Instantiate Controllers ---
         // Pass the instances created above
         this.inputSystem = new InputSystem(this.svg.node(), this.store, this.eventBus, this.registry);
-        this.uiController = new UIController(this.store, this.eventBus, this.serializationService, this.registry);
         this.addNodeHelperSystem = new AddNodeHelperSystem(this.svg, this.store, this.registry, this.eventBus);
-
+        this.uiController = new UIController(
+            this.store, 
+            this.eventBus, 
+            this.serializationService, 
+            this.registry,
+            this.addNodeHelperSystem 
+        );
         // --- 4. Initialize System ---
         this._initSystem();
         this._setupEventBridge();
@@ -111,6 +116,9 @@ export class DAGWidget {
         this.addNodeHelperSystem.listen();
         
         startRenderLoop();
+        requestAnimationFrame(() => {
+            this.eventBus.emit('STATE_LOADED', this.state);
+        });
     }
 
     // ... (Remaining methods: dispatch, subscribe, _setupEventBridge, _notifySubscribers, _zoomCall, _zoomReset stay the same) ...

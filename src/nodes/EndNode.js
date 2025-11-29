@@ -7,15 +7,17 @@ export class EndNodeDefinition extends NodeDefinition {
     constructor(x, y) {
         super(x, y, 'end');
         this.type = 'end';
-        this.width = CONFIG.node.width;
-        this.height = CONFIG.node.height;
-        this.handlers.push(new TargetVerticalHandlerDefinition(0, CONFIG.node.handlerSeparator * 2));
+        this.width = 192;
+        this.height = 96;
+        this.handlers.push(new TargetVerticalHandlerDefinition(0, this.height/2));
     }
+    static hasTargetHandlers() { return true; }
 
-    getIconPath() { return 'M739-307v-361q-75 5-146.5-11.5T463-731q-41-25-84.45-37T290-780q-17 0-34.5 2t-36.5 6v359q17-2 35.5-3.5T294-418q59 0 118 16t110 46q51 30 105.2 42 54.21 12 111.8 7ZM160-120v-700q48-11 76.5-15.5T291-840q52 0 102.5 14.5T489-784q47 28 100 42.5T695.66-727q27.34 0 53.01-2.63 25.66-2.62 51.33-4.37v482.02Q774-250 748.5-247q-25.5 3-51.17 3-52.33 0-102.83-14T498-300q-48-29-100.14-43.5T292-358q-17 0-34 1.5t-38 5.5v231h-60Z'; }
+    getIconPath() { return 'M579 533V172Q504 177 432.5 160.5T303 109Q262 84 218.55 72T130 60Q113 60 95.5 62T59 68V427Q76 425 94.5 423.5T134 422Q193 422 252 438T362 484Q413 514 467.2 526 521.41 538 579 533ZM0 720V20Q48 9 76.5 4.5T131 0Q183 0 233.5 14.5T329 56Q376 84 429 98.5T535.66 113Q563 113 588.67 110.37 614.33 107.75 640 106V588.02Q614 590 588.5 593 563 596 537.33 596 485 596 434.5 582T338 540Q290 511 237.86 496.5T132 482Q115 482 98 483.5T60 489V720H0Z'; }
 
     
     getShapePath() {
+        return 'M160 96 16 96A16 16 90 010 80L0 68 12 68 12 28 0 28 0 16A16 16 90 0116 0L160 0A32 32 90 01192 32L192 64A32 32 90 01160 96Z';
         const W = CONFIG.node.width;
         const H = CONFIG.node.height;
         const R  = CONFIG.node.largeBorderRadius;        

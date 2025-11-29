@@ -8,16 +8,17 @@ export class TaskNodeDefinition extends NodeDefinition {
     constructor(x, y, label, note, data) {
         super(x, y, label, note, data);
         this.type = 'task';
-        this.label = 'task';
-        this.width = CONFIG.node.width;
-        this.height = CONFIG.node.height;
-        this.handlers.push(new TargetVerticalHandlerDefinition(0, CONFIG.node.handlerSeparator * 2));
-        this.handlers.push(new SourceHandlerDefinition(this.width, CONFIG.node.handlerSeparator * 2));
+        this.width = 192;
+        this.height = 96;
+        this.handlers.push(new TargetVerticalHandlerDefinition(0, this.height/2));
+        this.handlers.push(new SourceHandlerDefinition(this.width, this.height/2));
     }
+    static hasTargetHandlers() { return true; }
 
-    getIconPath() { return 'M705-128 447-388q-23 8-46 13t-47 5q-97.08 0-165.04-67.67Q121-505.33 121-602q0-31 8.16-60.39T152-718l145 145 92-86-149-149q25.91-15.16 54.96-23.58Q324-840 354-840q99.17 0 168.58 69.42Q592-701.17 592-602q0 24-5 47t-13 46l259 258q11 10.96 11 26.48T833-198l-76 70q-10.7 11-25.85 11Q716-117 705-128Zm28-57 40-40-273-273q16-21 24-49.5t8-54.5q0-75-55.5-127T350-782l102 104q9 9 8.5 21.5T451-635L318-510q-9.27 8-21.64 8-12.36 0-20.36-8l-98-97q3 77 54.67 127T354-430q25 0 53-8t49-24l277 277ZM476-484Z'; }
+    getIconPath() { return 'M585 713 327 453Q304 461 281 466T234 471Q136.92 471 68.96 403.33 1 335.67 1 239 1 208 9.16 178.61T32 123L177 268 269 182 120 33Q145.91 17.84 174.96 9.42 204 1 234 1 333.17 1 402.58 70.42 472 139.83 472 239 472 263 467 286T454 332L713 590Q724 600.96 724 616.48T713 643L637 713Q626.3 724 611.15 724 596 724 585 713ZM613 656 653 616 380 343Q396 322 404 293.5T412 239Q412 164 356.5 112T230 59L332 163Q341 172 340.5 184.5T331 206L198 331Q188.73 339 176.36 339 164 339 156 331L58 234Q61 311 112.67 361T234 411Q259 411 287 403T336 379L613 656ZM356 357Z'; }
 
     getShapePath() {
+        return 'M32 0 176 0A16 16 90 01192 16L192 28A20 20 90 00192 68L192 80A16 16 90 01176 96L16 96A16 16 90 010 80L0 68 12 68 12 28 0 28 0 16A16 16 90 0116 0Z';
         const W = CONFIG.node.width;
         const H = CONFIG.node.height;
         const sR = CONFIG.node.smallBorderRadius;

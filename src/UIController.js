@@ -1,16 +1,17 @@
 // src/UIController.js
 import { getStrokeIcon, getIcon } from './Icons.js';
-//import { showNodeTypeMenu, HELPER_CONFIG } from './AddNodeHelper.js'; 
+import { HELPER_CONFIG } from './AddNodeHelper.js'; 
 import { AddNodeHelperSystem } from './AddNodeHelper.js';
 
 // Note: AddNodeHelper still uses singletons, a future refactor.
 
 export class UIController {
-    constructor(store, eventBus, serializationService, registry) {
+    constructor(store, eventBus, serializationService, registry, addNodeHelperSystem) {
         this.store = store;
         this.eventBus = eventBus;
         this.serializationService = serializationService;
         this.registry = registry;
+        this.addNodeHelperSystem = addNodeHelperSystem;
         
         this.panels = {
             zoom: { visible: true, element: null },
@@ -107,8 +108,8 @@ export class UIController {
             const svg = d3.select('svg');
             
             switch(action) {
-                case 'undo': store.undo(); break;
-                case 'redo': store.redo(); break;
+                case 'undo': this.store.undo(); break;
+                case 'redo': this.store.redo(); break;
                 case 'zoom-in': svg.transition().call(window.zoomBehavior.scaleBy, 1.3); break;
                 case 'zoom-out': svg.transition().call(window.zoomBehavior.scaleBy, 0.7); break;
                 case 'zoom-reset': svg.transition().call(window.zoomBehavior.transform, d3.zoomIdentity); break;
@@ -128,22 +129,22 @@ export class UIController {
 
                 case 'open-file': this.openFile(); break;
                 case 'add-node':
-                    const btnRect = btn.getBoundingClientRect();
-                    const typeCount = this.registry.getNodeTypes().length;
-                    const menuHeight = typeCount * HELPER_CONFIG.menuItemHeight;
-                    /* TODO rewrite this part in order to integrate the AddNodeHelper menu
-                    showNodeTypeMenu({
-                        x: btnRect.left - 10, 
-                        y: btnRect.top - menuHeight
-                    }, null, (type) => {
-                        const svg = d3.select('svg');
-                        const rect = svg.node().getBoundingClientRect();
-                        const t = d3.zoomTransform(svg.node());
-                        const x = (rect.width/2 - t.x) / t.k;
-                        const y = (rect.height/2 - t.y) / t.k;
-                        this.store.addNode(type, x, y);
-                    });
-                    */
+                    const svg = d3.select('svg');
+                    const rect = svg.node().getBoundingClientRect();
+                    const t = d3.zoomTransform(svg.node());
+                    
+                    // Center coordinates in Graph Space
+                    const cx = (rect.width/2 - t.x) / t.k;
+                    const cy = (rect.height/2 - t.y) / t.k;
+
+                    // Use the helper system to show the menu
+                    this.addNodeHelperSystem.showNodeTypeMenu(
+                        { x: cx, y: cy }, 
+                        null, // No filter
+                        (type) => {
+                            this.store.addNode(type, cx, cy);
+                        }
+                    );
                     break;
             }
         });

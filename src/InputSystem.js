@@ -1,3 +1,4 @@
+// /src/InputSystem.js
 import { snapToGrid } from './config.js';
 import { startInlineEditing } from './InlineEditor.js';
 import { findClosestTOnPath } from './geometry.js';
@@ -11,7 +12,6 @@ export class InputSystem {
         this.registry = registry;
         
         this.dragState = null;
-        
         // Bind methods to this for adding/removing listeners
         this.handleMove = this.handleMove.bind(this);
         this.handleUp = this.handleUp.bind(this);
@@ -27,12 +27,10 @@ export class InputSystem {
     }
 
     _getMousePosition(event) {
-        // D3 pointer returns [x, y] relative to the specified node
         return d3.pointer(event, this.viewport.node());
     }
 
     handleDown(event) {
-        // 1. Check strict targets first
         const target = event.target;
         const [mouseX, mouseY] = this._getMousePosition(event);
         
@@ -41,7 +39,13 @@ export class InputSystem {
         const labelElement = target.closest('.link-label-group');
 
         // Only left-click triggers drag
-        if (event.button !== 0) return; 
+        if (event.button !== 0) return;
+
+        // FIX 1: Prevent browser text selection/native drag on interactables
+        // This stops the label from highlighting and ensures handleUp fires.
+        if (nodeElement || handlerElement || labelElement) {
+            event.preventDefault(); 
+        }
 
         let dragging = false;
 
@@ -62,9 +66,10 @@ export class InputSystem {
             } else if (handlerData.role === 'target') {
                 const existingLink = this.store.links.find(l => l.targetHandlerId === handlerData.id);
                 if (existingLink) {
-                    // Reconnect logic
-                    this.store.removeLink(existingLink.id, true); // Soft remove
+                    // Reconnect logic: Remove link immediately to start "moving" it
+                    this.store.removeLink(existingLink.id, true);
                     this.store.setDisconnectingLink(existingLink);
+                    
                     this.dragState = { type: 'handler_reconnect', id: existingLink.sourceHandlerId };
                     this.store.setGhostLink({
                         sourceHandlerId: existingLink.sourceHandlerId,
@@ -92,7 +97,6 @@ export class InputSystem {
             
             d3.select(nodeElement).raise().classed("dragging", true);
             this.store.selectObject('node', nodeData);
-            
             this.dragState = {
                 type: 'node',
                 id: nodeData.id,
@@ -112,7 +116,7 @@ export class InputSystem {
         }
 
         if (dragging) {
-            // Attach temporary listeners to WINDOW to track drag even outside canvas
+            // Attach temporary listeners to WINDOW
             d3.select(window)
                 .on("mousemove.drag", this.handleMove)
                 .on("mouseup.drag", this.handleUp);
@@ -121,11 +125,8 @@ export class InputSystem {
 
     handleMove(event) {
         if (!this.dragState) return;
-        
-        // Prevent default browser selection behaviors
         event.preventDefault();
 
-        // Get coordinates relative to the viewport, even if mouse is outside
         const [mouseX, mouseY] = this._getMousePosition(event);
 
         if (this.dragState.type === 'node') {
@@ -133,10 +134,7 @@ export class InputSystem {
             const dy = mouseY - this.dragState.startPos.y;
             const newX = this.dragState.initialNodePos.x + dx;
             const newY = this.dragState.initialNodePos.y + dy;
-            
-            // High-frequency update without history
             this.store.moveNode(this.dragState.id, newX, newY);
-            
         } else if (this.dragState.type.startsWith('handler_')) {
             // Update ghost link
             this.store.setGhostLink({
@@ -144,7 +142,6 @@ export class InputSystem {
                 targetX: mouseX,
                 targetY: mouseY
             });
-            
         } else if (this.dragState.type === 'label') {
             const link = this.store.getLink(this.dragState.id);
             if (link && link.label) {
@@ -152,78 +149,78 @@ export class InputSystem {
                 link.label.offset = newT;
                 link.label.offsetX = 0;
                 link.label.offsetY = 0;
-                this.eventBus.emit('GHOST_LINK_UPDATED'); // Force partial redraw
+                this.eventBus.emit('GHOST_LINK_UPDATED');
             }
         }
     }
 
+    // FIX 2: Completely robust handleUp using try...finally
     handleUp(event) {
         if (!this.dragState) return;
-        
-        const targetElement = event.target; // The DOM element under cursor
+        const targetElement = event.target; 
 
-        if (this.dragState.type === 'node') {
-            const node = this.store.getNode(this.dragState.id);
-            if (node) {
-                const snappedX = snapToGrid(node.position.x);
-                const snappedY = snapToGrid(node.position.y);
+        try {
+            if (this.dragState.type === 'node') {
+                const node = this.store.getNode(this.dragState.id);
+                if (node) {
+                    const snappedX = snapToGrid(node.position.x);
+                    const snappedY = snapToGrid(node.position.y);
+                    
+                    d3.select(`.node[data-id="${node.id}"]`).classed("dragging", false);
+                    
+                    this.store.updateNodePosition(
+                        node.id, 
+                        this.dragState.initialNodePos, 
+                        { x: snappedX, y: snappedY }
+                    );
+                }
+            } else if (this.dragState.type.startsWith('handler_')) {
+                const targetHandlerElement = targetElement.closest('.handler-g');
+                const ghost = this.store.ui.ghostLink;
                 
-                d3.select(`.node[data-id="${node.id}"]`).classed("dragging", false);
-                
-                // Commit to history
-                this.store.updateNodePosition(
-                    node.id, 
-                    this.dragState.initialNodePos, 
-                    { x: snappedX, y: snappedY }
-                );
-            }
-        } else if (this.dragState.type.startsWith('handler_')) {
-            const targetHandlerElement = targetElement.closest('.handler-g');
-            const ghost = this.store.ui.ghostLink;
-            let linkAdded = false;
-
-            if (targetHandlerElement && ghost) {
-                const targetData = d3.select(targetHandlerElement).datum();
-                // Validate connection logic
-                if (targetData) {
-                     if (targetData.role === 'target' && !ghost.reversed) {
-                        this.store.addLink(ghost.sourceHandlerId, targetData.id, true);
-                        linkAdded = true;
-                    } else if (targetData.role === 'source' && ghost.reversed) {
-                        this.store.addLink(targetData.id, ghost.sourceHandlerId, true);
-                        linkAdded = true;
+                // Connection Logic
+                if (targetHandlerElement && ghost) {
+                    const targetData = d3.select(targetHandlerElement).datum();
+                    if (targetData) {
+                         if (targetData.role === 'target' && !ghost.reversed) {
+                            this.store.addLink(ghost.sourceHandlerId, targetData.id, true);
+                        } else if (targetData.role === 'source' && ghost.reversed) {
+                            this.store.addLink(targetData.id, ghost.sourceHandlerId, true);
+                        }
                     }
                 }
+                
+                // Note: We intentionally DO NOT restore the link if dropping in empty space.
+                // This ensures the "Remove Link" behavior works.
+                
+            } else if (this.dragState.type === 'label') {
+                d3.select(`.link-label-group[data-id="${this.dragState.id}"]`).classed("dragging", false);
+                const link = this.store.getLink(this.dragState.id);
+                if (link) {
+                    this.store.updateLink(link.id, { label: { ...link.label } });
+                }
             }
-            
-            const disconnecting = this.store.ui.disconnectingLink;
-            if (disconnecting && !linkAdded) {
-                // Restore if drag failed
-                this.store.addLink(disconnecting.sourceHandlerId, disconnecting.targetHandlerId, false);
-            }
-            
+        } catch (e) {
+            console.error("Error in handleUp:", e);
+        } finally {
+            // FIX 3: Guaranteed Cleanup
+            // Even if an error occurs above, we MUST reset the state
+            this.dragState = null;
             this.store.setGhostLink(null);
             this.store.setDisconnectingLink(null);
+            
+            // Remove listeners immediately
+            d3.select(window).on("mousemove.drag", null).on("mouseup.drag", null);
+            
+            // Force a state update to remove the ghost line visually
             this.eventBus.emit('STATE_UPDATED');
-
-        } else if (this.dragState.type === 'label') {
-            d3.select(`.link-label-group[data-id="${this.dragState.id}"]`).classed("dragging", false);
-            const link = this.store.getLink(this.dragState.id);
-            if (link) {
-                this.store.updateLink(link.id, { label: { ...link.label } });
-            }
         }
-
-        // Cleanup
-        this.dragState = null;
-        d3.select(window).on("mousemove.drag", null).on("mouseup.drag", null);
     }
     
     handleClick(event) {
         const target = event.target;
         if (target.closest('.node')) {
             event.stopPropagation();
-            // Selection handled in mousedown usually, but safe to keep here
         } else if (target.closest('.link-group')) {
             event.stopPropagation();
             const linkData = d3.select(target.closest('.link-group')).datum();
@@ -238,7 +235,7 @@ export class InputSystem {
             const d = d3.select(target.closest('.link-label-group')).datum();
             startInlineEditing(event, d.label.text, (val) => {
                  this.store.updateLink(d.id, { label: { ...d.label, text: val } });
-            });
+            }, this.eventBus);
         }
         
         if (target.matches('.node-label')) {
@@ -246,29 +243,32 @@ export class InputSystem {
             const d = d3.select(target.closest('.node')).datum();
             startInlineEditing(event, d.label, (val) => {
                 this.store.updateNode(d.id, { label: val });
-            });
+            }, this.eventBus);
         }
     }
     
     handleContextMenu(event) {
         const target = event.target;
         const nodeElement = target.closest('.node');
-        const linkElement = target.closest('.link-hitarea');
+        // FIX 4: Check for .link-group to support clicking on the stroke or the hitarea
+        const linkGroup = target.closest('.link-group');
         const handlerElement = target.closest('.handler-g');
 
-        // FIXED: Import path changed from '../ContextMenu.js' to './ContextMenu.js'
         if (handlerElement) {
-            event.preventDefault(); event.stopPropagation();
+            event.preventDefault();
+            event.stopPropagation();
             const d = d3.select(handlerElement).datum();
-            import('./ContextMenu.js').then(m => m.showHandlerContextMenu(event, d));
-        } else if (linkElement) {
-            event.preventDefault(); event.stopPropagation();
-            const d = d3.select(linkElement.closest('.link-group')).datum();
-            import('./ContextMenu.js').then(m => m.showLinkContextMenu(event, d));
+            import('./ContextMenu.js').then(m => m.showHandlerContextMenu(event, d, this.eventBus, this.store));
+        } else if (linkGroup) {
+            event.preventDefault(); 
+            event.stopPropagation();
+            const d = d3.select(linkGroup).datum();
+            import('./ContextMenu.js').then(m => m.showLinkContextMenu(event, d, this.eventBus, this.store));
         } else if (nodeElement) {
-            event.preventDefault(); event.stopPropagation();
+            event.preventDefault(); 
+            event.stopPropagation();
             const d = d3.select(nodeElement).datum();
-            import('./ContextMenu.js').then(m => m.showNodeContextMenu(event, d));
+            import('./ContextMenu.js').then(m => m.showNodeContextMenu(event, d, this.eventBus, this.store));
         }
     }
 }

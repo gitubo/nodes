@@ -28,7 +28,8 @@ export class SwitchNodeDefinition extends NodeDefinition {
         // Combine handlers for the base class
         this.handlers = [...this.targetHandlers, ...this.sourceHandlers];
     }
-    
+    static hasTargetHandlers() { return true; }
+
     getDimensions() {
         const w = this.width;
         const h = CONFIG.node.handlerSeparator*2*( this.sourceHandlers.length+1);
@@ -37,7 +38,7 @@ export class SwitchNodeDefinition extends NodeDefinition {
 
     getIconPath() { return 'M465 342l42 42q14-13 37-28t48-24l-15-59q-35 11-64.5 31.5T465 342Zm171-84 14 58q21-4 49.5-5t66.5 1l-90 90 42 42L880 282 718 120l-42 42 89 89q-42-2-76.5.5T636 258ZM80 450v60H280q46 0 79 15.5T432 585q63 69 135.5 98.5T766 708l-90 90 42 42L880 678 718 516l-42 42 90 90q-108 6-174.5-19.5T478 545q-13-15-32-31.5T401 480q16-10 35-24.5T466 428l-43-43q-33 33-64 49t-79 16H80Z'; }
 
-    static getHandlers(d) { return [...d.targetHandlers, ...d.sourceHandlers]; }
+    getHandlers() { return [...this.targetHandlers, ...this.sourceHandlers]; }
     
     // Reuse the Diamond shape path logic
     getShapePath() {

@@ -9,7 +9,7 @@ export const HELPER_CONFIG = {
 
 export class AddNodeHelperSystem {
     constructor(svg, store, registry, eventBus) {
-        this.svg = svg; // La selezione d3 dell'<svg>
+        this.svg = svg;
         this.viewport = svg.select("g.viewport");
         this.store = store;
         this.registry = registry;
@@ -27,7 +27,7 @@ export class AddNodeHelperSystem {
         this.eventBus.on('CONNECTION_CREATED', this.update.bind(this));
         this.eventBus.on('CONNECTION_REMOVED', this.update.bind(this));
         this.eventBus.on('NODE_MOVED', this.update.bind(this));
-        this.eventBus.on('STATE_LOADED', this.update.bind(this)); // Per il caricamento iniziale/importazione
+        this.eventBus.on('STATE_LOADED', this.update.bind(this)); 
     }
 
     /**
@@ -44,8 +44,9 @@ export class AddNodeHelperSystem {
         const helpers = [];
         // USA: this.store e this.registry
         this.store.nodes.forEach(node => {
-            const nodeDef = this.registry.getNodeDefinition(node.type);
-            const handlers = nodeDef ? nodeDef.getHandlers(node) : [];
+//            const nodeDef = this.registry.getNodeDefinition(node.type);
+//            const handlers = nodeDef ? nodeDef.getHandlers(node) : [];
+            const handlers = node.getHandlers() || [];
             
             handlers.forEach(handler => {
                 const def = this.registry.getHandlerDefinition(handler.type);
@@ -62,7 +63,6 @@ export class AddNodeHelperSystem {
                             handlerId: handler.id,
                             nodeId: node.id,
                             position: { x: node.position.x + offsetX, y: node.position.y + offsetY },
-                            // Cruciale per la sincronizzazione del drag
                             relX: offsetX, 
                             relY: offsetY
                         });
@@ -125,19 +125,39 @@ export class AddNodeHelperSystem {
             d3.select(this).transition().duration(150)
                 .attr("transform", `translate(${cfg.linkLength}, 0) scale(1)`);
         })
-        .on("click", (event) => { // Usa una arrow function per 'this'
+        .on("click", (event) => {
             event.stopPropagation();
-            const [mx, my] = d3.pointer(event, this.svg.node()); // USA: this.svg
-            const filter = (def) => def.getHandlers().some(h => h.role === 'target');
+            const [mx, my] = d3.pointer(event, this.svg.node());
+
+            // La funzione di filtro ora prende il 'type' come stringa, 
+            // ma la sua logica interna deve essere basata sul 'this.registry'
+            // per recuperare la definizione.
+            // NOTA: il parametro 'filter' qui è il filtro che showNodeTypeMenu applicherà.
+            // Il filtro passato DEVE essere una funzione che accetta l'oggetto definizione (def)
+            // come fa il tuo esempio showNodeTypeMenu.
             
-            // USA: this.showNodeTypeMenu
+            // Quindi, il problema era come definire la funzione 'filter' qui.
+            
+            // La funzione 'filter' che viene passata a this.showNodeTypeMenu riceve
+            // *già* l'oggetto 'def' (la NodeDefinition) grazie alla logica interna 
+            // di showNodeTypeMenu (come mostrato nel tuo esempio):
+            // if (!filterFn || filterFn(def)) { ...
+            
+            // Riscriviamo solo la funzione filter corretta (come Lambda)
+            const filter = (def) => {
+                // Chiamiamo il metodo d'istanza getHandlers() sulla definizione (def)
+                // che è stata ottenuta internamente da showNodeTypeMenu:
+                return def.hasTargetHandlers();
+            };
+            
+            // Chiamata a this.showNodeTypeMenu con il filtro corretto
             this.showNodeTypeMenu({x: mx, y: my}, filter, (type) => {
                 // Questo callback onSelect ora ha il 'this' corretto
-                const newNode = this.store.addNode(type, data.position.x + 150, data.position.y - 30); // USA: this.store
+                const newNode = this.store.addNode(type, data.position.x + 150, data.position.y);
                 if (newNode) {
                     const targetHandler = newNode.handlers.find(h => h.role === 'target');
                     if (targetHandler) {
-                        this.store.addLink(data.handlerId, targetHandler.id); // USA: this.store
+                        this.store.addLink(data.handlerId, targetHandler.id);
                     }
                 }
             });

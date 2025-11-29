@@ -148,22 +148,6 @@ export class SourceHandlerDefinition extends HandlerDefinition {
                 },                
                 exit => exit.remove()
             );
-        //this.setupDrag(selection);
     }
-    /*
-    setupDrag(selection) {
-        selection.call(d3.drag()
-            .on("start", (event, d) => {
-                event.sourceEvent.stopPropagation();
-                linkInteractionManager.startDrag(d.id, event.sourceEvent, false);
-            })
-            .on("drag", (event) => {
-                linkInteractionManager.updateDrag(event.sourceEvent);
-            })
-            .on("end", (event, d) => {
-                linkInteractionManager.endDrag(event, d.id, false);
-            })
-        );
-    }
-    */
+
 }

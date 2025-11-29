@@ -11,10 +11,10 @@ export function findGlobalHandlerPos(handlerId, nodes, registry) {
     if (!nodes || !registry) return { x: 0, y: 0, dir: 'right' };
 
     for (const node of nodes) {
-        const definition = registry.getNodeDefinition(node.type);
-        const handlers = definition ? definition.getHandlers(node) : [];
+        //const definition = registry.getNodeDefinition(node.type);
+        //const handlers = definition ? definition.getHandlers(node) : [];
         
-        for (const handler of handlers) {
+        for (const handler of node.getHandlers()) {
             if (handler.id === handlerId) {
                 const localX = handler.offset.x || 0;
                 const localY = handler.offset.y || 0;

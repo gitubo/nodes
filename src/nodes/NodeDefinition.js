@@ -1,12 +1,9 @@
 // src/nodes/NodeDefinition.js
 import { CONFIG } from '../config.js';
-//import { eventBus } from '../EventBus.js'; // Note: Still used by renderProperties
-
-const generateId = () => crypto.randomUUID();
 
 export class NodeDefinition {
     constructor(x, y, label, note, data) {
-        this.id = generateId();
+        this.id = crypto.randomUUID();
         this.type = 'base';
         this.label = label;
         this.note = note;
@@ -17,10 +14,9 @@ export class NodeDefinition {
         this.data = data;
     }
 
-    static getId(d) { return d.id; }
-    static getHandlers(d) { return d.handlers || []; }
-    static getData(d) { return d.data || {}; }
+    static hasTargetHandlers() { return false; }
 
+    getHandlers() { return this.handlers || []; }
     getDimensions() { return { width: this.width, height: this.height }; }
     getIconPath() { return ''; }
 
@@ -45,12 +41,6 @@ export class NodeDefinition {
         `.replace(/\s+/g, ' ');
     }
         
-    // REMOVED: static render(currentSelection, d)
-
-    // REMOVED: serialize()
-    
-    // REMOVED: static deserialize(data)
-
     static renderProperties(container, nodeData, onChange) {
         // This logic remains as it's UI-specific for the properties panel
     }

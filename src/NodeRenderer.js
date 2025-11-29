@@ -36,37 +36,38 @@ export class NodeRenderer {
              const icon = d.getIconPath();
              currentSelection.selectAll("path.node-icon").remove();
              if(icon && icon !== ''){
-                const size = CONFIG.node.iconSize;
+                // Actual icon
                 const path = currentSelection.append("path")
                     .attr("class", "node-icon")
                     .attr("d", icon);
-    
                 const bbox = path.node().getBBox();
+                const size = CONFIG.node.iconSize-CONFIG.node.iconPadding*2;
                 const scale = size / Math.max(bbox.width, bbox.height);
-                const tx = (dimensions.width - bbox.width * scale) / 2 - bbox.x * scale;
-                const ty = (dimensions.height - bbox.height * scale) / 2 - bbox.y * scale;
-                path.attr("transform", `translate(${tx}, ${ty}) scale(${scale})`);
-             }
+                path.attr("transform", `translate(${CONFIG.node.iconMargin+CONFIG.node.iconPadding}, ${CONFIG.node.iconMargin+CONFIG.node.iconPadding}) scale(${scale})`);
+
+                // Icon line
+                currentSelection.append("path")
+                    .attr("class", "node-icon line")
+                    .attr("d", "M16 0 48 0A16 16 90 0164 16L64 48A16 16 90 0148 64L16 64A16 16 90 010 48L0 16A16 16 90 0116 0Z")
+                    .attr("transform", `translate(${CONFIG.node.iconMargin}, ${CONFIG.node.iconMargin})`);
+            }
 
              // 3. Render Labels
-             let yOffset = dimensions.height + CONFIG.node.labelTopMargin;
-             
              if (d.label) {
                 const capitalized = d.label.charAt(0).toUpperCase() + d.label.slice(1);
                 const labelJoin = currentSelection.selectAll("text.node-label").data([d]);
                 
-                labelJoin.enter()
+                const label = labelJoin.enter()
                     .append("text")
                     .attr("class", "node-label") 
-                    .attr("text-anchor", "middle")
+                    .attr("text-anchor", "left")
                     .merge(labelJoin)
-                    .attr("x", dimensions.width / 2)
-                    .attr("y", yOffset)
                     .text(capitalized);
-                    // REMOVED: .on("dblclick", ...)
+
+                const bbox = label.node().getBBox();
+                label.attr("transform", `translate(${CONFIG.node.iconMargin*2+CONFIG.node.iconSize}, ${CONFIG.node.iconMargin+CONFIG.node.iconSize/2})`);
                     
                 labelJoin.exit().remove();
-                yOffset += CONFIG.node.noteTopMargin;
              } else {
                 currentSelection.selectAll("text.node-label").remove();
              }
@@ -78,30 +79,34 @@ export class NodeRenderer {
                     .attr("class", "node-note") 
                     .attr("text-anchor", "middle")
                     .merge(noteJoin)
-                    .attr("x", dimensions.width / 2)
-                    .attr("y", yOffset)
+                    .attr("transform", `translate(${CONFIG.node.iconMargin*2+CONFIG.node.iconSize}, ${CONFIG.node.iconMargin+CONFIG.node.iconSize})`)
                     .text(d.note);
+                    
                 noteJoin.exit().remove();
              } else {
                 currentSelection.selectAll("text.node-note").remove();
              }
         });
-        //}.bind(this)); // Bind 'this' to access this.registry
     }
 
     renderHandlers(selection, d) {
         const renderer = this;
         selection.selectAll("g.handler-g")
             .data(() => {
-                const definition = renderer.registry.getNodeDefinition(d.type);
-                return definition ? definition.getHandlers(d) : [];
+//                const definition = renderer.registry.getNodeDefinition(d.type);
+//                return definition ? definition.getHandlers(d) : [];
+                return d.getHandlers() || [];
             }, h => h.id)
             .join(
                 enter => {
                     const g = enter.append("g")
                         .attr("class", h => `handler-g ${h.type} ${h.role}`)
                         .attr("data-id", h => h.id) // Add data-id for InputSystem
-                        .attr("transform", h => `translate(${h.offset.x || 0}, ${h.offset.y || 0})`); 
+                        .attr("transform", h => {
+                                const tx = h.offset?.x || 0;
+                                const ty = h.offset?.y || 0;
+                                return `translate(${tx},${ty})`;
+                            }); 
 
                     g.each(function (h) {
                         const HandlerClass = renderer.registry.getHandlerDefinition(h.type);
@@ -118,7 +123,12 @@ export class NodeRenderer {
                     return g;
                 },
                 update => {
-                    update.attr("transform", h => `translate(${h.offset.x || 0}, ${h.offset.y || 0})`); 
+                    update.attr("transform", h => {
+                            const tx = h.offset?.x || 0;
+                            const ty = h.offset?.y || 0;
+                            return `translate(${tx},${ty})`;
+                        }); 
+ 
                     update.each(function (h) {
                         if (h.instance) {
                             h.instance.render(d3.select(this));

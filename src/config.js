@@ -11,7 +11,8 @@ export const CONFIG = {
     canvas: {
         width: 1024,
         height: 1024,
-        backgroundColor: '#f8fbff'
+        backgroundColor: '#f8fbff',
+        scale: 2
     },
     
     // Grid settings
@@ -33,6 +34,8 @@ export const CONFIG = {
         labelTopMargin: MODULE_4,
         noteTopMargin: MODULE_3,
         iconSize: MODULE_8,
+        iconMargin: MODULE_2,
+        iconPadding: MODULE,
         handlerSeparator: MODULE_4
     },
     
