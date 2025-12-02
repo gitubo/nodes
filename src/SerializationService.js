@@ -12,29 +12,29 @@ export class SerializationService {
      */
     serialize(state) {
         const exportData = {
+            metadata: {
+                version: '0.1', 
+                createdAt: new Date().toISOString(),
+                viewport: {
+                    x: state.transform.x || 0,
+                    y: state.transform.y || 0,
+                    k: state.transform.k || 1 
+                }
+            },
             nodes: {},
             connections: {}
         };
 
         state.nodes.forEach(node => {
-            // 1. Shallow copy the node to avoid mutating the store
-            const nodeCopy = { ...node };
-
-            // 2. Clean 'handlers' array: remove 'instance' property added by Renderer
-            if (nodeCopy.handlers) {
-                nodeCopy.handlers = nodeCopy.handlers.map(h => {
-                    // Destructure to separate 'instance' from the rest of the data
-                    const { instance, ...cleanHandler } = h;
-                    return cleanHandler;
-                });
+            const definition = this.registry.getNodeDefinition(node.type);
+            if (!definition) {
+                console.warn(`[Serialization] node type ${node.type} is not defined into the Registry`);
+                return;
             }
-
-            // 3. Remove derived/redundant arrays that cause circular reference issues during JSON.stringify
-            // These are re-calculated by the Node class constructor during deserialize.
-            delete nodeCopy.sourceHandlers;
-            delete nodeCopy.targetHandlers;
-
-            exportData.nodes[node.id] = nodeCopy;
+            exportData.nodes = { 
+                ...exportData.nodes, 
+                ...definition.serialize(node, this.registry)
+            };
         });
 
         state.links.forEach(link => {
@@ -51,45 +51,23 @@ export class SerializationService {
         if (!data || !data.nodes || !data.connections) {
             return { nodes: [], links: [] };
         }
+        
+        const viewportState = data.metadata?.viewport || { x: 0, y: 0, k: 1 };
 
-        const newNodes = Object.values(data.nodes).map(nodeData => {
+        const newNodes = [];
+
+        Object.entries(data.nodes).forEach(([nodeId, nodeData]) => {
             const NodeClass = this.registry.getNodeDefinition(nodeData.type);
             if (!NodeClass) {
-                console.warn(`No definition for node type ${nodeData.type}`);
-                return null;
-            }
-
-            // Re-create the node instance (this restores default handlers and derived arrays)
-            const instance = new NodeClass(nodeData.position?.x || 0, nodeData.position?.y || 0);
-            
-            // Overwrite standard properties
-            instance.id = nodeData.id;
-            instance.type = nodeData.type;
-            instance.position = { x: nodeData.position?.x || 0, y: nodeData.position?.y || 0 };
-            instance.label = nodeData.label;
-            instance.note = nodeData.note;
-            instance.data = nodeData.data || {};
-            
-            // Restore persisted handlers (merging with defaults if needed, or overwriting)
-            if (nodeData.handlers && Array.isArray(nodeData.handlers)) {
-                // We map back the saved data to the handlers
-                instance.handlers = nodeData.handlers.map(h => ({
-                    ...h,
-                    offset_x: h.offset?.x || 0,
-                    offset_y: h.offset?.y || 0
-                }));
-            }
-
-            // Restore type-specific data (Switch Node logic)
-            if (nodeData.type === 'switch') {
-                instance.condition = nodeData.condition;
-                // Re-bind the derived arrays to the restored handlers
-                instance.sourceHandlers = instance.handlers.filter(h => h.role === 'source');
-                instance.targetHandlers = instance.handlers.filter(h => h.role === 'target');
+                console.warn(`No definition for node type ${nodeData.type}. Skipping node with ID: ${nodeId}`);
+                return;
             }
             
-            return instance;
-        }).filter(Boolean);
+            nodeData.id = nodeId;
+            const instance = NodeClass.deserialize(nodeData, this.registry);
+            
+            newNodes.push(instance);
+        });
 
         const newLinks = Object.values(data.connections).map(l => ({
             id: l.id,
@@ -100,6 +78,6 @@ export class SerializationService {
             label: l.label
         }));
 
-        return { nodes: newNodes, links: newLinks };
+        return { nodes: newNodes, links: newLinks, viewport: viewportState };
     }
 }

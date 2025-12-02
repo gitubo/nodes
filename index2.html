@@ -28,6 +28,31 @@
             height: 100%;
             z-index: 1; /* Behind panels */
         }
+
+        #node-palette-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            padding: 10px;
+            overflow-y: auto;
+        }
+
+        .palette-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px;
+            border-radius: 6px;
+            background-color: #e5e4e2; 
+            cursor: grab;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        }
+
+        .palette-icon-svg {
+            width: 40px; 
+            height: 40px;
+            flex-shrink: 0; /* Previene lo stiramento in un contenitore flex */
+        }
     </style>
 </head>
 <body>
@@ -48,33 +73,36 @@
 
     <div id="commands-panel" class="floating-panel">
         
-        <div class="control-group" title="Viewport Controls">
-            <button class="icon-button" onclick="cmd('ZOOM_IN')" title="Zoom In">
-                <span class="material-symbols-outlined">zoom_in</span>
+        <div class="control-group" title="History">
+            <button class="icon-button" onclick="cmd('undo')" title="Undo">
+                <span class="material-symbols-outlined">undo</span>
             </button>
-            <button class="icon-button" onclick="cmd('ZOOM_OUT')" title="Zoom Out">
-                <span class="material-symbols-outlined">zoom_out</span>
-            </button>
-            <button class="icon-button" onclick="cmd('ZOOM_FIT')" title="Fit to Screen">
-                <span class="material-symbols-outlined">fit_screen</span>
-            </button>
-            <button class="icon-button" onclick="cmd('ZOOM_RESET')" title="Reset View">
-                <span class="material-symbols-outlined">refresh</span>
+            <button class="icon-button" onclick="cmd('redo')" title="Redo">
+                <span class="material-symbols-outlined">redo</span>
             </button>
         </div>
 
-        <div class="control-group" title="History and Utility">
-            <button class="icon-button" onclick="cmd('UNDO')" title="Undo">
-                <span class="material-symbols-outlined">undo</span>
+        <div class="control-group" title="Viewport Controls">
+            <button class="icon-button" onclick="cmd('zoom_in')" title="Zoom In">
+                <span class="material-symbols-outlined">zoom_in</span>
             </button>
-            <button class="icon-button" onclick="cmd('REDO')" title="Redo">
-                <span class="material-symbols-outlined">redo</span>
+            <button class="icon-button" onclick="cmd('zoom_fit')" title="Fit to Screen">
+                <span class="material-symbols-outlined">fit_screen</span>
             </button>
-            <button class="icon-button" onclick="cmd('EXPORT')" title="Export Data">
+            <button class="icon-button" onclick="cmd('zoom_out')" title="Zoom Out">
+                <span class="material-symbols-outlined">zoom_out</span>
+            </button>
+            <button class="icon-button" onclick="cmd('zoom_reset')" title="Reset View">
+                <span class="material-symbols-outlined">reset_focus</span>
+            </button>
+        </div>
+
+        <div class="control-group" title="Utility">
+            <button class="icon-button" onclick="cmd('import')" title="Open file">
+                <span class="material-symbols-outlined">folder_open</span>
+            </button>
+            <button class="icon-button" onclick="cmd('export')" title="Create representation">
                 <span class="material-symbols-outlined">data_object</span>
-            </button>
-            <button class="icon-button" onclick="cmd('DESELECT')" title="Deselect All">
-                <span class="material-symbols-outlined">deselect</span>
             </button>
         </div>
     </div>

@@ -9,9 +9,8 @@ const DEFINITIONS = {
 };
 
 export class SwitchNodeDefinition extends NodeDefinition {
-    constructor(x, y, label, note, data) {
-        // ... (constructor logic)
-        super(x, y, label, note, data);
+    constructor(x, y, _label, note, data) {
+        super(x, y, 'switch', note, data);
         this.type = 'switch';
         this.conditions = [];
         this.targetHandlers = [];
@@ -20,7 +19,7 @@ export class SwitchNodeDefinition extends NodeDefinition {
         this.width = CONFIG.node.width*2;
         // Initialize default handlers
         DEFINITIONS.sourceHandlerLabels.forEach((label, i) => {
-            const offset = (CONFIG.node.handlerSeparator*2) + (CONFIG.node.handlerSeparator*2 )*i;
+            const offset = (CONFIG.node.handlerSeparator*4) + (CONFIG.node.handlerSeparator*2 )*i;
             this.sourceHandlers.push(new SourceHandlerDefinition(this.width, offset, label));
         });
         this.height = CONFIG.node.handlerSeparator*2*( this.sourceHandlers.length+1);

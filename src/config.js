@@ -36,7 +36,7 @@ export const CONFIG = {
         iconSize: MODULE_8,
         iconMargin: MODULE_2,
         iconPadding: MODULE,
-        handlerSeparator: MODULE_4
+        handlerSeparator: MODULE_3
     },
     
     // Handler settings

@@ -4,8 +4,8 @@ import { CONFIG } from '../config.js';
 import { TargetHorizontalHandlerDefinition } from '../handlers/TargetHorizontalHandler.js';
 
 export class ServiceNodeDefinition extends NodeDefinition {
-    constructor(x, y, label, note, data) {
-        super(x, y, label, note, data);
+    constructor(x, y, _label, note, data) {
+        super(x, y, 'service', note, data);
         this.type = 'service';
         this.width = 192;
         this.height = 96;

@@ -16,6 +16,35 @@ export class HandlerDefinition {
     static getDimension(obj) { return obj.dimensions || {}; }
     static getRole(obj) { return obj.role || ''; }
     static draw(obj){}
+
+    static serialize(handler) {
+        return {
+            [handler.id] : {
+                type: handler.type, 
+                label: handler.label,
+                presentation: {
+                    offset: {
+                        x: handler.offset.x, 
+                        y: handler.offset.y
+                    },
+                    direction: handler.direction
+                }
+            }
+        };
+    }
+
+    static deserialize(data, id) {
+        const offset_x = data.presentation?.offset?.x || 0;
+        const offset_y = data.presentation?.offset?.y || 0;
+        const label = data.label || '';
+        const direction = data.presentation?.direction || 'right';
+        const instance = new this(offset_x, offset_y, label, direction);
+
+        instance.id = id;
+//        instance.type = data.type; 
+        return instance;
+    }
+
     /**
      * Render the handler visual elements
      * @param {d3.Selection} selection - D3 selection to render into

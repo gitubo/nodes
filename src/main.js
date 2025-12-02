@@ -1,4 +1,3 @@
-import { CONFIG } from './config.js';
 import { store } from './state.js';
 import { render, initRenderer } from './render.js';
 import { Grid } from './Grid.js';

@@ -273,12 +273,29 @@ export class Store {
         }
     }
 
-    loadState({ nodes, links }) {
+    loadState({ nodes, links, viewport={} }) {
+    
         this.state = {
             ...this.state,
             nodes: nodes,
             links: links
         };
+    
+        if(
+            viewport !== null && 
+            typeof viewport === 'object' &&
+            typeof viewport.x === 'number' && isFinite(viewport.x) &&
+            typeof viewport.y === 'number' && isFinite(viewport.y) &&
+            typeof viewport.k === 'number' && isFinite(viewport.k) && viewport.k > 0
+        ){
+            const { x, y, k } = viewport;
+            const newTransform = d3.zoomIdentity.translate(x, y).scale(k);
+            this.state = {
+                ...this.state,
+                transform: newTransform,
+            };
+        }
+
         this._rebuildCache();
         this.eventBus.emit('STATE_LOADED', this.state); 
         this.deselect();

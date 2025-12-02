@@ -183,8 +183,8 @@ export class UIController {
             reader.onload = (evt) => {
                 try { 
                     const data = JSON.parse(evt.target.result);
-                    const { nodes, links } = this.serializationService.deserialize(data);
-                    this.store.loadState({ nodes, links });
+                    const { nodes, links, viewport } = this.serializationService.deserialize(data);
+                    this.store.loadState({ nodes, links, viewport });
                 } 
                 catch (err) { console.error(err);
                 alert("Invalid JSON file"); }

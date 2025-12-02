@@ -179,8 +179,10 @@ export class DAGWidget {
                 return data; 
             case 'import':
                 if (payload) {
-                    const { nodes, links } = this.serializationService.deserialize(payload);
-                    this.store.loadState({ nodes, links });
+                    const { nodes, links, viewport } = this.serializationService.deserialize(payload);
+                    this.store.loadState({ nodes, links, viewport });
+                    this.svg.transition().duration(500)
+                        .call(window.zoomBehavior.transform, this.state.transform);
                 }
                 break;
             default: console.warn(`[DAGWidget] Unknown command: ${commandName}`);

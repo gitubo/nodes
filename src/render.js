@@ -188,13 +188,11 @@ function renderLinkLabels(viewport) {
                 const g = enter.append("g")
                     .attr("class", "link-label-group")
                     .attr("data-id", d => d.id);
-                    // REMOVED: .call(d3.drag() ...)
                     
                 g.append("rect").attr("class", "link-label-bg");
                 g.append("text").attr("class", "link-label-text")
                     .attr("text-anchor", "middle").attr("dy", "0.3em");
                     
-                // REMOVED: g.on("dblclick", ...)
                 return g;
             },
             update => {
@@ -209,10 +207,12 @@ function renderLinkLabels(viewport) {
             const text = g.select("text").text(d.label.text);
             
             const bbox = text.node().getBBox();
-            const pad = 4;
+            const pad = 6;
             g.select("rect")
-                .attr("x", bbox.x - pad).attr("y", bbox.y - pad)
-                .attr("width", bbox.width + pad*2).attr("height", bbox.height + pad*2);
+                .attr("x", bbox.x - pad)
+                .attr("y", bbox.y - pad)
+                .attr("width", bbox.width + pad*2)
+                .attr("height", bbox.height + pad*2);
                  
             // Projection
             const pos = calculatePositionAlongPath(d, d.label.offset || 0.5, store.state.nodes, registry);
