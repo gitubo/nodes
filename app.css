@@ -1,0 +1,261 @@
+/*
+ * Application Layout and Panel Styles
+ */
+
+/* Define CSS Variables for the web app colors */
+:root {
+    --baltic-blue: #23395d;
+    --white: #ffffff;
+    --alice-blue: #f0f8ff;
+    --pale-slate: #c0c8d4;
+    --dim-gray: #696969;
+    --platinum: #e5e4e2;
+}
+
+/* --- Panel System --- */
+
+.floating-panel {
+    position: fixed;
+    background: var(--white);
+    /* Rounded corners with a smooth shadow */
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    border: 1px solid var(--pale-slate);
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+}
+
+/* --- Fixed Top Commands Panel (NEW) --- */
+#commands-panel {
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%); /* Center horizontally */
+    flex-direction: row;
+    padding: 8px;
+    gap: 12px;
+    align-items: center;
+}
+
+#commands-panel .control-group {
+    display: flex;
+    gap: 4px;
+    padding: 0 10px;
+    /* Visual separator between groups */
+    border-right: 1px solid var(--pale-slate); 
+}
+#commands-panel .control-group:last-child {
+    border-right: none;
+}
+
+/* --- Right Event Panel --- */
+#event-panel {
+    top: 20px;
+    right: 20px; /* Position on the right */
+    width: 320px;
+    height: calc(100vh - 40px);
+    transition: transform 0.3s ease-in-out;
+}
+
+#event-panel.hidden {
+    /* Translate full width + gap */
+    transform: translateX(calc(100% + 20px)); 
+}
+
+#node-palette-panel {
+    position: fixed;
+    background: var(--white);
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    border: 1px solid var(--pale-slate);
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    top: 20px;
+    left: 20px; /* Position on the left */
+    width: 240px; 
+    height: calc(100vh - 40px);
+    transition: transform 0.3s ease-in-out;
+}
+
+#node-palette-panel.hidden {
+    /* Translate full width + gap */
+    transform: translateX(calc(-100% - 20px));
+}
+
+/* (NEW) List styles for palette */
+#node-palette-list {
+    flex-grow: 1;
+    background: var(--white);
+    padding: 10px;
+    overflow-y: auto;
+    font-family: Arial, sans-serif;
+    border-bottom-left-radius: 12px;
+    border-bottom-right-radius: 12px;
+}
+
+#node-palette-list .palette-item {
+    display: flex;
+    align-items: center;
+    padding: 8px;
+    gap: 8px;
+    cursor: pointer;
+    border-radius: 6px;
+    font-size: 14px;
+    color: var(--baltic-blue);
+    user-select: none;
+}
+
+#node-palette-list .palette-item:hover {
+    background: var(--alice-blue);
+}
+
+#node-palette-list .palette-item .material-symbols-outlined {
+    font-size: 20px;
+}
+
+.panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 16px;
+    border-bottom: 1px solid #eee;
+    flex-shrink: 0;
+    /* User changes */
+    background-color: var(--baltic-blue); 
+    border-top-right-radius: 12px;
+    border-top-left-radius: 12px;
+}
+
+.panel-title {
+    font-weight: 600;
+    font-size: 16px;
+    /* User change */
+    color: var(--white);
+}
+
+/* --- Floating Toggle Button --- */
+
+.floating-toggle {
+    position: fixed;
+    top: 20px;
+    right: 340px; /* Aligned to the left edge of the panel (320px width + 20px margin) */
+    z-index: 11; /* Above the panel */
+    transition: right 0.3s ease-in-out;
+    border-radius: 50%;
+    padding: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    background: var(--white);
+    border: 1px solid var(--pale-slate);
+}
+
+.floating-toggle-left {
+    position: fixed;
+    top: 20px;
+    left: 260px; /* Aligned to the right edge of the panel (240px width + 20px margin) */
+    z-index: 11; /* Above the panel */
+    transition: left 0.3s ease-in-out;
+    border-radius: 50%;
+    padding: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    background: var(--white);
+    border: 1px solid var(--pale-slate);
+}
+
+#node-palette-panel.hidden ~ .floating-toggle-left {
+    left: 20px; /* Moves to the far left edge when panel is hidden */
+}
+
+#event-panel.hidden ~ .floating-toggle {
+    right: 20px; /* Moves to the far right edge when panel is hidden */
+}
+
+/* --- Event Log (inside right panel) --- */
+
+#log {
+    flex-grow: 1;
+    background: var(--white);
+    padding: 10px;
+    overflow-y: auto;
+    font-family: Arial, sans-serif;
+    font-size: 13px;
+    border-bottom-left-radius: 12px;
+    border-bottom-right-radius: 12px;
+}
+
+/* --- Event Card Visualization --- */
+
+.log-card {
+    background: var(--alice-blue);
+    border: 1px solid var(--pale-slate);
+    border-radius: 8px;
+    padding: 8px;
+    margin-bottom: 10px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 4px;
+    margin-bottom: 6px;
+}
+
+.card-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--baltic-blue); /* Primary color for event type */
+}
+
+.card-time {
+    font-size: 11px;
+    color: var(--dim-gray);
+}
+
+.card-payload {
+    font-family: monospace;
+    font-size: 11px;
+    background: var(--platinum);
+    padding: 4px;
+    border-radius: 4px;
+    color: #333;
+    white-space: pre-wrap; /* Ensures complex JSON stays readable */
+    word-break: break-word;
+    margin: 0;
+}
+
+/* --- General Button Styles --- */
+
+button {
+    padding: 6px 12px; 
+    cursor: pointer;
+    border: 1px solid var(--pale-slate);
+    border-radius: 8px; 
+    background: var(--white);
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    transition: background 0.1s;
+}
+button:hover {
+    background: var(--alice-blue);
+    border-color: var(--baltic-blue);
+}
+
+/* Icon-only button style */
+.icon-button {
+    padding: 8px; /* Slightly larger hit area */
+    min-width: 38px; 
+    min-height: 38px;
+    justify-content: center;
+    border-radius: 8px;
+}
+
+.icon-button .material-symbols-outlined {
+    font-size: 20px;
+    margin: 0;
+    color: var(--baltic-blue);
+}

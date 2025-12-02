@@ -1,8 +1,6 @@
-// src/UIController.js
 import { getStrokeIcon, getIcon } from './Icons.js';
 import { HELPER_CONFIG } from './AddNodeHelper.js'; 
 import { AddNodeHelperSystem } from './AddNodeHelper.js';
-
 // Note: AddNodeHelper still uses singletons, a future refactor.
 
 export class UIController {
@@ -12,7 +10,6 @@ export class UIController {
         this.serializationService = serializationService;
         this.registry = registry;
         this.addNodeHelperSystem = addNodeHelperSystem;
-        
         this.panels = {
             zoom: { visible: true, element: null },
             properties: { visible: false, element: null }
@@ -23,24 +20,21 @@ export class UIController {
         this.createZoomPanel();
         this.createPropertiesPanel();
         this.attachEventListeners();
-        
         this.eventBus.on('EDIT_PROPERTIES', (payload) => {
             const { type, id } = payload;
             const data = type === 'node' ? this.store.getNode(id) : this.store.getLink(id);
             if(data) this.showPropertiesPanel({ type, data });
         });
-        
         this.eventBus.on('SELECTION_CHANGED', (payload) => {
             if (!payload || !payload.id) {
                 this.hidePropertiesPanel();
             } else {
                 if (this.panels.properties.visible) {
                      const data = payload.type === 'node' ? this.store.getNode(payload.id) : this.store.getLink(payload.id);
-                     if(data) this.showPropertiesPanel({ type: payload.type, data });
+                      if(data) this.showPropertiesPanel({ type: payload.type, data });
                 }
             }
         });
-
         // Listen for history changes to update button states (opacity/disabled)
         this.eventBus.on('HISTORY_CHANGED', (status) => {
             const undoBtn = document.querySelector('[data-action="undo"]');
@@ -48,12 +42,12 @@ export class UIController {
             
             if (undoBtn) {
                 undoBtn.style.opacity = status.canUndo ? '1' : '0.3';
-                undoBtn.style.pointerEvents = status.canUndo ? 'auto' : 'none';
+                  undoBtn.style.pointerEvents = status.canUndo ? 'auto' : 'none';
             }
             if (redoBtn) {
                 redoBtn.style.opacity = status.canRedo ? '1' : '0.3';
                 redoBtn.style.pointerEvents = status.canRedo ? 'auto' : 'none';
-            }
+              }
         });
     }
     
@@ -72,6 +66,7 @@ export class UIController {
                 <button class="icon-btn" data-action="zoom-fit" title="Fit to Screen">${getStrokeIcon('zoomFitToScreen')}</button>
                 <button class="icon-btn" data-action="zoom-reset" title="Reset View">${getStrokeIcon('zoomResetView')}</button>
             </div>
+        
             <div class="panel-separator"></div>
             <div class="panel-group">
                 <button class="icon-btn" id="btn-add-node" data-action="add-node" title="Add Node">${getStrokeIcon('addNode')}</button>
@@ -79,7 +74,7 @@ export class UIController {
             <div class="panel-separator"></div>
             <div class="panel-group">
                  <button class="icon-btn" data-action="open-file" title="Open File">${getStrokeIcon('openFile')}</button>
-                <button class="icon-btn" data-action="save-file" title="Save File">${getStrokeIcon('saveFile')}</button>
+                  <button class="icon-btn" data-action="save-file" title="Save File">${getStrokeIcon('saveFile')}</button>
             </div>
         `;
         document.body.appendChild(p);
@@ -105,14 +100,15 @@ export class UIController {
             const btn = e.target.closest('[data-action]');
             if (!btn) return;
             const action = btn.dataset.action;
-            const svg = d3.select('svg');
+            const svg = d3.select('svg'); 
             
             switch(action) {
                 case 'undo': this.store.undo(); break;
                 case 'redo': this.store.redo(); break;
                 case 'zoom-in': svg.transition().call(window.zoomBehavior.scaleBy, 1.3); break;
                 case 'zoom-out': svg.transition().call(window.zoomBehavior.scaleBy, 0.7); break;
-                case 'zoom-reset': svg.transition().call(window.zoomBehavior.transform, d3.zoomIdentity); break;
+                case 'zoom-reset': 
+                    svg.transition().call(window.zoomBehavior.transform, d3.zoomIdentity); break;
                 case 'zoom-fit': this.fitToScreen(); break;
                 case 'close-prop': this.hidePropertiesPanel(); break;
                 
@@ -129,7 +125,6 @@ export class UIController {
 
                 case 'open-file': this.openFile(); break;
                 case 'add-node':
-                    const svg = d3.select('svg');
                     const rect = svg.node().getBoundingClientRect();
                     const t = d3.zoomTransform(svg.node());
                     
@@ -166,13 +161,14 @@ export class UIController {
     }
 
     getGraphBounds() {
-         if (store.nodes.length === 0) return null;
+        
+         if (this.store.nodes.length === 0) return null;
         let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-        store.nodes.forEach(n => {
-            minX = Math.min(minX, n.x);
-            minY = Math.min(minY, n.y);
-            maxX = Math.max(maxX, n.x + (n.width || 100));
-            maxY = Math.max(maxY, n.y + (n.height || 50));
+        this.store.nodes.forEach(n => {
+            minX = Math.min(minX, n.position.x); 
+            minY = Math.min(minY, n.position.y);
+            maxX = Math.max(maxX, n.position.x + (n.width || 100));
+            maxY = Math.max(maxY, n.position.y + (n.height || 50));
         });
         return { minX, minY, maxX, maxY };
     }
@@ -190,7 +186,8 @@ export class UIController {
                     const { nodes, links } = this.serializationService.deserialize(data);
                     this.store.loadState({ nodes, links });
                 } 
-                catch (err) { console.error(err); alert("Invalid JSON file"); }
+                catch (err) { console.error(err);
+                alert("Invalid JSON file"); }
             };
             reader.readAsText(file);
         };
@@ -210,19 +207,18 @@ export class UIController {
                     <input type="text" id="node-label-input" value="${node.label || ''}" class="prop-input">
                 </div>
                 <div class="property-group">
-                    <label>Note</label>
+                  <label>Note</label>
                     <input type="text" id="node-note-input" value="${node.note || ''}" class="prop-input">
                 </div>
                 
                 <div class="panel-separator" style="margin: 15px 0;"></div>
-                
+            
                 <label style="font-weight:bold; color:#666; font-size:12px;">Custom Params</label>
                 <div id="custom-params-container"></div>
                 <button class="btn-standard" id="add-param-btn" style="width:auto; font-size:12px; padding:4px 8px;">+ Add Param</button>
                 
-                <div id="def-props-container"></div>
+                 <div id="def-props-container"></div>
             `;
-            
             import('./Registry.js').then(m => {
                  const definition = m.registry.getNodeDefinition(node.type);
                  if(definition) {
@@ -230,12 +226,10 @@ export class UIController {
                      });
                  }
              });
-
             const customContainer = content.querySelector('#custom-params-container');
-            const customData = node.custom_params || {}; 
-
+            const customData = node.custom_params || {};
             const renderCustomProp = (key, val) => {
-                if (key === 'conditions' && node.type === 'switch') return; 
+                if (key === 'conditions' && node.type === 'switch') return;
                 const row = document.createElement('div');
                 row.className = 'property-group';
                 row.style.display = 'flex';
@@ -251,7 +245,6 @@ export class UIController {
 
             Object.entries(customData).forEach(([k, v]) => renderCustomProp(k, v));
             content.querySelector('#add-param-btn').onclick = () => renderCustomProp('', '');
-
             const updBtn = document.createElement('button');
             updBtn.className = 'btn-standard';
             updBtn.textContent = 'Update Node';
@@ -261,13 +254,11 @@ export class UIController {
                 
                 const newParams = {};
                 if (node.custom_params && node.custom_params.conditions) newParams.conditions = node.custom_params.conditions;
-                
                 customContainer.querySelectorAll('.property-group').forEach(row => {
                     const k = row.querySelector('.prop-key').value.trim();
                     const v = row.querySelector('.prop-val').value;
                     if(k) newParams[k] = v;
                 });
-
                 this.store.updateNode(node.id, {
                     label: newLabel,
                     note: newNote,
@@ -280,14 +271,14 @@ export class UIController {
             delBtn.className = 'btn-danger'; 
             delBtn.textContent = 'Delete Node';
             delBtn.onclick = () => { 
-                this.store.removeNode(node.id); 
+                this.store.removeNode(node.id);
                 this.hidePropertiesPanel(); 
             };
             content.appendChild(delBtn);
 
         } else if (selected.type === 'link') {
               const link = selected.data;
-              if (link.label) {
+            if (link.label) {
                 const labelGroup = document.createElement('div');
                 labelGroup.className = 'property-group';
                 labelGroup.innerHTML = `
@@ -295,7 +286,7 @@ export class UIController {
                     <input type="text" value="${link.label.text}" class="prop-input">
                 `;
                 labelGroup.querySelector('input').onchange = (e) => {
-                    store.updateLink(link.id, { label: { ...link.label, text: e.target.value } });
+                    this.store.updateLink(link.id, { label: { ...link.label, text: e.target.value } });
                 };
                 content.appendChild(labelGroup);
             } else {
@@ -327,4 +318,3 @@ export class UIController {
         }
     }
 }
-//export const uiController = new UIController();

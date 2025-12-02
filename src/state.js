@@ -2,16 +2,13 @@
 import { snapToGrid } from './config.js';
 import { HistoryManager } from './HistoryManager.js';
 
-// RIMOSSO: import { registry } from './Registry.js';
-
 const generateId = () => crypto.randomUUID();
 
 export class Store {
-    // MODIFICA: Aggiunto 'registry' al costruttore
     constructor(eventBus, serializationService, registry) {
         this.eventBus = eventBus;
         this.serializationService = serializationService;
-        this.registry = registry; // Salviamo l'istanza iniettata
+        this.registry = registry;
         
         this.state = {
             nodes: [],
@@ -27,6 +24,9 @@ export class Store {
             }
         };
 
+        // NEW: Track last history status to prevent redundant events
+        this.lastHistoryStatus = { canUndo: false, canRedo: false };
+
         this.history = new HistoryManager(
             30,
             (state) => this.serializationService.serialize(state),
@@ -35,7 +35,6 @@ export class Store {
         this._saveHistory(); 
     }
 
-    // ... (Getter rimangono uguali: nodes, links, ui, transform, getNode, getLink, getLinksForNode, _rebuildCache, _emitHistoryStatus, _saveHistory) ...
     get nodes() { return this.state.nodes; }
     get links() { return this.state.links; }
     get ui() { return this.state.ui; }
@@ -69,7 +68,14 @@ export class Store {
             canUndo: this.history.canUndo(),
             canRedo: this.history.canRedo()
         };
-        this.eventBus.emit('HISTORY_CHANGED', status);
+
+        // MODIFIED: Only emit if the state actually changed
+        if (status.canUndo !== this.lastHistoryStatus.canUndo || 
+            status.canRedo !== this.lastHistoryStatus.canRedo) {
+            
+            this.lastHistoryStatus = status;
+            this.eventBus.emit('HISTORY_CHANGED', status);
+        }
     }
 
     _saveHistory() {
@@ -81,10 +87,7 @@ export class Store {
 
     addNode(type, x, y, label='', note='', data = {}) {
         this._saveHistory();
-        
-        // USO DI REGISTRY: Usa 'this.registry' invece dell'import globale
         const definition = this.registry.getNodeDefinition(type);
-        
         if (!definition) {
             console.error(`Node type ${type} not registered.`);
             return null;
@@ -97,7 +100,6 @@ export class Store {
         return node;
     }
 
-    // ... (removeNode rimane uguale) ...
     removeNode(nodeId) {
         this._saveHistory();
         this.state.links = this.state.links.filter(link => 
@@ -141,14 +143,26 @@ export class Store {
         this.eventBus.emit('STATE_UPDATED');
         return link;
     }
-    
-    // ... (removeLink, moveNode, updateNodePosition, updateNode, updateLink, selectObject, deselect, setGhostLink, setDisconnectingLink rimangono uguali) ...
-    
+
     removeLink(linkId, saveHistory = true) {
+        // MODIFIED: Capture link details before removal for the event payload
+        const linkToRemove = this.getLink(linkId);
+        if (!linkToRemove) return;
+
         if (saveHistory) this._saveHistory();
+        
         this.state.links = this.state.links.filter(l => l.id !== linkId);
         this._rebuildCache();
-        this.eventBus.emit('CONNECTION_REMOVED', linkId);
+
+        // MODIFIED: Payload contains full connection info, not just ID
+        this.eventBus.emit('CONNECTION_REMOVED', {
+            id: linkToRemove.id,
+            source: linkToRemove.source,
+            target: linkToRemove.target,
+            sourceHandlerId: linkToRemove.sourceHandlerId,
+            targetHandlerId: linkToRemove.targetHandlerId
+        });
+
         this.eventBus.emit('STATE_UPDATED');
     }
 
@@ -167,10 +181,24 @@ export class Store {
             this._saveHistory();
             node.position.x = finalPos.x;
             node.position.y = finalPos.y;
-            this.eventBus.emit('NODE_MOVED', node);
+            
+            // MODIFIED: Simplified payload { id, previous, current }
+            this.eventBus.emit('NODE_MOVED', {
+                id: node.id,
+                previous: initialPos,
+                current: finalPos
+            });
+
             this.eventBus.emit('STATE_UPDATED');
         } else if (node) {
-            this.eventBus.emit('NODE_MOVED', node);
+            // Even if position didn't effectively change (e.g. snapped back), 
+            // we emit to ensure drag state is cleared if listeners depend on it,
+            // but we adhere to the new payload format.
+            this.eventBus.emit('NODE_MOVED', {
+                id: node.id,
+                previous: initialPos,
+                current: node.position
+            });
         }
     }
 
@@ -215,17 +243,12 @@ export class Store {
 
     _findNodeByHandlerId(handlerId) {
         for (const node of this.state.nodes) {
-            // USO DI REGISTRY: Usa 'this.registry' per ottenere le definizioni
-//            const def = this.registry.getNodeDefinition(node.type);
-//            const handlers = def ? def.getHandlers(node) : [];
-
             const handler = node.getHandlers().find(h => h.id === handlerId);
             if (handler) return { nodeId: node.id, handler };
         }
         return null;
     }
 
-    // ... (undo, redo, loadState rimangono uguali) ...
     undo() {
         if (!this.history.canUndo()) return;
         const previousStateData = this.history.undo();
@@ -262,12 +285,7 @@ export class Store {
     }
     
     initializeWithDefaults() {
-        // Logica invariata, ma addNode ora usa internamente this.registry
         const n1 = this.addNode('start', 128, 0);
-//        const n2 = this.addNode('task', 416, 0);
-//        const n3 = this.addNode('switch', 736, 0, 'Switch', 'device.type');
-//        const n4 = this.addNode('service', 1152, 352, 'HTTP', '[POST]');
-//        const n5 = this.addNode('service', 1344, 352, 'HTTP', '[GET]');
         const n6 = this.addNode('end', 1504, 0);
     }
 }

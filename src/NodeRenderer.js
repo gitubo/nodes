@@ -32,10 +32,10 @@ export class NodeRenderer {
                 .attr("d", d.getShapePath())
                 .lower();
 
-             // 2. Render Icon
-             const icon = d.getIconPath();
-             currentSelection.selectAll("path.node-icon").remove();
-             if(icon && icon !== ''){
+            // 2. Render Icon
+            const icon = definition.getIconPath();
+            currentSelection.selectAll("path.node-icon").remove();
+            if(icon && icon !== ''){
                 // Actual icon
                 const path = currentSelection.append("path")
                     .attr("class", "node-icon")

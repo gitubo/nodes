@@ -55,7 +55,7 @@ body { width: 100%; height: 100vh; overflow: hidden; font-family: sans-serif; }
 
 .context-menu-html { padding: 5px; display: flex; gap: 5px; }
 .helper-link { stroke: var(--dim-gray); stroke-dasharray: 6,6; stroke-width: 2px; }
-.helper-box { fill: var(--platinum); stroke: var(--dim-gray); stroke-dasharray: 6,6; stroke-width: 2px; }
+.helper-box { fill: #fff0; stroke: var(--dim-gray); stroke-dasharray: 6,6; stroke-width: 2px; }
 .helper-button { cursor: pointer; }
 .helper-plus { stroke: var(--dim-gray); }
 .helper-button:hover .helper-box { fill: var(--lavender); stroke: var(--baltic-blue); }

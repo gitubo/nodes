@@ -16,7 +16,7 @@ export class DAGWidget {
             : containerSelector;
         if (!this.container) throw new Error(`Container ${containerSelector} not found`);
 
-        this.config = { width: '100%', height: '100%', ...config };
+        this.config = { width: '100%', height: '100%', showDefaultUI: true, ...config };
         this.subscribers = new Set();
         this.zoomBehavior = null;
 
@@ -37,13 +37,15 @@ export class DAGWidget {
         // Pass the instances created above
         this.inputSystem = new InputSystem(this.svg.node(), this.store, this.eventBus, this.registry);
         this.addNodeHelperSystem = new AddNodeHelperSystem(this.svg, this.store, this.registry, this.eventBus);
-        this.uiController = new UIController(
-            this.store, 
-            this.eventBus, 
-            this.serializationService, 
-            this.registry,
-            this.addNodeHelperSystem 
-        );
+        if (this.config.showDefaultUI) {
+            this.uiController = new UIController(
+                this.store, 
+                this.eventBus, 
+                this.serializationService, 
+                this.registry,
+                this.addNodeHelperSystem 
+            );
+        }
         // --- 4. Initialize System ---
         this._initSystem();
         this._setupEventBridge();
@@ -79,12 +81,9 @@ export class DAGWidget {
 
         Grid.render(viewport.select(".grid-layer"), CONFIG.canvas.width, CONFIG.canvas.height);
 
-        // --- CRITICAL FIX FOR DRAG ---
         this.zoomBehavior = d3.zoom()
             .scaleExtent([CONFIG.zoom.min, CONFIG.zoom.max])
             .filter((event) => {
-                // If the user clicks on these interactive elements, prevent Zoom from starting.
-                // This allows the InputSystem to receive the mousedown event.
                 const target = event.target;
                 if (
                     target.closest('.node') || 
@@ -94,7 +93,7 @@ export class DAGWidget {
                 ) {
                     return false;
                 }
-                return !event.ctrlKey && !event.button; // Standard D3 filter behavior
+                return !event.ctrlKey && !event.button;
             })
             .on("zoom", ({ transform }) => {
                 viewport.attr("transform", transform);
@@ -109,7 +108,9 @@ export class DAGWidget {
 
     _initSystem() {
         this.store.initializeWithDefaults(); 
-        this.uiController.initialize();
+        if (this.config.showDefaultUI) {
+            this.uiController.initialize();
+        }
         
         // Pass dependencies to the renderer module
         initRenderer(this.svg, this.store, this.registry, this.eventBus);
@@ -121,14 +122,42 @@ export class DAGWidget {
         });
     }
 
-    // ... (Remaining methods: dispatch, subscribe, _setupEventBridge, _notifySubscribers, _zoomCall, _zoomReset stay the same) ...
+    /**
+     * Converts screen/container coordinates (pixels) to internal graph coordinates.
+     * Useful for dropping nodes at specific screen locations (like the center).
+     * @param {number} clientX - X position relative to the container's top-left
+     * @param {number} clientY - Y position relative to the container's top-left
+     */
+    getWidgetCoordinates(clientX, clientY) {
+        // 1. Get the current D3 Zoom Transform state
+        const transform = d3.zoomTransform(this.svg.node());
+        
+        // 2. Apply the inverse transform formula: (Screen - Translate) / Scale
+        return {
+            x: (clientX - transform.x) / transform.k,
+            y: (clientY - transform.y) / transform.k
+        };
+    }
+
     dispatch(commandName, payload = {}) {
         // (Copy previous dispatch logic here)
         switch (commandName) {
-            case 'create_node': return this.store.addNode(payload.type || 'task', payload.x || 0, payload.y || 0, payload.data || {});
+            case 'create_node': 
+                return this.store.addNode(
+                    payload.type || 'task', 
+                    payload.x || 0, 
+                    payload.y || 0, 
+                    payload.label || '', 
+                    payload.note || '', 
+                    payload.data || {}
+                );
             case 'delete_node': if (payload.id) this.store.removeNode(payload.id); break;
             case 'update_node': if (payload.id) this.store.updateNode(payload.id, payload); break;
             case 'get_node': return payload.id ? this.store.getNode(payload.id) : null;
+            case 'get_nodes_definition': return this.registry.getNodeTypes() || []; 
+            case 'get_node_icon_path_data':
+                const Def = this.registry.getNodeDefinition(payload.type);
+                return Def ? Def.getIconPath() : '';
             case 'create_link': if (payload.source && payload.target) this.store.addLink(payload.source, payload.target); break;
             case 'delete_link': if (payload.id) this.store.removeLink(payload.id); break;
             case 'update_link': if (payload.id) this.store.updateLink(payload.id, payload); break;

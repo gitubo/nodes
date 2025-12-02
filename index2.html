@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DAG Widget - Floating UI Demo</title>
+    
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" />
+
+    <link rel="stylesheet" href="./styles/main.css">
+    <link rel="stylesheet" href="./app.css">
+
+    <style>
+        body { 
+            height: 100vh;
+            overflow: hidden; 
+            margin: 0; 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        #canvas-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1; /* Behind panels */
+        }
+    </style>
+</head>
+<body>
+
+    <div id="canvas-container"></div>
+
+    <div id="node-palette-panel" class="floating-panel">
+        <div class="panel-header">
+            <span class="panel-title">Node Palette</span>
+        </div>
+        <div id="node-palette-list">
+            </div>
+    </div>
+    
+    <button id="toggle-palette-btn" class="icon-button floating-toggle-left" title="Toggle Palette">
+        <span class="material-symbols-outlined">chevron_left</span>
+    </button>
+
+    <div id="commands-panel" class="floating-panel">
+        
+        <div class="control-group" title="Viewport Controls">
+            <button class="icon-button" onclick="cmd('ZOOM_IN')" title="Zoom In">
+                <span class="material-symbols-outlined">zoom_in</span>
+            </button>
+            <button class="icon-button" onclick="cmd('ZOOM_OUT')" title="Zoom Out">
+                <span class="material-symbols-outlined">zoom_out</span>
+            </button>
+            <button class="icon-button" onclick="cmd('ZOOM_FIT')" title="Fit to Screen">
+                <span class="material-symbols-outlined">fit_screen</span>
+            </button>
+            <button class="icon-button" onclick="cmd('ZOOM_RESET')" title="Reset View">
+                <span class="material-symbols-outlined">refresh</span>
+            </button>
+        </div>
+
+        <div class="control-group" title="History and Utility">
+            <button class="icon-button" onclick="cmd('UNDO')" title="Undo">
+                <span class="material-symbols-outlined">undo</span>
+            </button>
+            <button class="icon-button" onclick="cmd('REDO')" title="Redo">
+                <span class="material-symbols-outlined">redo</span>
+            </button>
+            <button class="icon-button" onclick="cmd('EXPORT')" title="Export Data">
+                <span class="material-symbols-outlined">data_object</span>
+            </button>
+            <button class="icon-button" onclick="cmd('DESELECT')" title="Deselect All">
+                <span class="material-symbols-outlined">deselect</span>
+            </button>
+        </div>
+    </div>
+
+    <div id="event-panel" class="floating-panel">
+        <div class="panel-header">
+            <span class="panel-title">Event Stream</span>
+        </div>
+        <div id="log"></div>
+    </div>
+    
+    <button id="toggle-events-btn" class="icon-button floating-toggle" title="Toggle Panel">
+        <span class="material-symbols-outlined">chevron_right</span>
+    </button>
+
+
+    <script type="module">
+        import { DAGWidget } from './src/Widget.js';
+        
+        // 1. Initialize Widget
+        // MODIFIED: Pass config to hide default UI
+        const widget = new DAGWidget('#canvas-container', {
+            showDefaultUI: false 
+        });
+        
+        // 2. Subscribe to Events
+        widget.subscribe((type, payload) => {
+            logEvent(type, payload);
+            if (type === 'EXPORT_READY') {
+                console.log("--- EXPORTED DATA ---");
+                console.log(JSON.stringify(payload, null, 2));
+            }
+        });
+
+        // 2b. Populate Node Palette with Dynamic Icons
+        const paletteList = document.getElementById('node-palette-list');
+        const nodeTypes = widget.dispatch('get_nodes_definition');
+        
+        if (nodeTypes && nodeTypes.length > 0) {
+            nodeTypes.forEach(type => {
+                if (type === 'base') return; 
+                
+                const item = document.createElement('div');
+                item.className = 'palette-item';
+                item.dataset.type = type;
+                
+                // Get the raw path data from the widget
+                const pathData = widget.dispatch('get_node_icon_path_data', { type });
+                
+                // Create SVG container
+                const svgNS = "http://www.w3.org/2000/svg";
+                const svg = document.createElementNS(svgNS, "svg");
+                svg.setAttribute("class", "palette-icon-svg");
+                svg.setAttribute("viewBox", "0 0 40 40"); // Target viewbox size
+                
+                // Create path
+                const path = document.createElementNS(svgNS, "path");
+                path.setAttribute("d", pathData);
+                path.setAttribute("fill", "currentColor");
+                svg.appendChild(path);
+
+                // Append SVG to DOM *temporarily* to calculate BBox
+                // (Hidden append to body, or just append to item and calculate later)
+                // Here we append to item, but we need to do calculation in a moment
+                
+                const label = type.charAt(0).toUpperCase() + type.slice(1);
+                
+                item.appendChild(svg);
+                const span = document.createElement('span');
+                span.className = 'palette-item-label';
+                span.innerText = label;
+                item.appendChild(span);
+                
+                paletteList.appendChild(item);
+
+                // Dynamic Scaling Logic
+                // We must use D3 (already loaded) or native JS to get BBox after render
+                requestAnimationFrame(() => {
+                    try {
+                        // Use D3 to select the specific path we just added
+                        const d3Path = d3.select(path);
+                        const bbox = path.getBBox();
+                        
+                        // Target box inside the 40x40 SVG
+                        const targetSize = 32; 
+                        const padding = 4;
+                        
+                        if (bbox.width > 0 && bbox.height > 0) {
+                            const scale = targetSize / Math.max(bbox.width, bbox.height);
+                            // Center it: (Total - ScaledDim) / 2 - (OriginalPos * Scale)
+                            const tx = padding + (targetSize - bbox.width * scale) / 2 - bbox.x * scale;
+                            const ty = padding + (targetSize - bbox.height * scale) / 2 - bbox.y * scale;
+                            
+                            d3Path.attr("transform", `translate(${tx}, ${ty}) scale(${scale})`);
+                        }
+                    } catch(e) {
+                        console.warn("Could not scale icon for", type, e);
+                    }
+                });
+            });
+        }
+
+        // 3. Global Dispatch Bridge
+        window.cmd = (command, payload) => {
+            console.log(`%c➤ Dispatch: ${command}`, 'color: blue; font-weight: bold;', payload || '');
+            widget.dispatch(command, payload);
+        };
+        
+        /**
+         * FIXED FUNCTION: spawnNodeInCenter
+         * Calculates screen center and converts to Graph Coordinates using D3 Transform.
+         */
+        window.spawnNodeInCenter = (nodeType) => {
+            const container = document.getElementById('canvas-container');
+            const svgElement = container.querySelector('svg');
+
+            if (!svgElement) return;
+
+            // 1. Get Screen Center (Pixels relative to viewport)
+            const centerX = container.offsetWidth / 2;
+            const centerY = container.offsetHeight / 2;
+            
+            // 2. Get current D3 Zoom Transform (Translate & Scale)
+            // We use the global 'd3' object loaded in <head>
+            const transform = d3.zoomTransform(svgElement);
+            
+            // 3. Convert Screen Coordinates -> Graph Coordinates
+            // Formula: (Pixel - Translate) / Scale
+            const graphX = (centerX - transform.x) / transform.k;
+            const graphY = (centerY - transform.y) / transform.k;
+            
+            // 4. Dispatch 'create_node' with corrected coordinates
+            cmd('create_node', { type: nodeType, x: graphX, y: graphY });
+        };
+
+        // --- Helper: UI Menu Toggles ---
+        window.toggleMenu = (menuId) => {
+            document.getElementById(menuId).classList.toggle('hidden');
+        };
+
+        // This logic is no longer needed as the button was removed
+        // document.getElementById('toggle-add-node-menu').addEventListener('click', (event) => {
+        //     event.stopPropagation();
+        //     window.toggleMenu('add-node-menu');
+        // });
+        
+        // This logic is also no longer needed
+        // document.addEventListener('click', (event) => {
+        //     const menu = document.getElementById('add-node-menu');
+        //     const button = document.getElementById('toggle-add-node-menu');
+        //     if (!menu.classList.contains('hidden') && !menu.contains(event.target) && !button.contains(event.target)) {
+        //         menu.classList.add('hidden');
+        //     }
+        // });
+
+        // (NEW) Add click listener for palette items
+        paletteList.addEventListener('click', (event) => {
+            const item = event.target.closest('.palette-item');
+            if (item && item.dataset.type) {
+                // Use the existing function to spawn the node
+                window.spawnNodeInCenter(item.dataset.type); 
+            }
+        });
+
+
+        // --- Helper: Event Logging ---
+        const logDiv = document.getElementById('log');
+        function logEvent(type, payload) {
+            const entry = document.createElement('div');
+            entry.className = 'log-card';
+            const time = new Date().toLocaleTimeString();
+            
+            const dataStr = JSON.stringify(payload, (k,v) => k === 'handlers' ? '[...]' : v, 2);
+            entry.innerHTML = `
+                <div class="card-header">
+                    <strong class="card-title">${type}</strong>
+                    <span class="card-time">${time}</span> 
+                </div>
+                <pre class="card-payload">${dataStr}</pre>
+            `;
+            
+            logDiv.prepend(entry);
+            if (logDiv.childElementCount > 50) logDiv.lastChild.remove();
+        }
+        
+        // --- Helper: Panel Toggle (Right) ---
+        const eventPanel = document.getElementById('event-panel');
+        const toggleBtn = document.getElementById('toggle-events-btn');
+        const toggleIcon = toggleBtn.querySelector('.material-symbols-outlined');
+        
+        toggleBtn.addEventListener('click', () => {
+            const isHidden = eventPanel.classList.toggle('hidden');
+            
+            if (isHidden) {
+                toggleIcon.textContent = 'chevron_left';
+                toggleBtn.title = 'Show Panel';
+            } else {
+                toggleIcon.textContent = 'chevron_right';
+                toggleBtn.title = 'Hide Panel';
+            }
+        });
+
+        // --- (NEW) Helper: Panel Toggle (Left) ---
+        const palettePanel = document.getElementById('node-palette-panel');
+        const togglePaletteBtn = document.getElementById('toggle-palette-btn');
+        const togglePaletteIcon = togglePaletteBtn.querySelector('.material-symbols-outlined');
+        
+        togglePaletteBtn.addEventListener('click', () => {
+            const isHidden = palettePanel.classList.toggle('hidden');
+            
+            if (isHidden) {
+                togglePaletteIcon.textContent = 'chevron_right';
+                togglePaletteBtn.title = 'Show Palette';
+            } else {
+                togglePaletteIcon.textContent = 'chevron_left';
+                togglePaletteBtn.title = 'Hide Palette';
+            }
+        });
+        
+        console.log("Widget Initialized. Dispatch commands via window.cmd()");
+    </script>
+</body>
+</html>

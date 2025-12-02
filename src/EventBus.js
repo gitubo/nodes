@@ -16,11 +16,6 @@ export class EventBus {
     }
 
     emit(event, data) {
-        // Filter noisy events from logs if needed
-        if (event !== 'GHOST_LINK_UPDATED' && event !== 'NODE_MOVED_HIGH_FREQ') {
-            // console.log(`[EventBus] ${event}`, data);
-        }
-
         if (!this.listeners[event]) return;
         this.listeners[event].forEach(callback => callback(data));
     }

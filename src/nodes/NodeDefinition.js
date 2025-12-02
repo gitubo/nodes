@@ -18,7 +18,7 @@ export class NodeDefinition {
 
     getHandlers() { return this.handlers || []; }
     getDimensions() { return { width: this.width, height: this.height }; }
-    getIconPath() { return ''; }
+    static getIconPath() { return ''; }
 
     getShapePath() { 
         const W = CONFIG.node.width;

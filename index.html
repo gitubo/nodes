@@ -8,52 +8,14 @@
     <link rel="stylesheet" href="./styles/main.css">
     <style>
         body { display: flex; height: 100vh; overflow: hidden; margin: 0; }
-        #sidebar {
-            width: 300px; background: #f0f0f0; border-right: 1px solid #ccc;
-            display: flex; flex-direction: column; padding: 10px; gap: 10px;
-            font-family: monospace;
-        }
+
         #canvas-container { flex-grow: 1; position: relative; }
-        #log {
-            flex-grow: 1; background: #1e1e1e; color: #00ff00; 
-            padding: 10px; overflow-y: auto; font-size: 11px;
-            border-radius: 4px; margin-top: 10px;
-        }
-        .btn-group { display: flex; gap: 5px; flex-wrap: wrap; }
-        button { 
-            padding: 6px 12px; cursor: pointer; 
-            border: 1px solid #999; border-radius: 3px; background: #fff; 
-        }
-        button:hover { background: #e0e0e0; }
+
         h3 { margin: 0 0 5px 0; font-size: 14px; color: #333; }
     </style>
 </head>
 <body>
 
-    <div id="sidebar">
-        <h3>Controls</h3>
-        <div class="btn-group">
-            <button onclick="cmd('create_node', { type: 'task', x: 100, y: 100 })">Add Task</button>
-            <button onclick="cmd('create_node', { type: 'switch', x: 300, y: 100 })">Add Switch</button>
-        </div>
-        
-        <h3>Viewport</h3>
-        <div class="btn-group">
-            <button onclick="cmd('ZOOM_IN')">+</button>
-            <button onclick="cmd('ZOOM_OUT')">-</button>
-            <button onclick="cmd('ZOOM_FIT')">Fit</button>
-            <button onclick="cmd('ZOOM_RESET')">Reset</button>
-        </div>
-
-        <h3>Data</h3>
-        <div class="btn-group">
-            <button onclick="cmd('EXPORT')">Log JSON</button>
-            <button onclick="cmd('DESELECT')">Deselect All</button>
-        </div>
-
-        <h3>Event Stream</h3>
-        <div id="log"></div>
-    </div>
 
     <div id="canvas-container"></div>
 
@@ -65,17 +27,7 @@
 
         // 2. Subscribe to the Event Stream (Outbound)
         widget.subscribe((type, payload) => {
-            logEvent(type, payload);
-
-            // Example: React to specific events
-            if (type === 'EXPORT_READY') {
-                console.log("--- EXPORTED DATA ---");
-                console.log(JSON.stringify(payload, null, 2));
-            }
-            
-            if (type === 'NODE_CREATED') {
-                console.log(`System created node: ${payload.id}`);
-            }
+            console.log(type," --> ",JSON.stringify(payload, null, 2));
         });
 
         // 3. Dispatch Helper (Inbound)
@@ -84,28 +36,6 @@
             console.log(`%c➤ Dispatch: ${command}`, 'color: blue; font-weight: bold;', payload || '');
             widget.dispatch(command, payload);
         };
-
-        // Logger Helper
-        const logDiv = document.getElementById('log');
-        function logEvent(type, payload) {
-            const entry = document.createElement('div');
-            entry.style.marginBottom = '4px';
-            entry.style.borderBottom = '1px solid #333';
-            
-            const time = new Date().toLocaleTimeString().split(' ')[0];
-            // Safely stringify payload, handling circular refs if any (though state is clean)
-            const dataStr = JSON.stringify(payload, (k,v) => k === 'handlers' ? '[...]' : v);
-            
-            entry.innerHTML = `
-                <span style="color: #888">[${time}]</span> 
-                <strong style="color: #4fc1ff">${type}</strong><br>
-                <span style="color: #ce9178">${dataStr}</span>
-            `;
-            
-            logDiv.prepend(entry);
-            // Keep log size manageable
-            if (logDiv.childElementCount > 50) logDiv.lastChild.remove();
-        }
 
         console.log("Widget Initialized. Dispatch commands via window.cmd()");
     </script>
