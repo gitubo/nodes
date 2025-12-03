@@ -12,65 +12,16 @@
     <link rel="stylesheet" href="./styles/main.css">
     <link rel="stylesheet" href="./app.css">
 
-    <style>
-        body { 
-            height: 100vh;
-            overflow: hidden; 
-            margin: 0; 
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-        }
-
-        #canvas-container {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: 1; /* Behind panels */
-        }
-
-        #node-palette-list {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-            padding: 10px;
-            overflow-y: auto;
-        }
-
-        .palette-item {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            padding: 8px;
-            border-radius: 6px;
-            background-color: #e5e4e2; 
-            cursor: grab;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-        }
-
-        .palette-icon-svg {
-            width: 40px; 
-            height: 40px;
-            flex-shrink: 0; /* Previene lo stiramento in un contenitore flex */
-        }
-    </style>
-</head>
+    </head>
 <body>
 
     <div id="canvas-container"></div>
 
     <div id="node-palette-panel" class="floating-panel">
-        <div class="panel-header">
-            <span class="panel-title">Node Palette</span>
-        </div>
         <div id="node-palette-list">
             </div>
     </div>
     
-    <button id="toggle-palette-btn" class="icon-button floating-toggle-left" title="Toggle Palette">
-        <span class="material-symbols-outlined">chevron_left</span>
-    </button>
-
     <div id="commands-panel" class="floating-panel">
         
         <div class="control-group" title="History">
@@ -107,25 +58,30 @@
         </div>
     </div>
 
-    <div id="event-panel" class="floating-panel">
+    <div id="event-panel" class="floating-panel hidden">
         <div class="panel-header">
-            <span class="panel-title">Event Stream</span>
+            <span class="panel-title">Event Log</span>
         </div>
         <div id="log"></div>
     </div>
     
     <button id="toggle-events-btn" class="icon-button floating-toggle" title="Toggle Panel">
-        <span class="material-symbols-outlined">chevron_right</span>
+        <span class="material-symbols-outlined">chevron_left</span> 
     </button>
 
 
     <script type="module">
         import { DAGWidget } from './src/Widget.js';
-        
+        const container = document.getElementById('canvas-container');
+        const viewportWidth = container.offsetWidth;
+        const viewportHeight = container.offsetHeight;
+
         // 1. Initialize Widget
-        // MODIFIED: Pass config to hide default UI
         const widget = new DAGWidget('#canvas-container', {
-            showDefaultUI: false 
+            showDefaultUI: false,
+            initialZoom: 0.5,
+            initialOffsetX: viewportWidth / 3, 
+            initialOffsetY: viewportHeight / 2
         });
         
         // 2. Subscribe to Events
@@ -164,10 +120,6 @@
                 path.setAttribute("fill", "currentColor");
                 svg.appendChild(path);
 
-                // Append SVG to DOM *temporarily* to calculate BBox
-                // (Hidden append to body, or just append to item and calculate later)
-                // Here we append to item, but we need to do calculation in a moment
-                
                 const label = type.charAt(0).toUpperCase() + type.slice(1);
                 
                 item.appendChild(svg);
@@ -178,21 +130,16 @@
                 
                 paletteList.appendChild(item);
 
-                // Dynamic Scaling Logic
-                // We must use D3 (already loaded) or native JS to get BBox after render
                 requestAnimationFrame(() => {
                     try {
-                        // Use D3 to select the specific path we just added
                         const d3Path = d3.select(path);
                         const bbox = path.getBBox();
                         
-                        // Target box inside the 40x40 SVG
                         const targetSize = 32; 
                         const padding = 4;
                         
                         if (bbox.width > 0 && bbox.height > 0) {
                             const scale = targetSize / Math.max(bbox.width, bbox.height);
-                            // Center it: (Total - ScaledDim) / 2 - (OriginalPos * Scale)
                             const tx = padding + (targetSize - bbox.width * scale) / 2 - bbox.x * scale;
                             const ty = padding + (targetSize - bbox.height * scale) / 2 - bbox.y * scale;
                             
@@ -211,10 +158,6 @@
             widget.dispatch(command, payload);
         };
         
-        /**
-         * FIXED FUNCTION: spawnNodeInCenter
-         * Calculates screen center and converts to Graph Coordinates using D3 Transform.
-         */
         window.spawnNodeInCenter = (nodeType) => {
             const container = document.getElementById('canvas-container');
             const svgElement = container.querySelector('svg');
@@ -226,7 +169,6 @@
             const centerY = container.offsetHeight / 2;
             
             // 2. Get current D3 Zoom Transform (Translate & Scale)
-            // We use the global 'd3' object loaded in <head>
             const transform = d3.zoomTransform(svgElement);
             
             // 3. Convert Screen Coordinates -> Graph Coordinates
@@ -243,26 +185,9 @@
             document.getElementById(menuId).classList.toggle('hidden');
         };
 
-        // This logic is no longer needed as the button was removed
-        // document.getElementById('toggle-add-node-menu').addEventListener('click', (event) => {
-        //     event.stopPropagation();
-        //     window.toggleMenu('add-node-menu');
-        // });
-        
-        // This logic is also no longer needed
-        // document.addEventListener('click', (event) => {
-        //     const menu = document.getElementById('add-node-menu');
-        //     const button = document.getElementById('toggle-add-node-menu');
-        //     if (!menu.classList.contains('hidden') && !menu.contains(event.target) && !button.contains(event.target)) {
-        //         menu.classList.add('hidden');
-        //     }
-        // });
-
-        // (NEW) Add click listener for palette items
         paletteList.addEventListener('click', (event) => {
             const item = event.target.closest('.palette-item');
             if (item && item.dataset.type) {
-                // Use the existing function to spawn the node
                 window.spawnNodeInCenter(item.dataset.type); 
             }
         });
@@ -288,7 +213,7 @@
             if (logDiv.childElementCount > 50) logDiv.lastChild.remove();
         }
         
-        // --- Helper: Panel Toggle (Right) ---
+        // --- Helper: Event Panel Toggle (Right) ---
         const eventPanel = document.getElementById('event-panel');
         const toggleBtn = document.getElementById('toggle-events-btn');
         const toggleIcon = toggleBtn.querySelector('.material-symbols-outlined');
@@ -296,6 +221,7 @@
         toggleBtn.addEventListener('click', () => {
             const isHidden = eventPanel.classList.toggle('hidden');
             
+            // Toggles the chevron icon direction
             if (isHidden) {
                 toggleIcon.textContent = 'chevron_left';
                 toggleBtn.title = 'Show Panel';
@@ -304,23 +230,8 @@
                 toggleBtn.title = 'Hide Panel';
             }
         });
-
-        // --- (NEW) Helper: Panel Toggle (Left) ---
-        const palettePanel = document.getElementById('node-palette-panel');
-        const togglePaletteBtn = document.getElementById('toggle-palette-btn');
-        const togglePaletteIcon = togglePaletteBtn.querySelector('.material-symbols-outlined');
         
-        togglePaletteBtn.addEventListener('click', () => {
-            const isHidden = palettePanel.classList.toggle('hidden');
-            
-            if (isHidden) {
-                togglePaletteIcon.textContent = 'chevron_right';
-                togglePaletteBtn.title = 'Show Palette';
-            } else {
-                togglePaletteIcon.textContent = 'chevron_left';
-                togglePaletteBtn.title = 'Hide Palette';
-            }
-        });
+        // REMOVED: Palette toggle logic
         
         console.log("Widget Initialized. Dispatch commands via window.cmd()");
     </script>

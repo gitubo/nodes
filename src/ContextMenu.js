@@ -91,7 +91,31 @@ function showContextMenu(event, type, data, eventBus, store) {
         btn.onclick = (e) => { 
             e.stopPropagation(); 
             try {
-                a.callback(); 
+                if (eventBus && store && store.registry) {
+                    let serializedData = null;
+                    try {
+                        if (type === 'node') {
+                            const definition = store.registry.getNodeDefinition(data.type);
+                            if (definition) serializedData = definition.serialize(data, store.registry); 
+                        } else if (type === 'link') {
+                            serializedData = { ...data }; // Links are simple objects, a shallow copy is fine
+                        } else if (type === 'handler') {
+                            const HandlerDef = store.registry.getHandlerDefinition(data.type);
+                            if (HandlerDef) serializedData = HandlerDef.serialize(data); 
+                        }
+                    } catch (err) {
+                        console.error("Failed to serialize object for CONTEXT_MENU_ACTION:", err);
+                    }
+
+                    eventBus.emit('CONTEXT_MENU_ACTION', { 
+                        action: a.label, 
+                        object_type: type, 
+                        object_id: data.id, 
+                        object_data: serializedData 
+                    });
+                }
+
+                 a.callback();
             } finally {
                 menu.remove();
             }

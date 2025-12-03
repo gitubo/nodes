@@ -16,7 +16,14 @@ export class DAGWidget {
             : containerSelector;
         if (!this.container) throw new Error(`Container ${containerSelector} not found`);
 
-        this.config = { width: '100%', height: '100%', showDefaultUI: true, ...config };
+        this.config = { 
+            width: '100%', 
+            height: '100%', 
+            showDefaultUI: true, 
+            initialZoom: 1.0, 
+            initialOffsetX: 0, 
+            initialOffsetY: 0,
+            ...config };
         this.subscribers = new Set();
         this.zoomBehavior = null;
 
@@ -102,6 +109,15 @@ export class DAGWidget {
 
         svg.call(this.zoomBehavior);
         window.zoomBehavior = this.zoomBehavior; 
+
+        const initialScale = this.config.initialZoom; 
+        const initialOffsetX = this.config.initialOffsetX;
+        const initialOffsetY = this.config.initialOffsetY;
+        const initialTransform = d3.zoomIdentity
+            .translate(initialOffsetX, initialOffsetY)
+            .scale(initialScale);
+        this.store.transform = initialTransform;
+        svg.call(this.zoomBehavior.transform, initialTransform);
 
         this.svg = svg;
     }

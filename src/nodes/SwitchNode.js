@@ -1,4 +1,3 @@
-// src/nodes/SwitchNode.js - Renamed from DecisionNode
 import { NodeDefinition } from './NodeDefinition.js';
 import { CONFIG } from '../config.js';
 import { SourceHandlerDefinition } from '../handlers/SourceHandler.js';

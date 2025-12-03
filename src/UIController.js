@@ -12,7 +12,8 @@ export class UIController {
         this.addNodeHelperSystem = addNodeHelperSystem;
         this.panels = {
             zoom: { visible: true, element: null },
-            properties: { visible: false, element: null }
+            properties: { visible: false, element: null },
+            bufferedNode: null
         };
     }
     
@@ -21,9 +22,10 @@ export class UIController {
         this.createPropertiesPanel();
         this.attachEventListeners();
         this.eventBus.on('EDIT_PROPERTIES', (payload) => {
-            const { type, id } = payload;
-            const data = type === 'node' ? this.store.getNode(id) : this.store.getLink(id);
-            if(data) this.showPropertiesPanel({ type, data });
+            const { type, data } = payload; 
+            if(data) {
+                this.showPropertiesPanel({ type, data });
+            }
         });
         this.eventBus.on('SELECTION_CHANGED', (payload) => {
             if (!payload || !payload.id) {
@@ -186,8 +188,10 @@ export class UIController {
                     const { nodes, links, viewport } = this.serializationService.deserialize(data);
                     this.store.loadState({ nodes, links, viewport });
                 } 
-                catch (err) { console.error(err);
-                alert("Invalid JSON file"); }
+                catch (err) { 
+                    console.error(err);
+                    alert("Invalid JSON file"); 
+                }
             };
             reader.readAsText(file);
         };
@@ -195,126 +199,179 @@ export class UIController {
     }
 
     showPropertiesPanel(selected) {
-        const panel = this.panels.properties.element;
-        const content = panel.querySelector('#prop-content');
+        const panel = this.panels.properties.element; 
+        const content = panel.querySelector('#prop-content'); 
         content.innerHTML = '';
         
         if (selected.type === 'node') {
             const node = selected.data;
+            // Store the original node data for "cancel"
+            this.panels.properties.bufferedNode = node; 
+
+            // --- REFACTORED: Add Title and Subtitle ---
             content.innerHTML = `
+                <div class="property-group">
+                    <label>Type</label>
+                    <input type="text" value="${node.type}" class="prop-input prop-readonly" readonly>
+                </div>
+                <div class="property-group">
+                    <label>ID</label>
+                    <input type="text" value="${node.id}" class="prop-input prop-readonly" readonly>
+                </div>
+                <div class="panel-separator" style="margin: 15px 0;"></div>
+                
                 <div class="property-group">
                     <label>Label</label>
                     <input type="text" id="node-label-input" value="${node.label || ''}" class="prop-input">
                 </div>
                 <div class="property-group">
-                  <label>Note</label>
+                    <label>Note</label>
                     <input type="text" id="node-note-input" value="${node.note || ''}" class="prop-input">
                 </div>
                 
                 <div class="panel-separator" style="margin: 15px 0;"></div>
-            
-                <label style="font-weight:bold; color:#666; font-size:12px;">Custom Params</label>
+                
+                <label style="font-weight:bold; color:#666; font-size:12px;">Node Data (key/value)</label>
                 <div id="custom-params-container"></div>
                 <button class="btn-standard" id="add-param-btn" style="width:auto; font-size:12px; padding:4px 8px;">+ Add Param</button>
                 
-                 <div id="def-props-container"></div>
+                <div id="def-props-container"></div>
             `;
-            import('./Registry.js').then(m => {
-                 const definition = m.registry.getNodeDefinition(node.type);
-                 if(definition) {
-                     definition.renderProperties(content.querySelector('#def-props-container'), node, (k, v) => {
-                     });
-                 }
-             });
+            
+            // --- REFACTORED: Use node.data ---
             const customContainer = content.querySelector('#custom-params-container');
-            const customData = node.custom_params || {};
+            const customData = node.data || {};  
+            
             const renderCustomProp = (key, val) => {
-                if (key === 'conditions' && node.type === 'switch') return;
-                const row = document.createElement('div');
-                row.className = 'property-group';
+                const row = document.createElement('div'); 
+                row.className = 'property-group'; 
                 row.style.display = 'flex';
                 row.style.gap = '5px';
                 row.innerHTML = `
                     <input type="text" placeholder="Key" class="prop-input prop-key" value="${key}">
                     <input type="text" placeholder="Value" class="prop-input prop-val" value="${val}">
                     <button class="icon-btn prop-del" style="width:24px; height:24px;">${getIcon('close', 16)}</button>
-                `;
-                row.querySelector('.prop-del').onclick = () => row.remove();
+                `; 
+                row.querySelector('.prop-del').onclick = () => row.remove(); 
                 customContainer.appendChild(row);
             };
 
             Object.entries(customData).forEach(([k, v]) => renderCustomProp(k, v));
             content.querySelector('#add-param-btn').onclick = () => renderCustomProp('', '');
-            const updBtn = document.createElement('button');
-            updBtn.className = 'btn-standard';
-            updBtn.textContent = 'Update Node';
-            updBtn.onclick = () => {
-                const newLabel = content.querySelector('#node-label-input').value;
-                const newNote = content.querySelector('#node-note-input').value;
+
+            // --- Render definition-specific properties (Unchanged) ---
+            /*import('./Registry.js').then(m => { 
+                 const definition = m.registry.getNodeDefinition(node.type);
+                 if(definition) {
+                     definition.renderProperties(content.querySelector('#def-props-container'), node, (k, v) => {
+                     }); 
+                 }
+             });*/
+
+            const definition = this.registry.getNodeDefinition(node.type);
+            if(definition) {
+                definition.renderProperties(content.querySelector('#def-props-container'), node, (k, v) => {}); 
+            }
+            
+
+            // --- REFACTORED: Button Group ---
+            const buttonGroup = document.createElement('div');
+            buttonGroup.style.display = 'flex';
+            buttonGroup.style.gap = '10px';
+            buttonGroup.style.marginTop = '20px';
+
+            // --- "Apply" Button (Replaces "Update Node") ---
+            const applyBtn = document.createElement('button');
+            applyBtn.className = 'btn-standard';
+            applyBtn.textContent = 'Apply'; // <-- RENAMED 
+            applyBtn.style.flex = '1';
+            applyBtn.onclick = () => {
+                const newLabel = content.querySelector('#node-label-input').value; 
+                const newNote = content.querySelector('#node-note-input').value; 
                 
                 const newParams = {};
-                if (node.custom_params && node.custom_params.conditions) newParams.conditions = node.custom_params.conditions;
-                customContainer.querySelectorAll('.property-group').forEach(row => {
+                customContainer.querySelectorAll('.property-group').forEach(row => { 
                     const k = row.querySelector('.prop-key').value.trim();
                     const v = row.querySelector('.prop-val').value;
                     if(k) newParams[k] = v;
                 });
+                
                 this.store.updateNode(node.id, {
                     label: newLabel,
                     note: newNote,
-                    custom_params: newParams
+                    data: newParams 
                 });
+                
+                this.hidePropertiesPanel(); // <-- Close panel
             };
-            content.appendChild(updBtn);
+            buttonGroup.appendChild(applyBtn);
 
+            // --- "Cancel" Button (NEW) ---
+            const cancelBtn = document.createElement('button');
+            cancelBtn.className = 'btn-standard'; 
+            cancelBtn.style.background = 'var(--pale-slate)';
+            cancelBtn.style.color = 'var(--dim-gray)';
+            cancelBtn.textContent = 'Cancel';
+            cancelBtn.style.flex = '1';
+            cancelBtn.onclick = () => { 
+                this.hidePropertiesPanel(); // Just close, no action
+            };
+            buttonGroup.appendChild(cancelBtn);
+
+            // --- "Delete" Button (Replaces "Delete Node") ---
             const delBtn = document.createElement('button');
             delBtn.className = 'btn-danger'; 
-            delBtn.textContent = 'Delete Node';
+            delBtn.textContent = 'Delete'; 
+            delBtn.style.flex = '1';
             delBtn.onclick = () => { 
-                this.store.removeNode(node.id);
+                this.store.removeNode(node.id); 
                 this.hidePropertiesPanel(); 
             };
-            content.appendChild(delBtn);
+            buttonGroup.appendChild(delBtn);
+            
+            content.appendChild(buttonGroup);
 
         } else if (selected.type === 'link') {
-              const link = selected.data;
-            if (link.label) {
-                const labelGroup = document.createElement('div');
-                labelGroup.className = 'property-group';
+            // --- This section is UNCHANGED ---
+            const link = selected.data; 
+            if (link.label) { 
+                const labelGroup = document.createElement('div'); 
+                labelGroup.className = 'property-group'; 
                 labelGroup.innerHTML = `
                     <label>Label Text</label>
                     <input type="text" value="${link.label.text}" class="prop-input">
-                `;
-                labelGroup.querySelector('input').onchange = (e) => {
+                `; 
+                labelGroup.querySelector('input').onchange = (e) => { 
                     this.store.updateLink(link.id, { label: { ...link.label, text: e.target.value } });
                 };
-                content.appendChild(labelGroup);
+                content.appendChild(labelGroup); 
             } else {
-                 const addBtn = document.createElement('button');
+                 const addBtn = document.createElement('button'); 
                  addBtn.className = 'icon-btn'; 
                  addBtn.style.width = '100%';
                  addBtn.style.justifyContent = 'flex-start';
-                 addBtn.innerHTML = `<span>+ Add Label</span>`;
+                 addBtn.innerHTML = `<span>+ Add Label</span>`; 
                  addBtn.onclick = () => {
-                    this.store.updateLink(link.id, { label: { text: 'Label', offset: 0.5, offsetX: 0, offsetY: 0 } });
+                    this.store.updateLink(link.id, { label: { text: 'Label', offset: 0.5, offsetX: 0, offsetY: 0 } }); 
                     this.showPropertiesPanel(selected); 
                  };
                  content.appendChild(addBtn);
             }
-            const delBtn = document.createElement('button');
-            delBtn.className = 'btn-danger'; delBtn.textContent = 'Delete Link';
+            const delBtn = document.createElement('button'); 
+            delBtn.className = 'btn-danger'; delBtn.textContent = 'Delete Link'; 
             delBtn.onclick = () => { this.store.removeLink(link.id); this.hidePropertiesPanel(); };
-            content.appendChild(delBtn);
+            content.appendChild(delBtn); 
         }
         
-        panel.style.display = 'block';
-        this.panels.properties.visible = true;
+        panel.style.display = 'block'; 
+        this.panels.properties.visible = true; 
     }
     
     hidePropertiesPanel() {
         if (this.panels.properties.element) {
-            this.panels.properties.element.style.display = 'none';
-            this.panels.properties.visible = false;
+            this.panels.properties.element.style.display = 'none'; 
+            this.panels.properties.visible = false; 
+            this.panels.properties.bufferedNode = null; 
         }
     }
 }

@@ -9,7 +9,7 @@ export class Store {
         this.eventBus = eventBus;
         this.serializationService = serializationService;
         this.registry = registry;
-        
+
         this.state = {
             nodes: [],
             links: [],
@@ -24,7 +24,6 @@ export class Store {
             }
         };
 
-        // NEW: Track last history status to prevent redundant events
         this.lastHistoryStatus = { canUndo: false, canRedo: false };
 
         this.history = new HistoryManager(

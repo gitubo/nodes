@@ -13,7 +13,7 @@ document.addEventListener('DOMContentLoaded', () => {
     viewport.append("g").attr("class", "grid-layer");
     viewport.append("g").attr("class", "helper-layer");
     viewport.append("g").attr("class", "link-layer");
-    viewport.append("g").attr("class", "label-layer"); // ADDED: Label layer on top of links
+    viewport.append("g").attr("class", "label-layer");
     viewport.append("g").attr("class", "node-layer");
     
 //    Grid.render(viewport.select(".grid-layer"), CONFIG.canvas.width, CONFIG.canvas.height);

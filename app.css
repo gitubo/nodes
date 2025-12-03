@@ -4,13 +4,35 @@
 
 /* Define CSS Variables for the web app colors */
 :root {
-    --baltic-blue: #23395d;
-    --white: #ffffff;
-    --alice-blue: #f0f8ff;
-    --pale-slate: #c0c8d4;
-    --dim-gray: #696969;
-    --platinum: #e5e4e2;
+    --baltic-blue: #34639E; 
+    --blue-energy: #518fdb;
+    --lavender: #d3e3fc;
+    --alice-blue: #E6EFFE; 
+    --platinum: #f8fbff; 
+    --pale-slate: #bfc4c9; 
+    --dim-gray: #606265; 
+    --white: #ffffff; 
+    --danger: #dc3545; 
+    --black: #000000;
 }
+
+/* --- Global / Body Styles (MOVED FROM HTML) --- */
+body { 
+    height: 100vh;
+    overflow: hidden; 
+    margin: 0; 
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+#canvas-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1; /* Behind panels */
+}
+
 
 /* --- Panel System --- */
 
@@ -33,7 +55,6 @@
     transform: translateX(-50%); /* Center horizontally */
     flex-direction: row;
     padding: 8px;
-    gap: 12px;
     align-items: center;
 }
 
@@ -62,6 +83,7 @@
     transform: translateX(calc(100% + 20px)); 
 }
 
+/* --- Left Node Palette Panel --- */
 #node-palette-panel {
     position: fixed;
     background: var(--white);
@@ -73,41 +95,48 @@
     flex-direction: column;
     top: 20px;
     left: 20px; /* Position on the left */
-    width: 240px; 
+    width: 160px; 
     height: calc(100vh - 40px);
-    transition: transform 0.3s ease-in-out;
+    /* Removed transition and .hidden styles since it's always visible now */
 }
 
-#node-palette-panel.hidden {
-    /* Translate full width + gap */
-    transform: translateX(calc(-100% - 20px));
-}
-
-/* (NEW) List styles for palette */
+/* (MOVED FROM HTML) Node Palette List styles */
 #node-palette-list {
-    flex-grow: 1;
-    background: var(--white);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
     padding: 10px;
     overflow-y: auto;
+    flex-grow: 1; /* Keep existing flex-grow from previous app.css */
+    background: var(--white);
     font-family: Arial, sans-serif;
-    border-bottom-left-radius: 12px;
-    border-bottom-right-radius: 12px;
+    border-radius: 12px;
 }
 
-#node-palette-list .palette-item {
+/* (MOVED FROM HTML) Palette Item styles */
+.palette-item {
     display: flex;
     align-items: center;
-    padding: 8px;
     gap: 8px;
-    cursor: pointer;
+    padding: 4px;
     border-radius: 6px;
+    background: var(--alice-blue); 
+    cursor: grab;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    /* Added existing styles for completeness */
     font-size: 14px;
     color: var(--baltic-blue);
     user-select: none;
 }
 
+#node-palette-list .palette-icon-svg {
+    width: 32px; 
+    height: 32px;
+    flex-shrink: 0; /* Prevents stretching in a flex container */
+}
+
 #node-palette-list .palette-item:hover {
-    background: var(--alice-blue);
+    background: var(--lavender);
 }
 
 #node-palette-list .palette-item .material-symbols-outlined {
@@ -149,22 +178,7 @@
     border: 1px solid var(--pale-slate);
 }
 
-.floating-toggle-left {
-    position: fixed;
-    top: 20px;
-    left: 260px; /* Aligned to the right edge of the panel (240px width + 20px margin) */
-    z-index: 11; /* Above the panel */
-    transition: left 0.3s ease-in-out;
-    border-radius: 50%;
-    padding: 8px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    background: var(--white);
-    border: 1px solid var(--pale-slate);
-}
-
-#node-palette-panel.hidden ~ .floating-toggle-left {
-    left: 20px; /* Moves to the far left edge when panel is hidden */
-}
+/* REMOVED: .floating-toggle-left styling and logic as palette is always visible */
 
 #event-panel.hidden ~ .floating-toggle {
     right: 20px; /* Moves to the far right edge when panel is hidden */
