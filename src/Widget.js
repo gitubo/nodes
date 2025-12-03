@@ -170,7 +170,18 @@ export class DAGWidget {
             case 'delete_node': if (payload.id) this.store.removeNode(payload.id); break;
             case 'update_node': if (payload.id) this.store.updateNode(payload.id, payload); break;
             case 'get_node': return payload.id ? this.store.getNode(payload.id) : null;
-            case 'get_nodes_definition': return this.registry.getNodeTypes() || []; 
+            case 'get_nodes_definition': 
+                const nodeTypes = this.registry.getNodeTypes();
+                return nodeTypes
+                    .filter(type => type !== 'base') 
+                    .map(type => {
+                        const Def = this.registry.getNodeDefinition(type);
+                        if (!Def) return null;
+                        const role = Def.getRole ? Def.getRole() : NODE_ROLES.CORE; 
+                        const label = Def.name.replace('Definition', ''); 
+                        return { type, role, label };
+                    })
+                    .filter(def => def !== null); 
             case 'get_node_icon_path_data':
                 const Def = this.registry.getNodeDefinition(payload.type);
                 return Def ? Def.getIconPath() : '';

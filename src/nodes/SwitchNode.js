@@ -1,4 +1,4 @@
-import { NodeDefinition } from './NodeDefinition.js';
+import { NodeDefinition, NODE_ROLES } from './NodeDefinition.js';
 import { CONFIG } from '../config.js';
 import { SourceHandlerDefinition } from '../handlers/SourceHandler.js';
 import { TargetVerticalHandlerDefinition } from '../handlers/TargetVerticalHandler.js';
@@ -26,6 +26,9 @@ export class SwitchNodeDefinition extends NodeDefinition {
         // Combine handlers for the base class
         this.handlers = [...this.targetHandlers, ...this.sourceHandlers];
     }
+
+    static getRole() { return NODE_ROLES.LOGIC; }
+
     static hasTargetHandlers() { return true; }
 
     getDimensions() {

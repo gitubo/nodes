@@ -1,5 +1,5 @@
 // nodes/EndNode.js
-import { NodeDefinition } from './NodeDefinition.js';
+import { NodeDefinition, NODE_ROLES } from './NodeDefinition.js';
 import { CONFIG } from '../config.js';
 import { TargetVerticalHandlerDefinition } from '../handlers/TargetVerticalHandler.js';
 
@@ -11,6 +11,7 @@ export class EndNodeDefinition extends NodeDefinition {
         this.height = 96;
         this.handlers.push(new TargetVerticalHandlerDefinition(0, this.height/2));
     }
+
     static hasTargetHandlers() { return true; }
 
     static getIconPath() { return 'M521.1 533V172Q453.6 177 389.25 160.5T272.7 109Q235.8 84 196.695 72T117 60Q101.7 60 85.95 62T53.1 68V307Q68.4 305 85.05 303.5T120.6 302Q173.7 302 226.8 318T325.8 364Q371.7 394 420.48 406 469.269 418 521.1 413ZM0 640V20Q43.2 9 68.85 4.5T117.9 0Q164.7 0 210.15 14.5T296.1 56Q338.4 84 386.1 98.5T482.094 113Q506.7 113 529.803 110.37 552.897 107.75 576 106V468.02Q552.6 470 529.65 473 506.7 476 483.597 476 436.5 476 391.05 462T304.2 420Q261 391 214.074 376.5T118.8 362Q103.5 362 88.2 363.5T54 369V640H0Z'; }

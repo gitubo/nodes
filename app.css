@@ -83,7 +83,7 @@ body {
     transform: translateX(calc(100% + 20px)); 
 }
 
-/* --- Left Node Palette Panel --- */
+/* --- Left Node Palette Panel (Always Shown) --- */
 #node-palette-panel {
     position: fixed;
     background: var(--white);
@@ -94,10 +94,8 @@ body {
     display: flex;
     flex-direction: column;
     top: 20px;
-    left: 20px; /* Position on the left */
+    left: 20px; 
     width: 160px; 
-    height: calc(100vh - 40px);
-    /* Removed transition and .hidden styles since it's always visible now */
 }
 
 /* (MOVED FROM HTML) Node Palette List styles */
@@ -107,13 +105,31 @@ body {
     gap: 8px;
     padding: 10px;
     overflow-y: auto;
-    flex-grow: 1; /* Keep existing flex-grow from previous app.css */
+    flex-grow: 1;
     background: var(--white);
     font-family: Arial, sans-serif;
     border-radius: 12px;
 }
 
-/* (MOVED FROM HTML) Palette Item styles */
+/* --- Node Palette Grouping Header (NEW) --- */
+.palette-group-header {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--pale-slate);
+    margin-top: 10px;
+    margin-bottom: 2px;
+    padding-left: 4px;
+    border-bottom: 1px var(--pale-slate);
+    padding-bottom: 2px;
+    user-select: none;
+    letter-spacing: 0.5px;
+}
+/* Ensure the first header doesn't have extra top margin */
+#node-palette-list .palette-group-header:first-child {
+    margin-top: 0;
+}
+
+/* (MOVED FROM HTML) Palette Item styles - combined existing and moved styles */
 .palette-item {
     display: flex;
     align-items: center;
@@ -123,16 +139,16 @@ body {
     background: var(--alice-blue); 
     cursor: grab;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-    /* Added existing styles for completeness */
     font-size: 14px;
     color: var(--baltic-blue);
     user-select: none;
 }
 
-#node-palette-list .palette-icon-svg {
+/* (MOVED FROM HTML) Palette Icon SVG styles */
+.palette-icon-svg {
     width: 32px; 
     height: 32px;
-    flex-shrink: 0; /* Prevents stretching in a flex container */
+    flex-shrink: 0; 
 }
 
 #node-palette-list .palette-item:hover {
@@ -150,20 +166,17 @@ body {
     padding: 8px 16px;
     border-bottom: 1px solid #eee;
     flex-shrink: 0;
-    /* User changes */
     background-color: var(--baltic-blue); 
-    border-top-right-radius: 12px;
-    border-top-left-radius: 12px;
+    border-radius: 12px;
 }
 
 .panel-title {
     font-weight: 600;
     font-size: 16px;
-    /* User change */
     color: var(--white);
 }
 
-/* --- Floating Toggle Button --- */
+/* --- Floating Toggle Button (Right Panel) --- */
 
 .floating-toggle {
     position: fixed;
@@ -178,7 +191,7 @@ body {
     border: 1px solid var(--pale-slate);
 }
 
-/* REMOVED: .floating-toggle-left styling and logic as palette is always visible */
+/* REMOVED: .floating-toggle-left and logic for palette hiding */
 
 #event-panel.hidden ~ .floating-toggle {
     right: 20px; /* Moves to the far right edge when panel is hidden */

@@ -95,59 +95,98 @@
 
         // 2b. Populate Node Palette with Dynamic Icons
         const paletteList = document.getElementById('node-palette-list');
-        const nodeTypes = widget.dispatch('get_nodes_definition');
+        const nodeDefinitions = widget.dispatch('get_nodes_definition');
         
-        if (nodeTypes && nodeTypes.length > 0) {
-            nodeTypes.forEach(type => {
-                if (type === 'base') return; 
-                
-                const item = document.createElement('div');
-                item.className = 'palette-item';
-                item.dataset.type = type;
-                
-                // Get the raw path data from the widget
-                const pathData = widget.dispatch('get_node_icon_path_data', { type });
-                
-                // Create SVG container
-                const svgNS = "http://www.w3.org/2000/svg";
-                const svg = document.createElementNS(svgNS, "svg");
-                svg.setAttribute("class", "palette-icon-svg");
-                svg.setAttribute("viewBox", "0 0 40 40"); // Target viewbox size
-                
-                // Create path
-                const path = document.createElementNS(svgNS, "path");
-                path.setAttribute("d", pathData);
-                path.setAttribute("fill", "currentColor");
-                svg.appendChild(path);
+        // Group nodes by role
+        const nodesByRole = nodeDefinitions.reduce((acc, def) => {
+            // def.role now holds the descriptive string (e.g., 'Data Transformation')
+            const role = def.role || 'Core Elements'; 
+            if (!acc[role]) {
+                acc[role] = [];
+            }
+            acc[role].push(def);
+            return acc;
+        }, {});
+        
+        // Define a desired role order 
+        const roleOrder = [
+            'Core Elements',
+            'Data Transformation', 
+            'Tools and Helpers', 
+            'Control Flow & Logic',
+        ];
+        
+        // Sort roles based on defined order, placing any unrecognized roles at the end
+        const sortedRoles = roleOrder.filter(role => nodesByRole[role]).concat(
+            Object.keys(nodesByRole).filter(role => !roleOrder.includes(role))
+        );
 
-                const label = type.charAt(0).toUpperCase() + type.slice(1);
+        if (nodeDefinitions.length > 0) {
+            paletteList.innerHTML = '';
+            
+            sortedRoles.forEach(role => {
+                const definitions = nodesByRole[role];
                 
-                item.appendChild(svg);
-                const span = document.createElement('span');
-                span.className = 'palette-item-label';
-                span.innerText = label;
-                item.appendChild(span);
+                // 1. Create and append the Group Header
+                const groupHeader = document.createElement('div');
+                groupHeader.className = 'palette-group-header';
+                // Use the role string directly as the header text, as requested
+                groupHeader.textContent = role; 
+                paletteList.appendChild(groupHeader);
                 
-                paletteList.appendChild(item);
+                // 2. Append the node items for this group
+                definitions.forEach(def => {
+                    const type = def.type;
+                    
+                    const item = document.createElement('div');
+                    item.className = 'palette-item';
+                    item.dataset.type = type;
+                    
+                    // Get the raw path data from the widget
+                    const pathData = widget.dispatch('get_node_icon_path_data', { type });
+                    
+                    // Create SVG container
+                    const svgNS = "http://www.w3.org/2000/svg";
+                    const svg = document.createElementNS(svgNS, "svg");
+                    svg.setAttribute("class", "palette-icon-svg");
+                    svg.setAttribute("viewBox", "0 0 40 40"); 
+                    
+                    // Create path
+                    const path = document.createElementNS(svgNS, "path");
+                    path.setAttribute("d", pathData);
+                    path.setAttribute("fill", "currentColor");
+                    svg.appendChild(path);
 
-                requestAnimationFrame(() => {
-                    try {
-                        const d3Path = d3.select(path);
-                        const bbox = path.getBBox();
-                        
-                        const targetSize = 32; 
-                        const padding = 4;
-                        
-                        if (bbox.width > 0 && bbox.height > 0) {
-                            const scale = targetSize / Math.max(bbox.width, bbox.height);
-                            const tx = padding + (targetSize - bbox.width * scale) / 2 - bbox.x * scale;
-                            const ty = padding + (targetSize - bbox.height * scale) / 2 - bbox.y * scale;
+                    // Use the label derived in the dispatch command
+                    const label = def.label; 
+                    
+                    item.appendChild(svg);
+                    const span = document.createElement('span');
+                    span.className = 'palette-item-label';
+                    span.innerText = label;
+                    item.appendChild(span);
+                    
+                    paletteList.appendChild(item);
+
+                    requestAnimationFrame(() => {
+                        try {
+                            const d3Path = d3.select(path);
+                            const bbox = path.getBBox();
                             
-                            d3Path.attr("transform", `translate(${tx}, ${ty}) scale(${scale})`);
+                            const targetSize = 32; 
+                            const padding = 4;
+                            
+                            if (bbox.width > 0 && bbox.height > 0) {
+                                const scale = targetSize / Math.max(bbox.width, bbox.height);
+                                const tx = padding + (targetSize - bbox.width * scale) / 2 - bbox.x * scale;
+                                const ty = padding + (targetSize - bbox.height * scale) / 2 - bbox.y * scale;
+                                
+                                d3Path.attr("transform", `translate(${tx}, ${ty}) scale(${scale})`);
+                            }
+                        } catch(e) {
+                            console.warn("Could not scale icon for", type, e);
                         }
-                    } catch(e) {
-                        console.warn("Could not scale icon for", type, e);
-                    }
+                    });
                 });
             });
         }

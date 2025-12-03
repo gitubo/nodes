@@ -1,9 +1,17 @@
 // src/nodes/NodeDefinition.js
 import { CONFIG } from '../config.js';
 
+export const NODE_ROLES = {
+    DATA: 'Data Transformation',
+    TOOLS: 'Tools and Helpers',
+    LOGIC: 'Control Flow & Logic',
+    CORE: 'Core Elements'
+};
+
 export class NodeDefinition {
     constructor(x, y, label, note, data) {
         this.id = crypto.randomUUID();
+        this.role = this.constructor.getRole();
         this.type = 'base';
         this.label = label;
         this.note = note;
@@ -13,6 +21,8 @@ export class NodeDefinition {
         this.position = {x: x, y: y};
         this.data = data;
     }
+
+    static getRole() { return NODE_ROLES.CORE; }
 
     static serialize(node, registry) {
         let serializedHandlers = {};

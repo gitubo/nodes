@@ -1,5 +1,5 @@
 // nodes/StartNode.js
-import { NodeDefinition } from './NodeDefinition.js';
+import { NodeDefinition, NODE_ROLES } from './NodeDefinition.js';
 import { CONFIG } from '../config.js';
 import { SourceHandlerDefinition } from '../handlers/SourceHandler.js';
 
@@ -9,7 +9,6 @@ export class StartNodeDefinition extends NodeDefinition {
         this.type = 'start';
         this.width = 192;
         this.height = 96;
-//        this.handlers.push(new SourceHandlerDefinition(this.width, CONFIG.node.handlerSeparator * 2));
         this.handlers.push(new SourceHandlerDefinition(this.width, this.height/2));
     }
 
