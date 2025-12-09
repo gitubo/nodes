@@ -176,7 +176,7 @@ export class InputSystem {
                 link.label.offset = newT;
                 link.label.offsetX = 0;
                 link.label.offsetY = 0;
-                this.eventBus.emit('GHOST_LINK_UPDATED');
+                this.eventBus.emit('LABEL_DRAGGED', link.id);
             }
         }
     }

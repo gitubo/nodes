@@ -35,9 +35,29 @@ export function initRenderer(_svg, _store, _registry, _eventBus) {
             d3.select(`.node[data-id="${node.id}"]`)
                 .attr("transform", `translate(${node.position.x}, ${node.position.y})`);
             updateLinksOnly(node.id);
-            // Removed AddNodeHelpers update logic
+        });
+
+        eventBus.on('LABEL_DRAGGED', (linkId) => {
+            updateLabelVisuals(linkId);
         });
     }
+}
+
+function updateLabelVisuals(linkId) {
+    const link = store.getLink(linkId);
+    if (!link || !link.label) return;
+
+    // Select only the specific label group
+    const labelGroup = svg.select(`.link-label-group[data-id="${link.id}"]`);
+    if (labelGroup.empty()) return;
+
+    // Calculate only the new position (Geometry only, no DOM reads)
+    const pos = calculatePositionAlongPath(link, link.label.offset || 0.5, store.state.nodes, registry);
+    const x = pos.x + (link.label.offsetX || 0);
+    const y = pos.y + (link.label.offsetY || 0);
+
+    // Direct DOM update
+    labelGroup.attr("transform", `translate(${x}, ${y})`);
 }
 
 export function startRenderLoop() {
@@ -217,7 +237,5 @@ export function render() {
         );
 
     renderLinks(viewport);
-    renderLinkLabels(viewport);
-    
-    // REMOVED: AddNodeHelper calls
+    renderLinkLabels(viewport);    
 }

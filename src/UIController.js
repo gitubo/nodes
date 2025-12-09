@@ -1,17 +1,13 @@
 import { getStrokeIcon, getIcon } from './Icons.js';
-import { showCustomMenu } from './ContextMenu.js'; // Import the new helper
-// //import { HELPER_CONFIG } from './AddNodeHelper.js'; 
-//import { AddNodeHelperSystem } from './AddNodeHelper.js';
-// Note: AddNodeHelper still uses singletons, a future refactor.
+import { showCustomMenu } from './ContextMenu.js'; 
 
 export class UIController {
-    constructor(widget, store, eventBus, serializationService, registry/*, addNodeHelperSystem*/) {
+    constructor(widget, store, eventBus, serializationService, registry) {
         this.widget = widget;
         this.store = store;
         this.eventBus = eventBus;
         this.serializationService = serializationService;
         this.registry = registry;
-//        this.addNodeHelperSystem = addNodeHelperSystem;
         this.panels = {
             zoom: { visible: true, element: null },
             properties: { visible: false, element: null },

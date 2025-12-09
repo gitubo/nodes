@@ -74,7 +74,7 @@ function showContextMenu(event, type, data, eventBus, store) {
     document.querySelectorAll('.context-menu-html').forEach(e => e.remove());
     
     const menu = document.createElement('div');
-    menu.className = 'ui-panel context-menu-html';
+    menu.className = 'ui-panel context-menu-html context-menu-horizontal';
     const x = event.pageX !== undefined ? event.pageX : event.x;
     const y = event.pageY !== undefined ? event.pageY : event.y;
     menu.style.left = `${x}px`; menu.style.top = `${y}px`;

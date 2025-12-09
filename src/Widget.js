@@ -1,13 +1,12 @@
 import { Store } from './state.js';
 import { render, initRenderer, startRenderLoop } from './render.js';
 import { Grid } from './Grid.js';
-import { EventBus } from './EventBus.js'; // Import Class
+import { EventBus } from './EventBus.js'; 
 import { CONFIG } from './config.js';
 import { UIController } from './UIController.js';
 import { SerializationService } from './SerializationService.js';
-import { Registry, registerDefaultDefinitions } from './Registry.js'; // Import Class + Setup
+import { Registry, registerDefaultDefinitions } from './Registry.js'; 
 import { InputSystem } from './InputSystem.js';
-//import { AddNodeHelperSystem } from './AddNodeHelper.js';
 import { showCustomMenu } from './ContextMenu.js';
 import { getStrokeIcon } from './Icons.js';
 
@@ -45,7 +44,6 @@ export class DAGWidget {
         // --- 3. Instantiate Controllers ---
         // Pass the instances created above
         this.inputSystem = new InputSystem(this.svg.node(), this.store, this.eventBus, this.registry);
-        //this.addNodeHelperSystem = new AddNodeHelperSystem(this.svg, this.store, this.registry, this.eventBus);
         if (this.config.showDefaultUI) {
             this.uiController = new UIController(
                 this,

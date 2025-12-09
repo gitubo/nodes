@@ -137,8 +137,8 @@ export function findClosestTOnPath(link, targetPoint, nodes, registry, samples =
    
    let bestT = 0.5;
    let minDst = Infinity;
-
-   // Coarse search
+   
+   // 1. Coarse Search (existing logic)
    for(let i = 0; i <= samples; i++) {
        const t = i / samples;
        const x = cubicBezier(t, p.sx, p.c1x, p.c2x, p.tx);
@@ -146,12 +146,40 @@ export function findClosestTOnPath(link, targetPoint, nodes, registry, samples =
        const dx = x - targetPoint.x;
        const dy = y - targetPoint.y;
        const dst = dx*dx + dy*dy;
-       
        if(dst < minDst) {
            minDst = dst;
            bestT = t;
        }
    }
+
+   // 2. NEW: Binary Search Refinement for smooth movement
+   // Search in the range [bestT - step, bestT + step]
+   let step = 1 / samples; 
+   let currentT = bestT;
    
-   return bestT;
+   // 6 iterations gives significant precision increase
+   for(let i = 0; i < 6; i++) {
+       step /= 2;
+       // Check t - step
+       const tLeft = Math.max(0, currentT - step);
+       const xL = cubicBezier(tLeft, p.sx, p.c1x, p.c2x, p.tx);
+       const yL = cubicBezier(tLeft, p.sy, p.c1y, p.c2y, p.ty);
+       const dstL = (xL - targetPoint.x)**2 + (yL - targetPoint.y)**2;
+
+       // Check t + step
+       const tRight = Math.min(1, currentT + step);
+       const xR = cubicBezier(tRight, p.sx, p.c1x, p.c2x, p.tx);
+       const yR = cubicBezier(tRight, p.sy, p.c1y, p.c2y, p.ty);
+       const dstR = (xR - targetPoint.x)**2 + (yR - targetPoint.y)**2;
+
+       if (dstL < minDst) {
+           minDst = dstL;
+           currentT = tLeft;
+       } else if (dstR < minDst) {
+           minDst = dstR;
+           currentT = tRight;
+       }
+   }
+   
+   return currentT;
 }

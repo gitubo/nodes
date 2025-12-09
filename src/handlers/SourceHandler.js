@@ -15,8 +15,6 @@ export class SourceHandlerDefinition extends HandlerDefinition {
         const cx = 0;
         const cy = 0;
         
-        // 2. Render "Add Node" Visuals (if unconnected)
-        // Logic adapted from AddNodeHelper.js (config: size 36, linkLength 48)
         const HELPER_CFG = { size: 36, linkLength: 48, plusSize: 24 };
         
         if (!state.isConnected) {
