@@ -2,10 +2,10 @@
 import { CONFIG } from '../config.js';
 
 export const NODE_ROLES = {
-    DATA: 'Data Transformation',
-    TOOLS: 'Tools and Helpers',
-    LOGIC: 'Control Flow & Logic',
-    CORE: 'Core Elements'
+    DATA: 'Data',
+    TOOLS: 'Tools',
+    LOGIC: 'Logic',
+    CORE: 'Core'
 };
 
 export class NodeDefinition {

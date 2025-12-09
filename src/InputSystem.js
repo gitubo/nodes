@@ -34,6 +34,33 @@ export class InputSystem {
         const target = event.target;
         const [mouseX, mouseY] = this._getMousePosition(event);
         
+        // 1. Detect Helper Button Click (New Logic)
+        const helperBtn = target.closest('.helper-button');
+        if (helperBtn) {
+            event.stopPropagation();
+            event.preventDefault();
+
+            // Retrieve the handler data attached to the parent group
+            const handlerG = target.closest('.handler-g');
+            const handlerData = d3.select(handlerG).datum();
+
+            if (handlerData) {
+                // Calculate screen coordinates for the HTML menu
+                // We use clientX/Y directly for the HTML overlay position
+                const { clientX, clientY } = event.sourceEvent || event;
+
+                this.store.eventBus.emit('CMD_REQUESTED', {
+                    command: 'open_connection_menu',
+                    payload: {
+                        sourceHandlerId: handlerData.id,
+                        clientX,
+                        clientY
+                    }
+                });
+            }
+            return;
+        }
+
         const nodeElement = target.closest('.node');
         const handlerElement = target.closest('.handler-g');
         const labelElement = target.closest('.link-label-group');

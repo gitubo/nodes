@@ -91,6 +91,20 @@
                 console.log("--- EXPORTED DATA ---");
                 console.log(JSON.stringify(payload, null, 2));
             }
+
+            if (type === 'HISTORY_CHANGED') {
+                const undoBtn = document.querySelector('button[title="Undo"]');
+                const redoBtn = document.querySelector('button[title="Redo"]');
+
+                if (undoBtn) {
+                    undoBtn.disabled = !payload.canUndo;
+                    undoBtn.style.opacity = payload.canUndo ? '1' : '0.5';
+                }
+                if (redoBtn) {
+                    redoBtn.disabled = !payload.canRedo;
+                    redoBtn.style.opacity = payload.canRedo ? '1' : '0.5';
+                }
+            }
         });
 
         // 2b. Populate Node Palette with Dynamic Icons
@@ -100,7 +114,7 @@
         // Group nodes by role
         const nodesByRole = nodeDefinitions.reduce((acc, def) => {
             // def.role now holds the descriptive string (e.g., 'Data Transformation')
-            const role = def.role || 'Core Elements'; 
+            const role = def.role || 'Core'; 
             if (!acc[role]) {
                 acc[role] = [];
             }
@@ -110,10 +124,10 @@
         
         // Define a desired role order 
         const roleOrder = [
-            'Core Elements',
-            'Data Transformation', 
-            'Tools and Helpers', 
-            'Control Flow & Logic',
+            'Core',
+            'Data', 
+            'Tools', 
+            'Logic',
         ];
         
         // Sort roles based on defined order, placing any unrecognized roles at the end
@@ -158,7 +172,7 @@
                     svg.appendChild(path);
 
                     // Use the label derived in the dispatch command
-                    const label = def.label; 
+                    const label = def.type.charAt(0).toUpperCase() + def.type.slice(1)
                     
                     item.appendChild(svg);
                     const span = document.createElement('span');

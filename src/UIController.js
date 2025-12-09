@@ -1,15 +1,17 @@
 import { getStrokeIcon, getIcon } from './Icons.js';
-import { HELPER_CONFIG } from './AddNodeHelper.js'; 
-import { AddNodeHelperSystem } from './AddNodeHelper.js';
+import { showCustomMenu } from './ContextMenu.js'; // Import the new helper
+// //import { HELPER_CONFIG } from './AddNodeHelper.js'; 
+//import { AddNodeHelperSystem } from './AddNodeHelper.js';
 // Note: AddNodeHelper still uses singletons, a future refactor.
 
 export class UIController {
-    constructor(store, eventBus, serializationService, registry, addNodeHelperSystem) {
+    constructor(widget, store, eventBus, serializationService, registry/*, addNodeHelperSystem*/) {
+        this.widget = widget;
         this.store = store;
         this.eventBus = eventBus;
         this.serializationService = serializationService;
         this.registry = registry;
-        this.addNodeHelperSystem = addNodeHelperSystem;
+//        this.addNodeHelperSystem = addNodeHelperSystem;
         this.panels = {
             zoom: { visible: true, element: null },
             properties: { visible: false, element: null },
@@ -38,19 +40,30 @@ export class UIController {
             }
         });
         // Listen for history changes to update button states (opacity/disabled)
-        this.eventBus.on('HISTORY_CHANGED', (status) => {
+        const updateHistoryButtons = (status) => {
             const undoBtn = document.querySelector('[data-action="undo"]');
             const redoBtn = document.querySelector('[data-action="redo"]');
             
             if (undoBtn) {
                 undoBtn.style.opacity = status.canUndo ? '1' : '0.3';
-                  undoBtn.style.pointerEvents = status.canUndo ? 'auto' : 'none';
+                undoBtn.style.pointerEvents = status.canUndo ? 'auto' : 'none';
             }
             if (redoBtn) {
                 redoBtn.style.opacity = status.canRedo ? '1' : '0.3';
                 redoBtn.style.pointerEvents = status.canRedo ? 'auto' : 'none';
-              }
-        });
+            }
+        };
+
+        this.eventBus.on('HISTORY_CHANGED', updateHistoryButtons);
+
+        // 3. FIX: Immediate State Check (Force sync on init)
+        // Check if store has history capability and update immediately
+        if (this.store.history) {
+            updateHistoryButtons({
+                canUndo: this.store.history.canUndo(),
+                canRedo: this.store.history.canRedo()
+            });
+        }
     }
     
     createZoomPanel() {
@@ -72,6 +85,7 @@ export class UIController {
             <div class="panel-separator"></div>
             <div class="panel-group">
                 <button class="icon-btn" id="btn-add-node" data-action="add-node" title="Add Node">${getStrokeIcon('addNode')}</button>
+                <button class="icon-btn" id="btn-add-note" data-action="add-note" title="Add Note">${getStrokeIcon('addNote')}</button>
             </div>
             <div class="panel-separator"></div>
             <div class="panel-group">
@@ -109,11 +123,9 @@ export class UIController {
                 case 'redo': this.store.redo(); break;
                 case 'zoom-in': svg.transition().call(window.zoomBehavior.scaleBy, 1.3); break;
                 case 'zoom-out': svg.transition().call(window.zoomBehavior.scaleBy, 0.7); break;
-                case 'zoom-reset': 
-                    svg.transition().call(window.zoomBehavior.transform, d3.zoomIdentity); break;
-                case 'zoom-fit': this.fitToScreen(); break;
+                case 'zoom-reset': svg.transition().call(window.zoomBehavior.transform, d3.zoomIdentity); break;
+                case 'zoom-fit': this.widget.fitToScreen(); break;
                 case 'close-prop': this.hidePropertiesPanel(); break;
-                
                 case 'save-file': 
                     const dataStr = JSON.stringify(this.serializationService.serialize(this.store.state), null, 2);
                     const blob = new Blob([dataStr], {type: "application/json"});
@@ -124,55 +136,61 @@ export class UIController {
                     a.click();
                     URL.revokeObjectURL(url);
                     break;
-
                 case 'open-file': this.openFile(); break;
                 case 'add-node':
-                    const rect = svg.node().getBoundingClientRect();
-                    const t = d3.zoomTransform(svg.node());
+                    // 1. Get position of the clicked button
+                    const btnRect = btn.getBoundingClientRect();
                     
-                    // Center coordinates in Graph Space
-                    const cx = (rect.width/2 - t.x) / t.k;
-                    const cy = (rect.height/2 - t.y) / t.k;
+                    // 2. Define the menu spawn point
+                    // X: Aligned with the left of the button
+                    // Y: Aligned with the top of the button (so menu grows upwards)
+                    const menuX = btnRect.left;
+                    const menuY = btnRect.top;
 
-                    // Use the helper system to show the menu
-                    this.addNodeHelperSystem.showNodeTypeMenu(
-                        { x: cx, y: cy }, 
-                        null, // No filter
-                        (type) => {
-                            this.store.addNode(type, cx, cy);
-                        }
-                    );
+                    // 3. Show menu with 'top' alignment options
+                    this.showNodeCreationMenu(menuX, menuY, null, { align: 'top' });
                     break;
             }
         });
     }
 
-    fitToScreen() {
-        const bounds = this.getGraphBounds();
-        if (!bounds) return;
-        const svg = d3.select('svg');
-        const width = svg.node().clientWidth;
-        const height = svg.node().clientHeight;
-        const dx = bounds.maxX - bounds.minX;
-        const dy = bounds.maxY - bounds.minY;
-        const x = (bounds.minX + bounds.maxX) / 2;
-        const y = (bounds.minY + bounds.maxY) / 2;
-        const scale = Math.max(0.1, Math.min(4, 0.9 / Math.max(dx / width, dy / height)));
-        const translate = [width / 2 - scale * x, height / 2 - scale * y];
-        svg.transition().duration(750).call(window.zoomBehavior.transform, d3.zoomIdentity.translate(translate[0], translate[1]).scale(scale));
-    }
-
-    getGraphBounds() {
+    showNodeCreationMenu(clientX, clientY, sourceHandlerId = null, options = {}) {
+        // Get registered node types
+        const nodeTypes = this.registry.getNodeTypes().filter(t => t !== 'base');
         
-         if (this.store.nodes.length === 0) return null;
-        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-        this.store.nodes.forEach(n => {
-            minX = Math.min(minX, n.position.x); 
-            minY = Math.min(minY, n.position.y);
-            maxX = Math.max(maxX, n.position.x + (n.width || 100));
-            maxY = Math.max(maxY, n.position.y + (n.height || 50));
+        const menuItems = nodeTypes.map(type => {
+            const def = this.registry.getNodeDefinition(type);
+            return {
+                label: type.charAt(0).toUpperCase() + type.slice(1),
+                icon: getStrokeIcon('addNode', 16), // Or specific icons if available
+                callback: () => {
+                    // Convert Screen Coords -> Graph Coords
+                    const transform = this.store.transform;
+                    const graphX = (clientX - transform.x) / transform.k;
+                    const graphY = (clientY - transform.y) / transform.k;
+
+                    if (options.align === 'top' && !sourceHandlerId) {
+                        // Spawn in center of Viewport
+                        const svgRect = d3.select('svg').node().getBoundingClientRect();
+                        const centerX = (svgRect.width/2 - transform.x) / transform.k;
+                        const centerY = (svgRect.height/2 - transform.y) / transform.k;
+                        this.store.addNode(type, centerX, centerY);
+                    } else {
+                        if (sourceHandlerId) {
+                            // Offset the new node slightly to the right of the click
+                            this.store.eventBus.emit('CMD_REQUESTED', {
+                                command: 'spawn_node_connected',
+                                payload: { type, x: graphX + 50, y: graphY - 20, sourceHandlerId }
+                            });
+                        } else {
+                            this.store.addNode(type, graphX, graphY);
+                        }
+                    }
+                }
+            };
         });
-        return { minX, minY, maxX, maxY };
+
+        showCustomMenu(clientX, clientY, menuItems, options);
     }
 
     openFile() {

@@ -18,6 +18,58 @@ export function setupNodeContextMenu(selection) {
     });
 }
 
+export function showCustomMenu(x, y, items, options = {}) {
+    document.querySelectorAll('.context-menu-html').forEach(e => e.remove());
+
+    const menu = document.createElement('div');
+    menu.className = 'ui-panel context-menu-html';
+    
+    // Position Logic
+    if (options.align === 'top') {
+        // "Top" alignment means the menu sits ABOVE the y coordinate
+        // We set 'bottom' relative to the viewport height
+        menu.style.left = `${x}px`;
+        menu.style.bottom = `${window.innerHeight - y}px`;
+        menu.style.top = 'auto';
+        menu.style.transformOrigin = 'bottom left';
+    } else {
+        // Default (Drop down)
+        menu.style.left = `${x}px`;
+        menu.style.top = `${y}px`;
+        menu.style.transformOrigin = 'top left';
+    }
+
+    items.forEach(item => {
+        const row = document.createElement('div');
+        row.className = 'menu-item'; 
+        
+        if(item.icon) {
+            row.innerHTML = `<span style="display:flex;">${item.icon}</span>`;
+        }
+        
+        const label = document.createElement('span');
+        label.innerText = item.label;
+        row.appendChild(label);
+
+        row.onclick = (e) => {
+            e.stopPropagation();
+            item.callback();
+            menu.remove();
+        };
+        menu.appendChild(row);
+    });
+
+    document.body.appendChild(menu);
+
+    setTimeout(() => {
+        const close = () => menu.remove();
+        window.addEventListener('click', close, { once: true });
+        window.addEventListener('contextmenu', (e) => {
+            if (!e.target.closest('.context-menu-html')) close();
+        }, { once: true });
+    }, 10);
+}
+
 function showContextMenu(event, type, data, eventBus, store) {
     document.querySelectorAll('.context-menu-html').forEach(e => e.remove());
     

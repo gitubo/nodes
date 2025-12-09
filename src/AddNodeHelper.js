@@ -1,211 +1,134 @@
-// src/AddNodeHelper.js
-// NESSUN IMPORT di 'store', 'registry' o 'eventBus'
+// src/NodeRenderer.js
+import { CONFIG } from './config.js';
 
-// Questa configurazione è locale e va bene
-export const HELPER_CONFIG = {
-    size: 36, linkLength: 48, plusSize: 24, plusStrokeWidth: 3, 
-    hoverScale: 1.1, menuItemHeight: 36, menuWidth: 180
-};
-
-export class AddNodeHelperSystem {
-    constructor(svg, store, registry, eventBus) {
-        this.svg = svg;
-        this.viewport = svg.select("g.viewport");
-        this.store = store;
+export class NodeRenderer {
+    constructor(renderCallback, registry, store) {
+        this.renderCallback = renderCallback;
         this.registry = registry;
-        this.eventBus = eventBus;
+        this.store = store; // Store reference
     }
+    
+    renderBody(selection, d) {
+        const renderer = this;
+        selection.each(function() {
+             const currentSelection = d3.select(this);
+             const definition = renderer.registry.getNodeDefinition(d.type);
+             if (!definition) return;
+             
+             // 1. Render Shape
+             currentSelection.selectAll("path.node-body").data([d])
+                .join("path")
+                .attr("class", `node-body ${d.type}`)
+                .attr("d", d.getShapePath())
+                .lower();
 
-    /**
-     * Avvia gli event listener per questo sistema.
-     */
-    listen() {
-        // Aggiorna gli helper quando la topologia cambia
-        this.eventBus.on('NODE_CREATED', this.update.bind(this));
-        this.eventBus.on('NODE_UPDATED', this.update.bind(this)); 
-        this.eventBus.on('NODE_REMOVED', this.update.bind(this));
-        this.eventBus.on('CONNECTION_CREATED', this.update.bind(this));
-        this.eventBus.on('CONNECTION_REMOVED', this.update.bind(this));
-        this.eventBus.on('NODE_MOVED', this.update.bind(this));
-        this.eventBus.on('STATE_LOADED', this.update.bind(this)); 
-    }
+            // 2. Render Icon
+            const icon = definition.getIconPath();
+            currentSelection.selectAll("path.node-icon").remove();
+            if(icon && icon !== ''){
+                const path = currentSelection.append("path")
+                    .attr("class", "node-icon")
+                    .attr("d", icon);
+                const bbox = path.node().getBBox();
+                const size = CONFIG.node.iconSize-CONFIG.node.iconPadding*2;
+                const scale = size / Math.max(bbox.width, bbox.height);
+                path.attr("transform", `translate(${CONFIG.node.iconMargin+CONFIG.node.iconPadding}, ${CONFIG.node.iconMargin+CONFIG.node.iconPadding}) scale(${scale})`);
+                
+                currentSelection.append("path")
+                    .attr("class", "node-icon line")
+                    .attr("d", "M16 0 48 0A16 16 90 0164 16L64 48A16 16 90 0148 64L16 64A16 16 90 010 48L0 16A16 16 90 0116 0Z")
+                    .attr("transform", `translate(${CONFIG.node.iconMargin}, ${CONFIG.node.iconMargin})`);
+            }
 
-    /**
-     * Chiamato dagli eventi per rieseguire il rendering degli helper.
-     */
-    update() {
-        this.render(this.viewport);
-    }
+             // 3. Render Labels
+             if (d.label) {
+                const capitalized = d.label.charAt(0).toUpperCase() + d.label.slice(1);
+                const labelJoin = currentSelection.selectAll("text.node-label").data([d]);
+                
+                const label = labelJoin.enter()
+                    .append("text")
+                    .attr("class", "node-label") 
+                    .attr("text-anchor", "left")
+                    .merge(labelJoin)
+                    .text(capitalized);
 
-    /**
-     * Esegue il rendering (join D3) degli helper sul viewport.
-     */
-    render(viewport) {
-        const helpers = [];
-        // USA: this.store e this.registry
-        this.store.nodes.forEach(node => {
-//            const nodeDef = this.registry.getNodeDefinition(node.type);
-//            const handlers = nodeDef ? nodeDef.getHandlers(node) : [];
-            const handlers = node.getHandlers() || [];
-            
-            handlers.forEach(handler => {
-                const def = this.registry.getHandlerDefinition(handler.type);
-                if (def && typeof def.getRole === 'function') {
-                    handler.role = def.getRole(handler);
-                }
-                if (handler.role === 'source') {
-                    const isConnected = this.store.links.some(link => String(link.sourceHandlerId) === String(handler.id));
-                    if (!isConnected) {
-                        const offsetX = handler.offset.x || 0;
-                        const offsetY = handler.offset.y || 0;
-                        helpers.push({
-                            id: `helper_${handler.id}`,
-                            handlerId: handler.id,
-                            nodeId: node.id,
-                            position: { x: node.position.x + offsetX, y: node.position.y + offsetY },
-                            relX: offsetX, 
-                            relY: offsetY
-                        });
-                    }
-                }
-            });
+                label.attr("transform", `translate(${CONFIG.node.iconMargin*2+CONFIG.node.iconSize}, ${CONFIG.node.iconMargin+CONFIG.node.iconSize/2})`);
+                labelJoin.exit().remove();
+             } else {
+                currentSelection.selectAll("text.node-label").remove();
+             }
+             
+             if (d.note) {
+                const noteJoin = currentSelection.selectAll("text.node-note").data([d]);
+                noteJoin.enter()
+                    .append("text")
+                    .attr("class", "node-note") 
+                    .attr("text-anchor", "middle")
+                    .merge(noteJoin)
+                    .attr("transform", `translate(${CONFIG.node.iconMargin*2+CONFIG.node.iconSize}, ${CONFIG.node.iconMargin+CONFIG.node.iconSize})`)
+                    .text(d.note);
+                noteJoin.exit().remove();
+             } else {
+                currentSelection.selectAll("text.node-note").remove();
+             }
         });
+    }
 
-        let helperLayer = viewport.select("g.helper-layer");
-        if (helperLayer.empty()) helperLayer = viewport.append("g").attr("class", "helper-layer");
-
-        helperLayer.selectAll("g.add-node-helper")
-            .data(helpers, d => d.handlerId)
+    renderHandlers(selection, d) {
+        const renderer = this;
+        selection.selectAll("g.handler-g")
+            .data(() => {
+                return d.getHandlers() || [];
+            }, h => h.id)
             .join(
                 enter => {
-                    const g = enter.append("g").attr("class", "add-node-helper")
-                        .attr("data-node-id", d => d.nodeId)
-                        .attr("transform", d => `translate(${d.position.x}, ${d.position.y})`);
-                    
-                    // Usa una arrow function per passare il contesto 'this'
-                    g.each((d, i, nodes) => {
-                        this.renderHelper(d3.select(nodes[i]));
+                    const g = enter.append("g")
+                        .attr("class", h => `handler-g ${h.type} ${h.role}`)
+                        .attr("data-id", h => h.id)
+                        .attr("transform", h => {
+                                const tx = h.offset?.x || 0;
+                                const ty = h.offset?.y || 0;
+                                return `translate(${tx},${ty})`;
+                            }); 
+
+                    g.each(function (h) {
+                        const HandlerClass = renderer.registry.getHandlerDefinition(h.type);
+                        if (!HandlerClass) return;
+                        const instance = new HandlerClass();
+                        h.instance = instance; 
+                        
+                        // Pass connection state
+                        const isConnected = renderer.store.links.some(l => l.sourceHandlerId === h.id);
+                        instance.render(d3.select(this), { isConnected });
                     });
                     return g;
                 },
-                update => update
-                    .attr("data-node-id", d => d.nodeId)
-                    .attr("transform", d => `translate(${d.position.x}, ${d.position.y})`),
+                update => {
+                    update.attr("transform", h => {
+                            const tx = h.offset?.x || 0;
+                            const ty = h.offset?.y || 0;
+                            return `translate(${tx},${ty})`;
+                        });
+                    update.each(function (h) {
+                        if (h.instance) {
+                            // Pass connection state
+                            const isConnected = renderer.store.links.some(l => l.sourceHandlerId === h.id);
+                            h.instance.render(d3.select(this), { isConnected });
+                        }
+                    });
+                    return update;
+                },
                 exit => exit.remove()
             );
     }
 
-    /**
-     * Logica di rendering per un singolo helper (il "+").
-     * Chiamato da render().
-     */
-    renderHelper(group) {
-        const cfg = HELPER_CONFIG;
-        const data = group.datum();
-
-        group.append("line").attr("class", "helper-link")
-            .attr("x1", 0).attr("y1", 0).attr("x2", cfg.linkLength).attr("y2", 0);
-        
-        const btn = group.append("g").attr("class", "helper-button")
-            .attr("transform", `translate(${cfg.linkLength}, 0)`);
-        
-        btn.append("rect").attr("class", "helper-box")
-            .attr("x", -cfg.size/2).attr("y", -cfg.size/2)
-            .attr("width", cfg.size).attr("height", cfg.size).attr("rx", 4);
-        
-        btn.append("path").attr("class", "helper-plus")
-            .attr("d", "M -10 0 L 10 0 M 0 -10 L 0 10")
-            .attr("stroke-width", cfg.plusStrokeWidth);
-        
-        btn.on("mouseenter", function() {
-            d3.select(this).transition().duration(150)
-                .attr("transform", `translate(${cfg.linkLength}, 0) scale(${cfg.hoverScale})`);
-        })
-        .on("mouseleave", function() {
-            d3.select(this).transition().duration(150)
-                .attr("transform", `translate(${cfg.linkLength}, 0) scale(1)`);
-        })
-        .on("click", (event) => {
-            event.stopPropagation();
-            const [mx, my] = d3.pointer(event, this.svg.node());
-
-            // La funzione di filtro ora prende il 'type' come stringa, 
-            // ma la sua logica interna deve essere basata sul 'this.registry'
-            // per recuperare la definizione.
-            // NOTA: il parametro 'filter' qui è il filtro che showNodeTypeMenu applicherà.
-            // Il filtro passato DEVE essere una funzione che accetta l'oggetto definizione (def)
-            // come fa il tuo esempio showNodeTypeMenu.
-            
-            // Quindi, il problema era come definire la funzione 'filter' qui.
-            
-            // La funzione 'filter' che viene passata a this.showNodeTypeMenu riceve
-            // *già* l'oggetto 'def' (la NodeDefinition) grazie alla logica interna 
-            // di showNodeTypeMenu (come mostrato nel tuo esempio):
-            // if (!filterFn || filterFn(def)) { ...
-            
-            // Riscriviamo solo la funzione filter corretta (come Lambda)
-            const filter = (def) => {
-                // Chiamiamo il metodo d'istanza getHandlers() sulla definizione (def)
-                // che è stata ottenuta internamente da showNodeTypeMenu:
-                return def.hasTargetHandlers();
-            };
-            
-            // Chiamata a this.showNodeTypeMenu con il filtro corretto
-            this.showNodeTypeMenu({x: mx, y: my}, filter, (type) => {
-                // Questo callback onSelect ora ha il 'this' corretto
-                const newNode = this.store.addNode(type, data.position.x + 150, data.position.y);
-                if (newNode) {
-                    const targetHandler = newNode.handlers.find(h => h.role === 'target');
-                    if (targetHandler) {
-                        this.store.addLink(data.handlerId, targetHandler.id);
-                    }
-                }
-            });
-        });
+    render(selection, d) {
+        this.renderBody(selection, d);
+        this.renderHandlers(selection, d);
     }
-
-    /**
-     * Mostra il menu popup per la selezione del tipo di nodo.
-     */
-    showNodeTypeMenu(position, filterFn, onSelect) {
-        d3.selectAll(".node-type-menu").remove();
-        const types = [];
-        
-        // USA: this.registry
-        this.registry.getNodeTypes().forEach(type => {
-            const def = this.registry.getNodeDefinition(type);
-            if (!filterFn || filterFn(def)) {
-                types.push({ type, label: type.charAt(0).toUpperCase() + type.slice(1) });
-            }
-        });
-        if (types.length === 0) return;
-        
-        // USA: this.svg
-        const menu = this.svg.append("g").attr("class", "node-type-menu")
-            .attr("transform", `translate(${position.x + 10}, ${position.y})`);
-        
-        const h = types.length * HELPER_CONFIG.menuItemHeight;
-        menu.append("rect").attr("class", "menu-background")
-            .attr("width", HELPER_CONFIG.menuWidth).attr("height", h).attr("rx", 6);
-        
-        types.forEach((t, i) => {
-            const g = menu.append("g").attr("class", "menu-item")
-                .attr("transform", `translate(0, ${i * HELPER_CONFIG.menuItemHeight})`)
-                .on("click", function(e) {
-                    e.stopPropagation();
-                    onSelect(t.type);
-                    d3.selectAll(".node-type-menu").remove();
-                });
-            g.append("rect").attr("class", "menu-item-bg")
-                .attr("width", HELPER_CONFIG.menuWidth).attr("height", HELPER_CONFIG.menuItemHeight);
-            g.append("text").attr("class", "menu-item-text")
-                .attr("x", 16).attr("y", HELPER_CONFIG.menuItemHeight/2)
-                .attr("dominant-baseline", "middle").text(t.label);
-            g.on("mouseenter", function() { d3.select(this).select("rect").classed("menu-item-hover", true); });
-            g.on("mouseleave", function() { d3.select(this).select("rect").classed("menu-item-hover", false); });
-        });
-
-        // USA: this.svg
-        this.svg.on("click.menu", () => d3.selectAll(".node-type-menu").remove(), { once: true });
+    
+    update(selection, d) {
+        this.renderBody(selection, d);
+        this.renderHandlers(selection, d);
     }
 }

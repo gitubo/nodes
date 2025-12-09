@@ -7,7 +7,9 @@ import { UIController } from './UIController.js';
 import { SerializationService } from './SerializationService.js';
 import { Registry, registerDefaultDefinitions } from './Registry.js'; // Import Class + Setup
 import { InputSystem } from './InputSystem.js';
-import { AddNodeHelperSystem } from './AddNodeHelper.js';
+//import { AddNodeHelperSystem } from './AddNodeHelper.js';
+import { showCustomMenu } from './ContextMenu.js';
+import { getStrokeIcon } from './Icons.js';
 
 export class DAGWidget {
     constructor(containerSelector, config = {}) {
@@ -43,16 +45,22 @@ export class DAGWidget {
         // --- 3. Instantiate Controllers ---
         // Pass the instances created above
         this.inputSystem = new InputSystem(this.svg.node(), this.store, this.eventBus, this.registry);
-        this.addNodeHelperSystem = new AddNodeHelperSystem(this.svg, this.store, this.registry, this.eventBus);
+        //this.addNodeHelperSystem = new AddNodeHelperSystem(this.svg, this.store, this.registry, this.eventBus);
         if (this.config.showDefaultUI) {
             this.uiController = new UIController(
+                this,
                 this.store, 
                 this.eventBus, 
                 this.serializationService, 
                 this.registry,
-                this.addNodeHelperSystem 
             );
         }
+
+        // Listen for internal command requests from InputSystem
+        this.eventBus.on('CMD_REQUESTED', ({command, payload}) => {
+            this.dispatch(command, payload);
+        });
+
         // --- 4. Initialize System ---
         this._initSystem();
         this._setupEventBridge();
@@ -86,7 +94,7 @@ export class DAGWidget {
         viewport.append("g").attr("class", "label-layer");
         viewport.append("g").attr("class", "node-layer");
 
-        Grid.render(viewport.select(".grid-layer"), CONFIG.canvas.width, CONFIG.canvas.height);
+        Grid.render(viewport.select(".grid-layer"), 50000);
 
         this.zoomBehavior = d3.zoom()
             .scaleExtent([CONFIG.zoom.min, CONFIG.zoom.max])
@@ -130,7 +138,7 @@ export class DAGWidget {
         
         // Pass dependencies to the renderer module
         initRenderer(this.svg, this.store, this.registry, this.eventBus);
-        this.addNodeHelperSystem.listen();
+        //this.addNodeHelperSystem.listen();
         
         startRenderLoop();
         requestAnimationFrame(() => {
@@ -153,6 +161,36 @@ export class DAGWidget {
             x: (clientX - transform.x) / transform.k,
             y: (clientY - transform.y) / transform.k
         };
+    }
+
+    fitToScreen() {
+        // Calculate Bounds
+        if (this.store.nodes.length === 0) return;
+        
+        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+        this.store.nodes.forEach(n => {
+            minX = Math.min(minX, n.position.x); 
+            minY = Math.min(minY, n.position.y);
+            maxX = Math.max(maxX, n.position.x + (n.width || 100));
+            maxY = Math.max(maxY, n.position.y + (n.height || 50));
+        });
+
+        const bounds = { minX, minY, maxX, maxY };
+        
+        // Apply Zoom
+        const svg = this.svg;
+        const width = this.container.clientWidth; // Use container dimensions
+        const height = this.container.clientHeight;
+        const dx = bounds.maxX - bounds.minX;
+        const dy = bounds.maxY - bounds.minY;
+        const x = (bounds.minX + bounds.maxX) / 2;
+        const y = (bounds.minY + bounds.maxY) / 2;
+        
+        const scale = Math.max(0.1, Math.min(4, 0.9 / Math.max(dx / width, dy / height)));
+        const translate = [width / 2 - scale * x, height / 2 - scale * y];
+        
+        svg.transition().duration(750)
+           .call(this.zoomBehavior.transform, d3.zoomIdentity.translate(translate[0], translate[1]).scale(scale));
     }
 
     dispatch(commandName, payload = {}) {
@@ -197,7 +235,7 @@ export class DAGWidget {
             case 'zoom_in': this._zoomCall(1.3); break;
             case 'zoom_out': this._zoomCall(0.7); break;
             case 'zoom_reset': this._zoomReset(); break;
-            case 'zoom_fit': this.uiController.fitToScreen(); break;
+            case 'zoom_fit': this.fitToScreen(); break;
             case 'undo': this.store.undo(); break;
             case 'redo': this.store.redo(); break;
             case 'export':
@@ -212,6 +250,29 @@ export class DAGWidget {
                         .call(window.zoomBehavior.transform, this.state.transform);
                 }
                 break;
+            case 'open_connection_menu':
+                // Delegate UI logic to controller to keep Widget clean
+                this._showNodeCreationMenu(
+                    payload.clientX, 
+                    payload.clientY, 
+                    payload.sourceHandlerId
+                );
+                break;
+            case 'spawn_node_connected':
+                const { type, x, y, sourceHandlerId } = payload;
+                const newNode = this.store.addNode(type, x, y);
+                if (newNode && sourceHandlerId) {
+                    // Auto-connect to the first target handler of the new node
+                    const def = this.registry.getNodeDefinition(type);
+                    if (def && def.hasTargetHandlers()) {
+                         // Find the ID of the first handler in the new node instance
+                         const targetHandler = newNode.handlers.find(h => h.role === 'target');
+                         if(targetHandler) {
+                             this.store.addLink(sourceHandlerId, targetHandler.id);
+                         }
+                    }
+                }
+                break;
             default: console.warn(`[DAGWidget] Unknown command: ${commandName}`);
         }
     }
@@ -219,6 +280,35 @@ export class DAGWidget {
     subscribe(callback) {
         this.subscribers.add(callback);
         return () => this.subscribers.delete(callback);
+    }
+
+    _showNodeCreationMenu(clientX, clientY, sourceHandlerId = null) {
+        const nodeTypes = this.registry.getNodeTypes().filter(t => t !== 'base');
+        
+        const menuItems = nodeTypes.map(type => {
+            return {
+                label: type.charAt(0).toUpperCase() + type.slice(1),
+                icon: getStrokeIcon('addNode', 16), 
+                callback: () => {
+                    const transform = this.store.transform;
+                    const graphX = (clientX - transform.x) / transform.k;
+                    const graphY = (clientY - transform.y) / transform.k;
+
+                    if (sourceHandlerId) {
+                        this.dispatch('spawn_node_connected', { 
+                            type, 
+                            x: graphX + 50, // Slight offset for visual flow
+                            y: graphY - 20, 
+                            sourceHandlerId 
+                        });
+                    } else {
+                        this.store.addNode(type, graphX, graphY);
+                    }
+                }
+            };
+        });
+
+        showCustomMenu(clientX, clientY, menuItems);
     }
     _setupEventBridge() {
         const internalEvents = ['NODE_CREATED', 'NODE_UPDATED', 'NODE_REMOVED', 'NODE_MOVED', 'CONNECTION_CREATED', 'CONNECTION_UPDATED', 'CONNECTION_REMOVED', 'SELECTION_CHANGED', 'HISTORY_CHANGED'];

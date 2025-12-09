@@ -17,7 +17,7 @@ document.addEventListener('DOMContentLoaded', () => {
     viewport.append("g").attr("class", "node-layer");
     
 //    Grid.render(viewport.select(".grid-layer"), CONFIG.canvas.width, CONFIG.canvas.height);
-    Grid.render(viewport.select(".grid-layer"), 20000, 20000);
+    Grid.render(viewport.select(".grid-layer"), 20000);
     
     const zoom = d3.zoom().scaleExtent([0.2, 4]).on("zoom", ({transform}) => {
         viewport.attr("transform", transform);
