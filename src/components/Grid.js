@@ -1,5 +1,5 @@
 // src/Grid.js
-import { CONFIG } from './config.js';
+import { CONFIG } from '../core/config.js';
 
 export class Grid {
     static render(selection, size = 50000) { 

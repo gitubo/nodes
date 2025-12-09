@@ -1,12 +1,12 @@
-import { StartNodeDefinition } from './nodes/StartNode.js';
-import { TaskNodeDefinition } from './nodes/TaskNode.js';
-import { EndNodeDefinition } from './nodes/EndNode.js';
-import { NodeDefinition } from './nodes/NodeDefinition.js';
-import { SwitchNodeDefinition } from './nodes/SwitchNode.js';
-import { ServiceNodeDefinition } from './nodes/ServiceNode.js';
-import { SourceHandlerDefinition } from './handlers/SourceHandler.js';
-import { TargetVerticalHandlerDefinition } from './handlers/TargetVerticalHandler.js';
-import { TargetHorizontalHandlerDefinition } from './handlers/TargetHorizontalHandler.js';
+import { StartNodeDefinition } from '../nodes/StartNode.js';
+import { TaskNodeDefinition } from '../nodes/TaskNode.js';
+import { EndNodeDefinition } from '../nodes/EndNode.js';
+import { NodeDefinition } from '../nodes/NodeDefinition.js';
+import { SwitchNodeDefinition } from '../nodes/SwitchNode.js';
+import { ServiceNodeDefinition } from '../nodes/ServiceNode.js';
+import { SourceHandlerDefinition } from '../handlers/SourceHandler.js';
+import { TargetVerticalHandlerDefinition } from '../handlers/TargetVerticalHandler.js';
+import { TargetHorizontalHandlerDefinition } from '../handlers/TargetHorizontalHandler.js';
 
 export class Registry {
     constructor() {

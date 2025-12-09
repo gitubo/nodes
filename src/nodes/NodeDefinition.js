@@ -1,5 +1,5 @@
 // src/nodes/NodeDefinition.js
-import { CONFIG } from '../config.js';
+import { CONFIG } from '../core/config.js';
 
 export const NODE_ROLES = {
     DATA: 'Data',

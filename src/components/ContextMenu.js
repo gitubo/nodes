@@ -18,6 +18,12 @@ export function setupNodeContextMenu(selection) {
     });
 }
 
+export function showNoteContextMenu(event, data, eventBus, store) {
+    event.preventDefault(); 
+    event.stopPropagation();
+    showContextMenu(event, 'note', data, eventBus, store);
+}
+
 export function showCustomMenu(x, y, items, options = {}) {
     document.querySelectorAll('.context-menu-html').forEach(e => e.remove());
 
@@ -82,11 +88,13 @@ function showContextMenu(event, type, data, eventBus, store) {
     const actions = [];
     
     if (type === 'link') {
-        if (data.label) {
+        if (data.label && data.label.text && data.label.text.length > 0) {
             actions.push({
                 icon: 'labelDelete', label: 'Remove Label',
                 callback: () => { 
-                    store.updateLink(data.id, { label: undefined }); 
+                    store.updateLink(data.id, { 
+                        label: { text: undefined, offset: undefined, offsetX: undefined, offsetY: undefined }  
+                    }); 
                     store.deselect();
                 }
             });
@@ -132,6 +140,23 @@ function showContextMenu(event, type, data, eventBus, store) {
                  const val = prompt("Handler Label:", data.label);
                  if(val) { data.label = val; store.selectObject(null, null); }
              }
+        });
+    }
+    else if (type === 'note') {
+        // 3. Define Note Actions
+        actions.push({ 
+            icon: 'settings', 
+            label: 'Edit', 
+            callback: () => {
+                store.selectObject(type, data);
+                if (eventBus) eventBus.emit('EDIT_PROPERTIES', { type, data });
+            }
+        });
+        actions.push({ 
+            icon: 'delete', 
+            label: 'Delete', 
+            variant: 'danger', 
+            callback: () => store.removeNote(data.id) 
         });
     }
 

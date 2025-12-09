@@ -1,5 +1,5 @@
 // src/NodeRenderer.js
-import { CONFIG } from './config.js';
+import { CONFIG } from '../core/config.js';
 
 export class NodeRenderer {
     constructor(renderCallback, registry, store) {

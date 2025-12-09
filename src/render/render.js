@@ -136,8 +136,8 @@ function renderLinks(viewport) {
     let layer = viewport.select("g.link-layer");
     if (layer.empty()) layer = viewport.append("g").attr("class", "link-layer");
     
-    renderGhost();
-
+    renderGhost(); // existing
+    
     layer.selectAll("g.link-group")
         .data(store.links, d => d.id)
         .join(
@@ -146,17 +146,29 @@ function renderLinks(viewport) {
                     .attr("class", "link-group")
                     .attr("data-id", d => d.id);
                 
+                // Hit area (invisible, thick)
                 g.append("path").attr("class", "link-hitarea")
                     .style("stroke", "transparent").style("stroke-width", 15).style("fill", "none")
-                   .attr("d", d => calculatePath(d, store.state.nodes, registry));
-              
+                    .attr("d", d => calculatePath(d, store.state.nodes, registry));
+                
+                // Visual Link
                 g.append("path").attr("class", "link")
-                   .attr("d", d => calculatePath(d, store.state.nodes, registry));
+                    .attr("d", d => calculatePath(d, store.state.nodes, registry))
+                    // Apply Dynamic Styles
+                    .style("stroke", d => d.style?.stroke || 'var(--dim-gray)')
+                    .style("stroke-width", d => d.style?.strokeWidth || 2);
+
                  return g;
             },
             update => {
                 update.attr("data-id", d => d.id);
-                update.select("path.link").attr("d", d => calculatePath(d, store.state.nodes, registry));
+                const linkPath = update.select("path.link");
+                
+                linkPath.attr("d", d => calculatePath(d, store.state.nodes, registry))
+                    // Update Dynamic Styles
+                    .style("stroke", d => d.style?.stroke || 'var(--dim-gray)')
+                    .style("stroke-width", d => d.style?.strokeWidth || 2);
+                    
                 update.select("path.link-hitarea").attr("d", d => calculatePath(d, store.state.nodes, registry));
                 return update;
             },
@@ -167,7 +179,11 @@ function renderLinks(viewport) {
 function renderLinkLabels(viewport) {
     let layer = viewport.select("g.label-layer");
     if (layer.empty()) layer = viewport.append("g").attr("class", "label-layer");
-    const labeledLinks = store.links.filter(l => l.label);
+    const labeledLinks = store.links.filter(l => 
+        l.label && 
+        typeof l.label.text === 'string' && 
+        l.label.text.trim() !== ''
+    );
     
     layer.selectAll("g.link-label-group")
         .data(labeledLinks, d => d.id)
@@ -189,14 +205,18 @@ function renderLinkLabels(viewport) {
         )
         .each(function(d) {
             const g = d3.select(this);
-            const text = g.select("text").text(d.label.text);
+            const text = g.select("text")
+                .text(d.label.text)
+                .style("fill", d.label.color || '#606265')
+                .style("font-size", (d.label.fontSize || 20) + "px");
             const bbox = text.node().getBBox();
             const pad = 6;
             g.select("rect")
                 .attr("x", bbox.x - pad)
                 .attr("y", bbox.y - pad)
                 .attr("width", bbox.width + pad*2)
-                .attr("height", bbox.height + pad*2);
+                .attr("height", bbox.height + pad*2)
+                .style("fill", d.label.bgColor || '#f8fbff');
             const pos = calculatePositionAlongPath(d, d.label.offset || 0.5, store.state.nodes, registry);
             const x = pos.x + (d.label.offsetX || 0);
             const y = pos.y + (d.label.offsetY || 0);

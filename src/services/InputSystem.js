@@ -1,7 +1,7 @@
 // /src/InputSystem.js
-import { snapToGrid } from './config.js';
-import { startInlineEditing } from './InlineEditor.js';
-import { findClosestTOnPath } from './geometry.js';
+import { snapToGrid } from '../core/config.js';
+import { startInlineEditing } from '../components/InlineEditor.js';
+import { findClosestTOnPath } from '../render/geometry.js';
 
 export class InputSystem {
     constructor(svgElement, store, eventBus, registry) {
@@ -280,22 +280,40 @@ export class InputSystem {
         // FIX 4: Check for .link-group to support clicking on the stroke or the hitarea
         const linkGroup = target.closest('.link-group');
         const handlerElement = target.closest('.handler-g');
+        const noteElement = target.closest('.note'); // 1. Detect Note
 
         if (handlerElement) {
             event.preventDefault();
             event.stopPropagation();
             const d = d3.select(handlerElement).datum();
-            import('./ContextMenu.js').then(m => m.showHandlerContextMenu(event, d, this.eventBus, this.store));
+            import('../components/ContextMenu.js').then(m => m.showHandlerContextMenu(event, d, this.eventBus, this.store));
         } else if (linkGroup) {
             event.preventDefault(); 
             event.stopPropagation();
             const d = d3.select(linkGroup).datum();
-            import('./ContextMenu.js').then(m => m.showLinkContextMenu(event, d, this.eventBus, this.store));
+            import('../components/ContextMenu.js').then(m => m.showLinkContextMenu(event, d, this.eventBus, this.store));
         } else if (nodeElement) {
             event.preventDefault(); 
             event.stopPropagation();
             const d = d3.select(nodeElement).datum();
-            import('./ContextMenu.js').then(m => m.showNodeContextMenu(event, d, this.eventBus, this.store));
+            import('../components/ContextMenu.js').then(m => m.showNodeContextMenu(event, d, this.eventBus, this.store));
+        } else if (noteElement) { 
+            // 2. Handle Note Context Menu
+            event.preventDefault(); 
+            event.stopPropagation();
+            
+            // Notes are HTML elements; we need to find the data object using the ID
+            const noteId = noteElement.id; 
+            const noteData = this.store.state.notes.find(n => n.id === noteId);
+
+            if (noteData) {
+                 import('../components/ContextMenu.js').then(m => {
+                     // Ensure showNoteContextMenu exists (see step 5)
+                     if (m.showNoteContextMenu) {
+                         m.showNoteContextMenu(event, noteData, this.eventBus, this.store);
+                     }
+                 });
+            }
         }
     }
 }

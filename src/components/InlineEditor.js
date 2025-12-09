@@ -1,6 +1,3 @@
-//import { store } from './state.js';
-//import { EventBus } from './EventBus.js';
-
 /**
  * Spawns an input box over an SVG element to edit text inline.
  * @param {Event} event - The mouse event (dblclick or click)

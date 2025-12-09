@@ -33,9 +33,9 @@ export const CONFIG = {
         largeBorderRadius: MODULE_8,
         labelTopMargin: MODULE_4,
         noteTopMargin: MODULE_3,
-        iconSize: MODULE_8,
-        iconMargin: MODULE_2,
-        iconPadding: MODULE,
+        iconSize: 52, //MODULE_8
+        iconMargin: 20, //MODULE_2
+        iconPadding: MODULE_0_5, //MODULE
         handlerSeparator: MODULE_3
     },
     

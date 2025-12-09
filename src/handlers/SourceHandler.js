@@ -1,6 +1,6 @@
 // src/handlers/SourceHandler.js
 import { HandlerDefinition } from './HandlerDefinition.js';
-import { CONFIG } from '../config.js';
+import { CONFIG } from '../core/config.js';
 
 export class SourceHandlerDefinition extends HandlerDefinition {
     constructor(x, y, label, direction='right') {
@@ -86,7 +86,7 @@ export class SourceHandlerDefinition extends HandlerDefinition {
                     .attr("cy", cy)
                     .attr("r", radius)
                     .on("contextmenu", (event, d) => {
-                        import('../ContextMenu.js').then(m => m.showHandlerContextMenu(event, d));
+                        import('../components/ContextMenu.js').then(m => m.showHandlerContextMenu(event, d));
                     }),
                 update => update.attr("r", radius)
             );

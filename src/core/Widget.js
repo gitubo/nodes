@@ -1,14 +1,15 @@
 import { Store } from './state.js';
-import { render, initRenderer, startRenderLoop } from './render.js';
-import { Grid } from './Grid.js';
+import { initRenderer, startRenderLoop } from '../render/render.js';
+import { Grid } from '../components/Grid.js';
 import { EventBus } from './EventBus.js'; 
 import { CONFIG } from './config.js';
-import { UIController } from './UIController.js';
-import { SerializationService } from './SerializationService.js';
+import { UIController } from '../components/UIController.js';
+import { SerializationService } from '../services/SerializationService.js';
 import { Registry, registerDefaultDefinitions } from './Registry.js'; 
-import { InputSystem } from './InputSystem.js';
-import { showCustomMenu } from './ContextMenu.js';
-import { getStrokeIcon } from './Icons.js';
+import { InputSystem } from '../services/InputSystem.js';
+import { showCustomMenu } from '../components/ContextMenu.js';
+import { getStrokeIcon } from '../components/Icons.js';
+import { Note } from '../components/Note.js';
 
 export class DAGWidget {
     constructor(containerSelector, config = {}) {
@@ -86,11 +87,16 @@ export class DAGWidget {
         `);
         
         const viewport = svg.append("g").attr("class", "viewport");
-        viewport.append("g").attr("class", "grid-layer");
-        viewport.append("g").attr("class", "helper-layer");
-        viewport.append("g").attr("class", "link-layer");
-        viewport.append("g").attr("class", "label-layer");
-        viewport.append("g").attr("class", "node-layer");
+        
+        // Define Layers Object
+        this.layers = {};
+        
+        // The order of appending here defines the Z-index (last one is on top)
+        this.layers.grid = viewport.append("g").attr("class", "grid-layer").node();
+        this.layers.notes = viewport.append("g").attr("class", "note-layer").node();
+        this.layers.links = viewport.append("g").attr("class", "link-layer").node();
+        this.layers.labels = viewport.append("g").attr("class", "label-layer").node(); 
+        this.layers.nodes = viewport.append("g").attr("class", "node-layer").node(); 
 
         Grid.render(viewport.select(".grid-layer"), 50000);
 
@@ -141,6 +147,15 @@ export class DAGWidget {
         startRenderLoop();
         requestAnimationFrame(() => {
             this.eventBus.emit('STATE_LOADED', this.state);
+        });
+
+        this.eventBus.on('NOTE_CREATED', (noteData) => {
+            new Note(noteData.id, noteData, this);
+        });
+        
+        this.eventBus.on('NOTE_REMOVED', (noteId) => {
+             const el = document.getElementById(noteId);
+             if(el) el.closest('foreignObject').remove(); // Remove the wrapper
         });
     }
 
@@ -218,6 +233,8 @@ export class DAGWidget {
                         return { type, role, label };
                     })
                     .filter(def => def !== null); 
+            case 'get_object_detail':
+                return payload.id ? this.store.getObjectById(payload.id) : null;
             case 'get_node_icon_path_data':
                 const Def = this.registry.getNodeDefinition(payload.type);
                 return Def ? Def.getIconPath() : '';
@@ -270,6 +287,11 @@ export class DAGWidget {
                          }
                     }
                 }
+                break;
+            case 'create_note':
+                return this.store.addNote(payload.x, payload.y);
+            case 'delete_note':
+                this.store.removeNote(payload.noteId);
                 break;
             default: console.warn(`[DAGWidget] Unknown command: ${commandName}`);
         }

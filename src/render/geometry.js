@@ -1,5 +1,5 @@
 // src/geometry.js
-import { CONFIG } from './config.js';
+import { CONFIG } from '../core/config.js';
 
 /**
  * Find the global position of a handler by its ID

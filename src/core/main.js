@@ -1,7 +1,7 @@
 import { store } from './state.js';
-import { render, initRenderer } from './render.js';
-import { Grid } from './Grid.js';
-import { uiController } from './UIController.js';
+import { render, initRenderer } from '../render/render.js';
+import { Grid } from '../components/Grid.js';
+import { uiController } from '../components/UIController.js';
 
 document.addEventListener('DOMContentLoaded', () => {
     store.initializeWithDefaults();

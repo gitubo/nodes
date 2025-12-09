@@ -1,6 +1,6 @@
 // nodes/TaskNode.js
 import { NodeDefinition, NODE_ROLES } from './NodeDefinition.js';
-import { CONFIG } from '../config.js'; 
+import { CONFIG } from '../core/config.js'; 
 import { TargetHorizontalHandlerDefinition } from '../handlers/TargetHorizontalHandler.js';
 
 export class ServiceNodeDefinition extends NodeDefinition {

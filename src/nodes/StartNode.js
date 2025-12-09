@@ -1,6 +1,6 @@
 // nodes/StartNode.js
 import { NodeDefinition, NODE_ROLES } from './NodeDefinition.js';
-import { CONFIG } from '../config.js';
+import { CONFIG } from '../core/config.js';
 import { SourceHandlerDefinition } from '../handlers/SourceHandler.js';
 
 export class StartNodeDefinition extends NodeDefinition {

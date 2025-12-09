@@ -1,6 +1,6 @@
-import { store } from './state.js';
-import { updateLinksOnly } from './render.js';
-import { eventBus } from './EventBus.js';
+import { store } from '../core/state.js';
+import { updateLinksOnly } from '../render/render.js';
+import { eventBus } from '../core/EventBus.js';
 
 class LinkInteractionManager {
     constructor() {

@@ -1,6 +1,6 @@
 // nodes/EndNode.js
 import { NodeDefinition, NODE_ROLES } from './NodeDefinition.js';
-import { CONFIG } from '../config.js';
+import { CONFIG } from '../core/config.js';
 import { TargetVerticalHandlerDefinition } from '../handlers/TargetVerticalHandler.js';
 
 export class EndNodeDefinition extends NodeDefinition {

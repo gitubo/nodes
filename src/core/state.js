@@ -1,6 +1,6 @@
 // src/state.js
 import { snapToGrid } from './config.js';
-import { HistoryManager } from './HistoryManager.js';
+import { HistoryManager } from '../services/HistoryManager.js';
 
 const generateId = () => crypto.randomUUID();
 
@@ -13,6 +13,7 @@ export class Store {
         this.state = {
             nodes: [],
             links: [],
+            notes: [],
             transform: d3.zoomIdentity,
             ui: {
                 ghostLink: null,
@@ -134,7 +135,8 @@ export class Store {
             target: targetInfo.nodeId,
             sourceHandlerId,
             targetHandlerId,
-            label: ''
+            label: { text: '', color: '#606265', bgColor: '#f8fbff', fontSize: 12 },
+            style: { stroke: '#606265', strokeWidth: 2 } 
         };
         this.state.links.push(link);
         this._rebuildCache();
@@ -189,16 +191,14 @@ export class Store {
             });
 
             this.eventBus.emit('STATE_UPDATED');
-        } else if (node) {
-            // Even if position didn't effectively change (e.g. snapped back), 
-            // we emit to ensure drag state is cleared if listeners depend on it,
-            // but we adhere to the new payload format.
+        } 
+        /*else if (node) {
             this.eventBus.emit('NODE_MOVED', {
                 id: node.id,
                 previous: initialPos,
                 current: node.position
             });
-        }
+        }*/
     }
 
     updateNode(id, changes) {
@@ -272,12 +272,63 @@ export class Store {
         }
     }
 
-    loadState({ nodes, links, viewport={} }) {
+    addNote(x, y, text="New Note") {
+        this._saveHistory();
+        const note = {
+            id: crypto.randomUUID(),
+            x, y,
+            width: 160, height: 100,
+            text,
+            style: { backgroundColor: "#fff9c4", fontSize: "14px", color: "#333" }
+        };
+        this.state.notes.push(note);
+        this.eventBus.emit('NOTE_CREATED', note);
+        return note;
+    }
+
+    removeNote(id) {
+        this._saveHistory();
+        this.state.notes = this.state.notes.filter(n => n.id !== id);
+        this.eventBus.emit('NOTE_REMOVED', id);
+    }
+
+    updateNote(id, changes) {
+        // No history save for high-freq drag, usually handling by drag end
+        const note = this.state.notes.find(n => n.id === id);
+        if(note) {
+            Object.assign(note, changes);
+            // Optional: emit NOTE_UPDATED if you want to sync multiple clients
+        }
+    }
+
+    getObjectById(id) {
+        // Search Nodes
+        const node = this.state.nodes.find(n => n.id === id);
+        if (node) return node;
+
+        // Search Links
+        const link = this.state.links.find(l => l.id === id);
+        if (link) {
+            // Ensure link has type property for the panel title logic
+            return { ...link, type: 'link' }; 
+        }
+
+        // Search Notes
+        const note = this.state.notes.find(n => n.id === id);
+        if (note) {
+             return { ...note, type: 'note' };
+        }
+
+        return null;
+    }
+
+    loadState({ nodes, links, notes, viewport={} }) {
     
         this.state = {
             ...this.state,
             nodes: nodes,
-            links: links
+            links: links,
+            notes: notes || []
         };
     
         if(
@@ -301,7 +352,12 @@ export class Store {
     }
     
     initializeWithDefaults() {
-        const n1 = this.addNode('start', 128, 0);
-        const n6 = this.addNode('end', 1504, 0);
+        const n1 = this.addNode('start', 96, 224);
+        const n2 = this.addNode('task', 480, 416);
+        const n3 = this.addNode('service', 736, 608);
+        const n4 = this.addNode('end', 1056, 416);
+        this.addLink(n1.getHandlers()[0].id, n2.getHandlers()[0].id, false);
+        this.addLink(n2.getHandlers()[1].id, n3.getHandlers()[0].id, false);
+        this.addLink(n2.getHandlers()[1].id, n4.getHandlers()[0].id, false);
     }
 }

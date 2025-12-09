@@ -167,7 +167,8 @@ body {
     border-bottom: 1px solid #eee;
     flex-shrink: 0;
     background-color: var(--baltic-blue); 
-    border-radius: 12px;
+    border-top-left-radius: 12px;
+    border-top-right-radius: 12px;
 }
 
 .panel-title {
