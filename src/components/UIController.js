@@ -21,37 +21,32 @@ export class UIController {
         this.createZoomPanel();
         this.propertiesPanel = new PropertiesPanel(document.body, this.eventBus, this.store);
 
-        // 2. Listen for external requests (e.g., from Context Menu)
+        // 2. Listen for external requests (e.g., from Context Menu "Edit" button)
         this.eventBus.on('SHOW_PROPERTIES_PANEL', (payload) => {
             const { type, id } = payload;
-            if (type && id) this.propertiesPanel.open(type, id);
+            if (type && id) this.propertiesPanel.open({ type, id }); // Pass as object
         });
 
         // 3. Listen for "Edit" actions (Legacy support for context menu)
         this.eventBus.on('EDIT_PROPERTIES', (payload) => {
              if (payload.data && payload.data.id) {
-                 this.propertiesPanel.open(payload.type, payload.data.id);
+                 this.propertiesPanel.open({ type: payload.type, id: payload.data.id });
              }
         });
-        
-        // 4. FIX: Handle Selection Changes
+
+        // 4. FIX: Handle Selection Changes (Do NOT open panel automatically)
         this.eventBus.on('SELECTION_CHANGED', (payload) => {
             if (!payload || !payload.id) {
-                // Deselection: Hide the panel
+                // Deselection: Always hide the panel
                 this.propertiesPanel.hide(); 
             } 
-            
-            /*else {
-                // Selection: Update the panel
-                // We use the new .open() API which takes (type, id)
-                this.propertiesPanel.open(payload.type, payload.id);
-            }*/
+            // Note: We removed the 'else { this.propertiesPanel.open(...) }' block 
+            // so simple selection does not trigger the UI.
         });
 
-        //        this.createPropertiesPanel();
         this.attachEventListeners();
-        
-        // Listen for history changes to update button states (opacity/disabled)
+
+        // Listen for history changes to update button states
         const updateHistoryButtons = (status) => {
             const undoBtn = document.querySelector('[data-action="undo"]');
             const redoBtn = document.querySelector('[data-action="redo"]');
@@ -65,18 +60,15 @@ export class UIController {
                 redoBtn.style.pointerEvents = status.canRedo ? 'auto' : 'none';
             }
         };
-
         this.eventBus.on('HISTORY_CHANGED', updateHistoryButtons);
 
-        // 3. FIX: Immediate State Check (Force sync on init)
-        // Check if store has history capability and update immediately
+        // Check initial history state
         if (this.store.history) {
             updateHistoryButtons({
                 canUndo: this.store.history.canUndo(),
                 canRedo: this.store.history.canRedo()
             });
         }
-
     }
 
     createZoomPanel() {
@@ -117,8 +109,8 @@ export class UIController {
             const svg = d3.select('svg'); 
             
             switch(action) {
-                case 'undo': this.store.undo(); break;
-                case 'redo': this.store.redo(); break;
+                case 'undo': this.store.history.undo(); break;
+                case 'redo': this.store.history.redo(); break;
                 case 'zoom-in': svg.transition().call(window.zoomBehavior.scaleBy, 1.3); break;
                 case 'zoom-out': svg.transition().call(window.zoomBehavior.scaleBy, 0.7); break;
                 case 'zoom-reset': svg.transition().call(window.zoomBehavior.transform, d3.zoomIdentity); break;

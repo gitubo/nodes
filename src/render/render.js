@@ -29,17 +29,13 @@ export function initRenderer(_svg, _store, _registry, _eventBus) {
         eventBus.on('CONNECTION_REMOVED', () => isDirty = true);
         eventBus.on('SELECTION_CHANGED', () => isDirty = true);
         eventBus.on('STATE_LOADED', () => isDirty = true);
-        eventBus.on('GHOST_LINK_UPDATED', () => isGhostDirty = true);
-
+        eventBus.on('GHOST_CONNECTION_UPDATED', () => isGhostDirty = true);
         eventBus.on('NODE_MOVED_HIGH_FREQ', (node) => {
             d3.select(`.node[data-id="${node.id}"]`)
                 .attr("transform", `translate(${node.position.x}, ${node.position.y})`);
             updateLinksOnly(node.id);
         });
-
-        eventBus.on('LABEL_DRAGGED', (linkId) => {
-            updateLabelVisuals(linkId);
-        });
+        eventBus.on('LABEL_DRAGGED', (linkId) => { updateLabelVisuals(linkId); });
     }
 }
 
@@ -47,17 +43,14 @@ function updateLabelVisuals(linkId) {
     const link = store.getLink(linkId);
     if (!link || !link.label) return;
 
-    // Select only the specific label group
     const labelGroup = svg.select(`.link-label-group[data-id="${link.id}"]`);
     if (labelGroup.empty()) return;
 
-    // Calculate only the new position (Geometry only, no DOM reads)
-    const pos = calculatePositionAlongPath(link, link.label.offset || 0.5, store.state.nodes, registry);
-    const x = pos.x + (link.label.offsetX || 0);
-    const y = pos.y + (link.label.offsetY || 0);
-
-    // Direct DOM update
-    labelGroup.attr("transform", `translate(${x}, ${y})`);
+    // Use ONLY the offset float. Default to 0.5 (middle) if undefined.
+    const pos = calculatePositionAlongPath(link, link.label.offset ?? 0.5, store.state.nodes, registry);
+    
+    // No offsetX/Y addition here
+    labelGroup.attr("transform", `translate(${pos.x}, ${pos.y})`);
 }
 
 export function startRenderLoop() {
@@ -78,14 +71,25 @@ export function startRenderLoop() {
 function renderGhost() {
     if (!svg) return;
     const layer = svg.select("g.link-layer");
-    const ghostData = store.state.ui.ghostLink ? [store.state.ui.ghostLink] : [];
+    
+    // OLD: const ghostData = store.state.ui.ghostLink ? [store.state.ui.ghostLink] : [];
+    // NEW: Access via transient uiState
+    const ghostData = store.uiState.ghostLink ? [store.uiState.ghostLink] : [];
+
     layer.selectAll("path.ghost-link").data(ghostData)
-        .join("path").attr("class", "ghost-link").attr("d", d => calculatePath(d, store.state.nodes, registry));
+        .join("path")
+        .attr("class", "ghost-link")
+        .attr("d", d => calculatePath(d, store.state.nodes, registry));
 }
 
 function updateSelectionStyles() {
     if (!svg) return;
-    const s = store.state.ui.selectedObject;
+    
+    // OLD: const s = store.state.ui.selectedObject;
+    // NEW: Access via the SelectionManager
+    const s = store.selection.getSelected(); 
+    
+    // The rest of the logic remains the same
     svg.selectAll(".node").classed("selected", d => s?.type === 'node' && s.id === d.id);
     svg.selectAll(".link-group").classed("selected", d => s?.type === 'link' && s.id === d.id);
 }
@@ -94,10 +98,11 @@ export function updateLinksOnly(nodeId = null) {
     if (!svg) return;
     const linkLayer = svg.select("g.link-layer");
     const labelLayer = svg.select("g.label-layer");
+    
     let linksToUpdate;
     if (nodeId) {
-        linksToUpdate = store.getLinksForNode(nodeId);
-        if(store.state.ui.ghostLink) linksToUpdate.push(store.state.ui.ghostLink);
+        linksToUpdate = store.getLinksForNode(nodeId); 
+        if(store.uiState.ghostLink) linksToUpdate.push(store.uiState.ghostLink);
     } else {
         linksToUpdate = store.links;
     }
@@ -123,10 +128,8 @@ export function updateLinksOnly(nodeId = null) {
         if (link.label) {
             const labelGroup = labelLayer.select(`.link-label-group[data-id="${link.id}"]`);
             if (!labelGroup.empty()) {
-                const pos = calculatePositionAlongPath(link, link.label.offset || 0.5, store.state.nodes, registry);
-                const x = pos.x + (link.label.offsetX || 0);
-                const y = pos.y + (link.label.offsetY || 0);
-                labelGroup.attr("transform", `translate(${x}, ${y})`);
+                const pos = calculatePositionAlongPath(link, link.label.offset ?? 0.5, store.state.nodes, registry);
+                labelGroup.attr("transform", `translate(${pos.x}, ${pos.y})`);
             }
         }
     });
@@ -217,10 +220,8 @@ function renderLinkLabels(viewport) {
                 .attr("width", bbox.width + pad*2)
                 .attr("height", bbox.height + pad*2)
                 .style("fill", d.label.bgColor || '#f8fbff');
-            const pos = calculatePositionAlongPath(d, d.label.offset || 0.5, store.state.nodes, registry);
-            const x = pos.x + (d.label.offsetX || 0);
-            const y = pos.y + (d.label.offsetY || 0);
-            g.attr("transform", `translate(${x}, ${y})`);
+            const pos = calculatePositionAlongPath(d, d.label.offset ?? 0.5, store.state.nodes, registry);
+            g.attr("transform", `translate(${pos.x}, ${pos.y})`);
         });
 }
 

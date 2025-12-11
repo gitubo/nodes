@@ -33,7 +33,10 @@ export class SwitchNodeDefinition extends NodeDefinition {
 
     getDimensions() {
         const w = this.width;
-        const h = CONFIG.node.handlerSeparator*2*( this.sourceHandlers.length+1);
+        const h = (CONFIG.node.handlerSeparator*3) + 
+                  (CONFIG.node.handlerSeparator*2 )*this.sourceHandlers.length +
+                  CONFIG.node.smallBorderRadius;
+        //const h = CONFIG.node.handlerSeparator*2*( this.sourceHandlers.length+1);
         return { width: w, height: h};
     }
 
@@ -52,15 +55,18 @@ export class SwitchNodeDefinition extends NodeDefinition {
         // Right side (source handlers)
         const handleFootprint = (SourceHandlerDefinition.getDimension(this.sourceHandlers[0]).radius + CONFIG.handler.margin) * 2;
         const handlerCount = Math.max(1, this.sourceHandlers.length);
-        let currentY = CONFIG.node.handlerSeparator-sR;
+        let currentY = CONFIG.node.handlerSeparator*3.5 - CONFIG.handler.margin;
         for(let i=0; i<handlerCount; i++) {
-            currentY += CONFIG.node.handlerSeparator - CONFIG.handler.margin;
             path += ` L ${W},${currentY}`;
             currentY += handleFootprint;
             path += ` A 1,1 0 0 0 ${W},${currentY}`; 
+            currentY += CONFIG.node.handlerSeparator - CONFIG.handler.margin;
             currentY -= CONFIG.handler.margin;
         }
-        const H = CONFIG.node.handlerSeparator*2*( this.sourceHandlers.length+1);
+        //const H = CONFIG.node.handlerSeparator*2*( this.sourceHandlers.length+1);
+        const H = (CONFIG.node.handlerSeparator*3) + 
+                  (CONFIG.node.handlerSeparator*2 )*this.sourceHandlers.length +
+                  CONFIG.node.smallBorderRadius;
         path += ` L ${W},${H-sR} A ${sR},${sR} 0 0 1 ${W-sR},${H}`;
         
         // Bottom

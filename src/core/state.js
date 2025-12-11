@@ -1,363 +1,247 @@
-// src/state.js
-import { snapToGrid } from './config.js';
+import { SelectionManager } from './SelectionManager.js';
 import { HistoryManager } from '../services/HistoryManager.js';
-
-const generateId = () => crypto.randomUUID();
+import { Note } from '../components/Note.js';
 
 export class Store {
     constructor(eventBus, serializationService, registry) {
         this.eventBus = eventBus;
-        this.serializationService = serializationService;
         this.registry = registry;
+        
+        // 1. Separation: Selection Logic isolated
+        this.selection = new SelectionManager(eventBus);
 
+        // 2. Data State (Pure)
         this.state = {
             nodes: [],
             links: [],
             notes: [],
-            transform: d3.zoomIdentity,
-            ui: {
-                ghostLink: null,
-                disconnectingLink: null, 
-                selectedObject: null 
-            },
-            cache: {
-                nodeLinks: new Map() 
-            }
+            transform: { k: 1, x: 0, y: 0 },
         };
 
-        this.lastHistoryStatus = { canUndo: false, canRedo: false };
+        // 3. UI State (Transient, not saved)
+        this.uiState = {
+            ghostLink: null
+        };
 
+        this.cache = { nodeLinks: new Map() };
+
+        // 4. Separation: History Logic isolated
         this.history = new HistoryManager(
             30,
-            (state) => this.serializationService.serialize(state),
-            (data) => this.serializationService.deserialize(data)
+            (state) => serializationService.serialize(state),
+            (data) => serializationService.deserialize(data)
         );
-        this._saveHistory(); 
     }
 
+    // --- Data Accessors ---
     get nodes() { return this.state.nodes; }
     get links() { return this.state.links; }
-    get ui() { return this.state.ui; }
-    get transform() { return this.state.transform; }
-    set transform(val) { this.state.transform = val; }
-
+    get notes() { return this.state.notes; }
+    
     getNode(id) { return this.state.nodes.find(n => n.id === id); }
-    getLink(id) { return this.state.links.find(l => l.id === id); } 
+    getLink(id) { return this.state.links.find(l => l.id === id); }
+    getNote(id) { return this.state.notes.find(n => n.id === id); }
 
-    getLinksForNode(nodeId) {
-        return Array.from(this.state.cache.nodeLinks.get(nodeId) || []);
-    }
-
-    _rebuildCache() {
-        this.state.cache.nodeLinks.clear();
-        this.state.links.forEach(link => {
-            const { source, target } = link;
-            if (!this.state.cache.nodeLinks.has(source)) {
-                this.state.cache.nodeLinks.set(source, new Set());
-            }
-            if (!this.state.cache.nodeLinks.has(target)) {
-                this.state.cache.nodeLinks.set(target, new Set());
-            }
-            this.state.cache.nodeLinks.get(source).add(link);
-            this.state.cache.nodeLinks.get(target).add(link);
-        });
-    }
-
-    _emitHistoryStatus() {
-        const status = {
-            canUndo: this.history.canUndo(),
-            canRedo: this.history.canRedo()
-        };
-
-        // MODIFIED: Only emit if the state actually changed
-        if (status.canUndo !== this.lastHistoryStatus.canUndo || 
-            status.canRedo !== this.lastHistoryStatus.canRedo) {
-            
-            this.lastHistoryStatus = status;
-            this.eventBus.emit('HISTORY_CHANGED', status);
-        }
-    }
-
-    _saveHistory() {
-        this.history.save(this.state); 
-        this._emitHistoryStatus();
-    }
-
-    // --- MUTATORS ---
-
-    addNode(type, x, y, label='', note='', data = {}) {
-        this._saveHistory();
-        const definition = this.registry.getNodeDefinition(type);
-        if (!definition) {
-            console.error(`Node type ${type} not registered.`);
-            return null;
-        }
-
-        const node = new definition(snapToGrid(x), snapToGrid(y), label, note, data);
+    addNode(type, x, y, label='', data={}) {
+        this._snapshot();
+        const Definition = this.registry.getNodeDefinition(type);
+        if (!Definition) return console.error(`Unknown node type: ${type}`);
+        
+        const node = new Definition(x, y, label, '', data);
         this.state.nodes.push(node);
         this.eventBus.emit('NODE_CREATED', node);
-        this.eventBus.emit('STATE_UPDATED');
         return node;
     }
 
     removeNode(nodeId) {
-        this._saveHistory();
+        this._snapshot();         
+        const nodeIndex = this.state.nodes.findIndex(n => n.id === nodeId);
+        if (nodeIndex === -1) return;
+
+        const removedNode = this.state.nodes.splice(nodeIndex, 1)[0];
+        const handlers = removedNode.handlers.map(h => h.id);
+        
         this.state.links = this.state.links.filter(link => 
-            link.source !== nodeId && link.target !== nodeId
+            !handlers.includes(link.sourceHandlerId) && 
+            !handlers.includes(link.targetHandlerId)
         );
-        this.state.nodes = this.state.nodes.filter(n => n.id !== nodeId);
 
-        this._rebuildCache();
+        this._rebuildCache(); 
+        this.selection.deselect(); // Deselect the removed node
         this.eventBus.emit('NODE_REMOVED', nodeId);
-        this.eventBus.emit('STATE_UPDATED');
     }
 
-    addLink(sourceHandlerId, targetHandlerId, saveHistory = true) {
-        if (!sourceHandlerId || !targetHandlerId) {
-             console.error("Cannot add link: Missing source or target IDs.", {sourceHandlerId, targetHandlerId});
-             return null;
-        }
-
-        if (saveHistory) this._saveHistory(); 
-        
-        const sourceInfo = this._findNodeByHandlerId(sourceHandlerId);
-        const targetInfo = this._findNodeByHandlerId(targetHandlerId);
-        
-        if (!sourceInfo || !targetInfo){
-            console.error('Cannot add link: handler does not belong to any node', { sourceHandlerId, targetHandlerId});
-            return null;
-        }
-        
-        const id = generateId();
-        const link = {
-            id,
-            source: sourceInfo.nodeId,
-            target: targetInfo.nodeId,
-            sourceHandlerId,
-            targetHandlerId,
-            label: { text: '', color: '#606265', bgColor: '#f8fbff', fontSize: 12 },
-            style: { stroke: '#606265', strokeWidth: 2 } 
-        };
-        this.state.links.push(link);
-        this._rebuildCache();
-        this.eventBus.emit('CONNECTION_CREATED', link);
-        this.eventBus.emit('STATE_UPDATED');
-        return link;
-    }
-
-    removeLink(linkId, saveHistory = true) {
-        // MODIFIED: Capture link details before removal for the event payload
-        const linkToRemove = this.getLink(linkId);
-        if (!linkToRemove) return;
-
-        if (saveHistory) this._saveHistory();
-        
-        this.state.links = this.state.links.filter(l => l.id !== linkId);
-        this._rebuildCache();
-
-        // MODIFIED: Payload contains full connection info, not just ID
-        this.eventBus.emit('CONNECTION_REMOVED', {
-            id: linkToRemove.id,
-            source: linkToRemove.source,
-            target: linkToRemove.target,
-            sourceHandlerId: linkToRemove.sourceHandlerId,
-            targetHandlerId: linkToRemove.targetHandlerId
-        });
-
-        this.eventBus.emit('STATE_UPDATED');
-    }
-
-    moveNode(nodeId, newX, newY) {
-        const node = this.getNode(nodeId);
+    updateNodePosition(id, x, y) {
+        const node = this.getNode(id);
         if (node) {
-            node.position.x = newX;
-            node.position.y = newY;
+            // Update the position object
+            node.position.x = x;
+            node.position.y = y;
+            
+            // Emit high-frequency event. render.js uses this for immediate link updates.
             this.eventBus.emit('NODE_MOVED_HIGH_FREQ', node);
         }
     }
 
-    updateNodePosition(nodeId, initialPos, finalPos) {
-        const node = this.getNode(nodeId);
-        if (node && (initialPos.x !== finalPos.x || initialPos.y !== finalPos.y)) {
-            this._saveHistory();
-            node.position.x = finalPos.x;
-            node.position.y = finalPos.y;
-            
-            // MODIFIED: Simplified payload { id, previous, current }
-            this.eventBus.emit('NODE_MOVED', {
-                id: node.id,
-                previous: initialPos,
-                current: finalPos
-            });
-
-            this.eventBus.emit('STATE_UPDATED');
-        } 
-        /*else if (node) {
-            this.eventBus.emit('NODE_MOVED', {
-                id: node.id,
-                previous: initialPos,
-                current: node.position
-            });
-        }*/
+    commitNodePosition(id, oldPos, newPos) {
+        this._snapshot(); // Save history only on commit
+        this.eventBus.emit('NODE_MOVED', { id, from: oldPos, to: newPos });
     }
 
-    updateNode(id, changes) {
-        const node = this.getNode(id);
-        if (node) {
-            this._saveHistory();
-            Object.assign(node, changes);
-            this.eventBus.emit('NODE_UPDATED', { id, changes });
-            this.eventBus.emit('STATE_UPDATED');
+    addLink(sourceId, targetId) {
+        this._snapshot();
+        const link = { id: crypto.randomUUID(), sourceHandlerId: sourceId, targetHandlerId: targetId };
+        this.state.links.push(link);
+        this._rebuildCache();
+        this.eventBus.emit('CONNECTION_CREATED', link);
+    }
+
+    updateLink(id, newData) {
+        const link = this.getLink(id); // Assuming getLink(id) exists and retrieves the link object
+        if (!link) {
+            console.warn(`Attempted to update non-existent link with ID: ${id}`);
+            return;
+        }
+
+        this._snapshot(); 
+        Object.assign(link, newData); 
+        this.eventBus.emit('CONNECTION_UPDATED', link);
+        if (newData.sourceHandlerId || newData.targetHandlerId) {
+            this._rebuildCache();
         }
     }
-    
-    updateLink(id, changes) {
-        const link = this.getLink(id);
-        if(link) {
-            this._saveHistory();
-            Object.assign(link, changes);
-            this.eventBus.emit('CONNECTION_UPDATED', { id, changes });
-            this.eventBus.emit('STATE_UPDATED');
-        }
-    }
-    
-    selectObject(type, object) {
-        this.state.ui.selectedObject = { type, id: object.id };
-        this.eventBus.emit('SELECTION_CHANGED', this.state.ui.selectedObject);
-    }
-    
-    deselect() {
-        this.state.ui.selectedObject = null;
-        this.eventBus.emit('SELECTION_CHANGED', null);
-    }
 
-    setGhostLink(ghostData) {
-        this.state.ui.ghostLink = ghostData;
-        this.eventBus.emit('GHOST_LINK_UPDATED', ghostData);
-    }
-
-    setDisconnectingLink(link) {
-        this.state.ui.disconnectingLink = link;
-    }
-
-    _findNodeByHandlerId(handlerId) {
-        for (const node of this.state.nodes) {
-            const handler = node.getHandlers().find(h => h.id === handlerId);
-            if (handler) return { nodeId: node.id, handler };
-        }
-        return null;
-    }
-
-    undo() {
-        if (!this.history.canUndo()) return;
-        const previousStateData = this.history.undo();
-        if (previousStateData) {
-            this.loadState(previousStateData);
-            this.eventBus.emit('STATE_UPDATED');
-            this._emitHistoryStatus();
+    removeLink(linkId) {
+        this._snapshot(); 
+        const initialLength = this.state.links.length;
+        this.state.links = this.state.links.filter(link => link.id !== linkId);
+        if (this.state.links.length < initialLength) {
+            this._rebuildCache(); 
+            this.selection.deselect(); // Deselect the removed link
+            this.eventBus.emit('CONNECTION_REMOVED', linkId);
         } else {
-             console.warn("Undo: Failed or skipped corrupted history element.");
+            console.warn(`Attempted to remove non-existent link with ID: ${linkId}`);
         }
     }
-    
-    redo() {
-        if (!this.history.canRedo()) return;
-        const nextStateData = this.history.redo();
-        if (nextStateData) {
-            this.loadState(nextStateData);
-            this.eventBus.emit('STATE_UPDATED');
-            this._emitHistoryStatus();
-        } else {
-             console.warn("Redo: Failed or skipped corrupted history element.");
+
+    setGhostLink(data) {
+        this.uiState.ghostLink = data;
+        this.eventBus.emit('GHOST_CONNECTION_UPDATED', data);
+    }
+
+    getLinksForNode(nodeId) {
+        return this.cache.nodeLinks.get(nodeId) || []; 
+    }
+
+    updateLinkLabelOffset(linkId, t) {
+        const link = this.getLink(linkId);
+        if (link) {
+            if (!link.label) link.label = {};
+            link.label.offset = Math.max(0, Math.min(1, t));
+            this.eventBus.emit('CONNECTION_MOVED_HIGH_FREQ', link);
+        }
+    }
+
+    commitLinkUpdate(linkId) {
+        const link = this.getLink(linkId);
+        if (link) {
+            this._snapshot(); // Save the new labelOffset
+            // Emit regular event to ensure final render is committed
+            this.eventBus.emit('CONNECTION_UPDATED', link); 
         }
     }
 
     addNote(x, y, text="New Note") {
-        this._saveHistory();
+        this._snapshot();
         const note = {
             id: crypto.randomUUID(),
             x, y,
-            width: 160, height: 100,
+            width: 210, height: 120,
             text,
-            style: { backgroundColor: "#fff9c4", fontSize: "14px", color: "#333" }
+            style: { backgroundColor: "#E6EFFE", fontSize: "20px", color: "#34639E" }
         };
         this.state.notes.push(note);
+        this._rebuildCache(); 
         this.eventBus.emit('NOTE_CREATED', note);
         return note;
     }
 
+    updateNode(id, changes) {
+        const node = this.getNode(id);
+        if (!node) return;
+        this._snapshot(); 
+        Object.assign(node, changes);
+        this.eventBus.emit('NODE_UPDATED', node);
+    }
+
     removeNote(id) {
-        this._saveHistory();
+        this._snapshot();
         this.state.notes = this.state.notes.filter(n => n.id !== id);
+        this._rebuildCache(); 
         this.eventBus.emit('NOTE_REMOVED', id);
     }
 
-    updateNote(id, changes) {
-        // No history save for high-freq drag, usually handling by drag end
-        const note = this.state.notes.find(n => n.id === id);
-        if(note) {
-            Object.assign(note, changes);
-            // Optional: emit NOTE_UPDATED if you want to sync multiple clients
-        }
+    _snapshot() {
+        this.history.save(this.state);
+        this.eventBus.emit('HISTORY_CHANGED', { canUndo: this.history.canUndo(), canRedo: this.history.canRedo() });
     }
 
-    getObjectById(id) {
-        // Search Nodes
-        const node = this.state.nodes.find(n => n.id === id);
-        if (node) return node;
-
-        // Search Links
-        const link = this.state.links.find(l => l.id === id);
-        if (link) {
-            // Ensure link has type property for the panel title logic
-            return { ...link, type: 'link' }; 
+    _getNodeIdFromHandlerId(handlerId) {
+        for (const node of this.state.nodes) {
+            if (node.handlers.some(h => h.id === handlerId)) {
+                return node.id;
+            }
         }
-
-        // Search Notes
-        const note = this.state.notes.find(n => n.id === id);
-        if (note) {
-             return { ...note, type: 'note' };
-        }
-
         return null;
     }
 
-    loadState({ nodes, links, notes, viewport={} }) {
-    
-        this.state = {
-            ...this.state,
-            nodes: nodes,
-            links: links,
-            notes: notes || []
-        };
-    
-        if(
-            viewport !== null && 
-            typeof viewport === 'object' &&
-            typeof viewport.x === 'number' && isFinite(viewport.x) &&
-            typeof viewport.y === 'number' && isFinite(viewport.y) &&
-            typeof viewport.k === 'number' && isFinite(viewport.k) && viewport.k > 0
-        ){
-            const { x, y, k } = viewport;
-            const newTransform = d3.zoomIdentity.translate(x, y).scale(k);
-            this.state = {
-                ...this.state,
-                transform: newTransform,
-            };
-        }
+    _rebuildCache() {
+        this.cache.nodeLinks.clear(); 
 
-        this._rebuildCache();
-        this.eventBus.emit('STATE_LOADED', this.state); 
-        this.deselect();
+        this.state.links.forEach(link => {
+            // Use the helper to resolve handler IDs to node IDs
+            const sourceNodeId = this._getNodeIdFromHandlerId(link.sourceHandlerId);
+            const targetNodeId = this._getNodeIdFromHandlerId(link.targetHandlerId);
+
+            // Helper to add the link to the cache for a given node ID
+            const addLinkToCache = (nodeId, link) => {
+                if (nodeId) {
+                    if (!this.cache.nodeLinks.has(nodeId)) {
+                        this.cache.nodeLinks.set(nodeId, []);
+                    }
+                    // Only add if it's not already in the array (prevents duplication)
+                    if (!this.cache.nodeLinks.get(nodeId).includes(link)) {
+                        this.cache.nodeLinks.get(nodeId).push(link);
+                    }
+                }
+            };
+
+            addLinkToCache(sourceNodeId, link);
+            addLinkToCache(targetNodeId, link);
+        });
     }
-    
-    initializeWithDefaults() {
-        const n1 = this.addNode('start', 96, 224);
-        const n2 = this.addNode('task', 480, 416);
-        const n3 = this.addNode('service', 736, 608);
-        const n4 = this.addNode('end', 1056, 416);
-        this.addLink(n1.getHandlers()[0].id, n2.getHandlers()[0].id, false);
-        this.addLink(n2.getHandlers()[1].id, n3.getHandlers()[0].id, false);
-        this.addLink(n2.getHandlers()[1].id, n4.getHandlers()[0].id, false);
+
+    undo() {
+        const previousState = this.history.undo();
+        if (previousState) {
+            this.loadState(previousState);
+        }
+    }
+
+    redo() {
+        const nextState = this.history.redo();
+        if (nextState) {
+            this.loadState(nextState);
+        }
+    }
+
+    loadState(newState) {
+        this.state = newState;
+        this._rebuildCache(); 
+        this.eventBus.emit('STATE_LOADED', this.state);
+        this.eventBus.emit('HISTORY_CHANGED', { 
+            canUndo: this.history.canUndo(), 
+            canRedo: this.history.canRedo() 
+        });
     }
 }

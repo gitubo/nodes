@@ -37,9 +37,9 @@ class LinkInteractionManager {
                 targetX: mouseX,
                 targetY: mouseY
             };
-            // Call the setter to emit 'GHOST_LINK_UPDATED'
+            // Call the setter to emit 'GHOST_CONNECTION_UPDATED'
             store.setGhostLink(newGhostData); 
-            eventBus.emit('GHOST_LINK_UPDATED', null);
+            eventBus.emit('GHOST_CONNECTION_UPDATED', null);
         }
     }
 

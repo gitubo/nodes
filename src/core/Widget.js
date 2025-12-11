@@ -1,5 +1,5 @@
 import { Store } from './state.js';
-import { initRenderer, startRenderLoop } from '../render/render.js';
+import { initRenderer, startRenderLoop, updateLinksOnly } from '../render/render.js';
 import { Grid } from '../components/Grid.js';
 import { EventBus } from './EventBus.js'; 
 import { CONFIG } from './config.js';
@@ -135,7 +135,6 @@ export class DAGWidget {
     }
 
     _initSystem() {
-        this.store.initializeWithDefaults(); 
         if (this.config.showDefaultUI) {
             this.uiController.initialize();
         }
@@ -145,6 +144,34 @@ export class DAGWidget {
         //this.addNodeHelperSystem.listen();
         
         startRenderLoop();
+
+        if (this.store.nodes.length === 0) {
+            this.loadDemoData();
+        }
+
+        this.eventBus.on('NODE_MOVED_HIGH_FREQ', (node) => {
+            updateLinksOnly(node.id); 
+        });
+        
+        this.eventBus.on('NODE_MOVED', (data) => {
+            updateLinksOnly(data.id); 
+            // updateNodesOnly(data.id);
+        });
+
+        this.eventBus.on('CONNECTION_MOVED_HIGH_FREQ', (link) => {
+            updateLinksOnly(); 
+        });
+
+        // D. Link Property Update (Existing)
+        this.eventBus.on('CONNECTION_UPDATED', (link) => {
+            updateLinksOnly(); 
+        });
+
+        this.eventBus.on('SELECTION_CHANGED', () => { /* ... update selection UI ... */ });
+        this.eventBus.on('GHOST_CONNECTION_UPDATED', () => { 
+            updateLinksOnly(); 
+        });
+
         requestAnimationFrame(() => {
             this.eventBus.emit('STATE_LOADED', this.state);
         });
@@ -157,14 +184,30 @@ export class DAGWidget {
              const el = document.getElementById(noteId);
              if(el) el.closest('foreignObject').remove(); // Remove the wrapper
         });
+
+        this.eventBus.on('CONNECTION_REMOVED', (linkId) => {
+            updateLinksOnly(); 
+        });
     }
 
-    /**
-     * Converts screen/container coordinates (pixels) to internal graph coordinates.
-     * Useful for dropping nodes at specific screen locations (like the center).
-     * @param {number} clientX - X position relative to the container's top-left
-     * @param {number} clientY - Y position relative to the container's top-left
-     */
+    loadDemoData() {
+        const n1 = this.store.addNode('start', 96, 224);
+        const n2 = this.store.addNode('task', 480, 416);
+        const n3 = this.store.addNode('service', 736, 608);
+        const n4 = this.store.addNode('end', 1056, 416);
+
+        if (n1 && n2) {
+            this.store.addLink(n1.handlers[0].id, n2.handlers[0].id);
+        }
+        if (n2 && n3) {
+            this.store.addLink(n2.handlers[1].id, n3.handlers[0].id);
+        }
+        if (n2 && n4) {
+            this.store.addLink(n2.handlers[1].id, n4.handlers[0].id);
+        }
+        this.store.history.reset(); 
+    }
+
     getWidgetCoordinates(clientX, clientY) {
         // 1. Get the current D3 Zoom Transform state
         const transform = d3.zoomTransform(this.svg.node());

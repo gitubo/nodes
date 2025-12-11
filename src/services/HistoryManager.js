@@ -1,100 +1,57 @@
-// src/HistoryManager.js
-
-/**
- * Manages the undo/redo stack using serialized state snapshots.
- */
 export class HistoryManager {
-    constructor(limit = 30, serializeFn, deserializeFn) {
-        this.stack = [];
-        this.current = -1; // Pointer to the current state in the stack
-        this.limit = limit;
+    constructor(maxDepth, serializeFn, deserializeFn) {
+        this.maxDepth = maxDepth;
         this.serialize = serializeFn;
         this.deserialize = deserializeFn;
+        
+        this.historyStack = []; // Stores past states (for Undo)
+        this.redoStack = [];    // Stores future states (for Redo)
     }
 
-    canUndo() {
-        return this.current > 0;
-    }
-    
-    canRedo() {
-        return this.current < this.stack.length - 1;
-    }
+    save(currentState) {
+        // Clear redo stack on new action
+        this.redoStack = []; 
 
-    /**
-     * Saves a new state snapshot. Clears the redo stack.
-     * @param {object} state - The raw state object to save.
-     */
-    save(state) {
-        if (!state || typeof state !== 'object') {
-            return;
-        }
+        // Serialize current state and push to history
+        const serializedState = this.serialize(currentState);
+        this.historyStack.push(serializedState);
 
-        try {
-            // Use the injected serializer
-            const serializedData = this.serialize(state);
-            const serializedState = JSON.stringify(serializedData);
-            
-            this.current++;
-            
-            if (this.current >= this.limit) {
-                this.stack.shift();
-                this.current--;
-            }
-
-            this.stack[this.current] = serializedState;
-            
-            this.stack.splice(this.current + 1);
-        } catch (e) {
-            console.error("History save failed during JSON serialization.", e);
-            this.current--;
+        // Enforce max depth
+        if (this.historyStack.length > this.maxDepth) {
+            this.historyStack.shift(); // Remove oldest item
         }
     }
 
-    /**
-     * Moves pointer backward and returns the previous deserialized state.
-     */
     undo() {
         if (!this.canUndo()) return null;
 
-        this.current--;
-        const stateString = this.stack[this.current];
-        
-        if (!stateString || stateString === "undefined") {
-            console.warn("History corrupted: Skipping invalid state entry on undo.");
-            return this.undo(); 
-        }
-        
-        try {
-            // Use the injected deserializer
-            const data = JSON.parse(stateString);
-            return this.deserialize(data);
-        } catch (e) {
-            console.error("History corrupted: Failed to parse JSON on undo.", e);
-            return null; 
-        }
-    }
+        // 1. Move current state from history to redo stack
+        const currentState = this.historyStack.pop(); 
+        this.redoStack.push(currentState);
 
-    /**
-     * Moves pointer forward and returns the next deserialized state.
-     */
+        // 2. Get previous state
+        const prevState = this.historyStack[this.historyStack.length - 1]; 
+        
+        return this.deserialize(prevState); // Return the deserialized state
+    }
+    
     redo() {
         if (!this.canRedo()) return null;
-        
-        this.current++;
-        const stateString = this.stack[this.current];
-        
-        if (!stateString || stateString === "undefined") {
-             console.warn("History corrupted: Skipping invalid state entry on redo.");
-             return this.redo(); 
-        }
+        const nextState = this.redoStack.pop(); 
+        this.historyStack.push(nextState);
+        return this.deserialize(nextState); // Return the deserialized state
+    }
 
-        try {
-            // Use the injected deserializer
-            const data = JSON.parse(stateString);
-            return this.deserialize(data);
-        } catch (e) {
-            console.error("History corrupted: Failed to parse JSON on redo.", e);
-            return null;
-        }
+    canUndo() {
+        return this.historyStack.length > 1; 
+    }
+
+    canRedo() {
+        return this.redoStack.length > 0;
+    }
+    
+    reset() {
+        this.historyStack = [];
+        this.redoStack = [];
     }
 }

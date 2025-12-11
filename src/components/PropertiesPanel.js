@@ -53,10 +53,21 @@ export class PropertiesPanel {
         this.container.appendChild(this.element);
     }
 
-    open(type, id) {
-        // 1. Find Object
-        const object = this.store.getObjectById(id);
-        if (!object) return;
+    open(selectedObject) {
+        if (!selectedObject) return this.hide();
+
+        const { type, id } = selectedObject;
+        let object = null;
+        if (type === 'node') {
+            object = this.store.getNode(id);
+        } else if (type === 'link') {
+            object = this.store.getLink(id);
+        } else if (type === 'note') {
+            // Assuming you have a getNote(id) method for completeness
+            object = this.store.getNote(id); 
+        }
+        
+        if (!object) return this.hide();
 
         // 2. Select Strategy
         import('./PropertiesStrategies.js').then(module => {
@@ -92,7 +103,7 @@ export class PropertiesPanel {
         this.element.style.display = 'none';
         this.currentStrategy = null;
         this.currentData = null;
-        this.store.deselect();
+        this.store.selection.deselect();
     }
 
     applyChanges() {

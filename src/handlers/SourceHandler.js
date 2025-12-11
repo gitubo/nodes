@@ -63,6 +63,25 @@ export class SourceHandlerDefinition extends HandlerDefinition {
                                 .attr("transform", `translate(${HELPER_CFG.linkLength}, 0) scale(1)`);
                             d3.select(this).select(".helper-box").style("stroke", "var(--dim-gray)").style("fill", "transparent");
                             d3.select(this).select(".helper-plus").style("stroke", "var(--dim-gray)");
+                        })
+                        .on("click", (event, d) => {
+                            event.stopPropagation();
+                            event.preventDefault(); // Prevent zoom/pan issues
+                            
+                            if (state.eventBus) {
+                                // Calculate screen position for the menu
+                                const screenX = event.clientX;
+                                const screenY = event.clientY;
+                                
+                                state.eventBus.emit('CMD_REQUESTED', {
+                                    command: 'open_connection_menu',
+                                    payload: { 
+                                        clientX: screenX, 
+                                        clientY: screenY, 
+                                        sourceHandlerId: d.id 
+                                    }
+                                });
+                            }
                         });
 
                         return g;

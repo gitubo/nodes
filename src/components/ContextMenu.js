@@ -1,4 +1,3 @@
-//import { store } from './state.js';
 import { getIcon } from './Icons.js';
 
 export function showHandlerContextMenu(event, data, eventBus, store) {
@@ -93,9 +92,9 @@ function showContextMenu(event, type, data, eventBus, store) {
                 icon: 'labelDelete', label: 'Remove Label',
                 callback: () => { 
                     store.updateLink(data.id, { 
-                        label: { text: undefined, offset: undefined, offsetX: undefined, offsetY: undefined }  
+                        label: { text: undefined, offset: undefined }  
                     }); 
-                    store.deselect();
+                    store.selection.deselect();
                 }
             });
         } else {
@@ -103,9 +102,9 @@ function showContextMenu(event, type, data, eventBus, store) {
                 icon: 'labelAdd', label: 'Add Label',
                 callback: () => {
                     store.updateLink(data.id, { 
-                        label: { text: 'Label', offset: 0.5, offsetX: 0, offsetY: 0 } 
+                        label: { text: 'Label', offset: 0.5 } 
                     });
-                    store.deselect();
+                    store.selection.deselect();
                 }
             });
         }
@@ -114,7 +113,7 @@ function showContextMenu(event, type, data, eventBus, store) {
         actions.push({
             icon: 'settings', label: 'Edit', 
             callback: () => {
-                store.selectObject(type, data);
+                store.selection.select(data.type, data);
                 if (eventBus) {
                     eventBus.emit('EDIT_PROPERTIES', { type, data }); // Was: EventBus.emit
                 }
@@ -126,7 +125,7 @@ function showContextMenu(event, type, data, eventBus, store) {
     }
     else if (type === 'node') {
         actions.push({ icon: 'settings', label: 'Edit', callback: () => {
-             store.selectObject(type, data);
+             store.selection.select(data.type, data);
              if (eventBus) {
                 eventBus.emit('EDIT_PROPERTIES', { type, data }); // Was: EventBus.emit
              }
@@ -148,7 +147,7 @@ function showContextMenu(event, type, data, eventBus, store) {
             icon: 'settings', 
             label: 'Edit', 
             callback: () => {
-                store.selectObject(type, data);
+                store.selection.select(data.type, data);
                 if (eventBus) eventBus.emit('EDIT_PROPERTIES', { type, data });
             }
         });

@@ -75,7 +75,7 @@ body { width: 100%; height: 100vh; overflow: hidden; font-family: sans-serif; }
     cursor: pointer;
 }
 .ghost-link { fill: none; stroke: var(--dim-gray); stroke-width: 2px; stroke-dasharray: 5,5; pointer-events: none; opacity: 0.6; }
-.link-label-group { cursor: grab; user-select: none; }
+.link-label-group { cursor: grab; user-select: none; pointer-events: all; }
 .link-label-group.dragging { cursor: grabbing; }
 .link-label-bg { fill: var(--platinum); stroke: var(--dim-gray); stroke-width: 1px; rx: 4px; ry: 4px; }
 .link-label-text { font-size: 20px; font-weight: 500; fill: var(--dim-gray); pointer-events: none; }

@@ -1,5 +1,6 @@
 const MODULE = 8;
 const MODULE_0_5 = MODULE / 2; //4
+const MODULE_1_5 = MODULE * 1.5; //12
 const MODULE_2 = MODULE * 2;  //16
 const MODULE_3 = MODULE * 3;  //24
 const MODULE_4 = MODULE * 4;  //32
@@ -32,11 +33,10 @@ export const CONFIG = {
         borderRadius: MODULE_4,
         largeBorderRadius: MODULE_8,
         labelTopMargin: MODULE_4,
-        noteTopMargin: MODULE_3,
-        iconSize: 52, //MODULE_8
-        iconMargin: 20, //MODULE_2
-        iconPadding: MODULE_0_5, //MODULE
-        handlerSeparator: MODULE_3
+        iconSize: MODULE_8,
+        iconMargin: MODULE_2,
+        iconPadding: MODULE_1_5,
+        handlerSeparator: MODULE_4
     },
     
     // Handler settings

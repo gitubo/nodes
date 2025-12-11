@@ -86,20 +86,29 @@ export class NodeRenderer {
                         .attr("class", h => `handler-g ${h.type} ${h.role}`)
                         .attr("data-id", h => h.id)
                         .attr("transform", h => {
-                                const tx = h.offset?.x || 0;
-                                const ty = h.offset?.y || 0;
-                                return `translate(${tx},${ty})`;
-                            }); 
+                            const tx = h.offset?.x || 0;
+                            const ty = h.offset?.y || 0;
+                            return `translate(${tx},${ty})`;
+                        }); 
 
                     g.each(function (h) {
                         const HandlerClass = renderer.registry.getHandlerDefinition(h.type);
                         if (!HandlerClass) return;
+
                         const instance = new HandlerClass();
+                        
+                        // FIX: Sync the visual instance ID with the persistent data ID
+                        // This ensures the Geometry engine can find this handler by ID later
+                        instance.id = h.id; 
+
                         h.instance = instance; 
                         
-                        // Pass connection state
+                        // Pass connection state AND eventBus to allow the helper button to dispatch commands
                         const isConnected = renderer.store.links.some(l => l.sourceHandlerId === h.id);
-                        instance.render(d3.select(this), { isConnected });
+                        instance.render(d3.select(this), { 
+                            isConnected, 
+                            eventBus: renderer.store.eventBus 
+                        });
                     });
                     return g;
                 },
@@ -111,9 +120,16 @@ export class NodeRenderer {
                         });
                     update.each(function (h) {
                         if (h.instance) {
-                            // Pass connection state
+                            // Ensure the instance ID is synced on update as well
+                            h.instance.id = h.id;
+
                             const isConnected = renderer.store.links.some(l => l.sourceHandlerId === h.id);
-                            h.instance.render(d3.select(this), { isConnected });
+                            
+                            // Re-render with updated connection state and eventBus
+                            h.instance.render(d3.select(this), { 
+                                isConnected, 
+                                eventBus: renderer.store.eventBus 
+                            });
                         }
                     });
                     return update;
