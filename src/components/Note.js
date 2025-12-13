@@ -139,13 +139,6 @@ export class Note {
             }
         });
         
-        // Context Menu & Properties
-        /*
-        this.el.addEventListener('contextmenu', (e) => {
-            e.preventDefault(); e.stopPropagation();
-            this._openPropertiesPanel();
-        });
-        */
     }
 
     _openPropertiesPanel() {
@@ -165,15 +158,11 @@ export class Note {
                     style: this.data.style 
                 });
                 this.updateView();
-                // Close panel logic if available in UIController
-                // For now, UIController stays open until explicit close or selection change
             },
             onDelete: () => {
                 this.widget.dispatch('delete_note', { noteId: this.id });
-                // Hide panel logic would go here
             }
         };
-        // Emit event to UIController
         this.widget.eventBus.emit('OPEN_PROPERTIES', config);
     }
 }

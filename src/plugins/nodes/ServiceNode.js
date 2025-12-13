@@ -20,23 +20,5 @@ export default class ServiceNodeDefinition extends NodeDefinition {
 
     getShapePath() {
         return 'M28 0 28 12 68 12 68 0 176 0A16 16 90 01192 16L192 68A32 32 90 01160 96L32 96A32 32 90 010 64L0 16A16 16 90 0116 0Z';
-        const W = CONFIG.node.width;
-        const H = W;
-        const R = CONFIG.node.width / 2;
-        const handlerDimensions = TargetHorizontalHandlerDefinition.getDimension(this.handlers[0]);
-        const targetHandlerHeight =  handlerDimensions.width/2 + CONFIG.handler.margin;
-        const targetHandlerLeft =  W/2 - handlerDimensions.height/2 - CONFIG.handler.margin;
-        const targetHandlerRight =  W/2 + handlerDimensions.height/2 + CONFIG.handler.margin;
-        
-        return `
-            M${targetHandlerLeft} 1.8 
-            A${R} ${R} 0 000 ${R}
-            A1 1 0 00${W} ${R} 
-            A1 1 0 00${H} ${R}
-            A${R} ${R} 0 00${targetHandlerRight} 1.8
-            L${targetHandlerRight} ${targetHandlerHeight}
-            L${targetHandlerLeft} ${targetHandlerHeight}
-            Z
-        `.replace(/\s+/g, ' ');
     }
 }

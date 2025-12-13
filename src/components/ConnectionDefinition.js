@@ -9,7 +9,6 @@ export class ConnectionDefinition {
         this.sourceHandlerId = data.sourceHandlerId;
         this.targetHandlerId = data.targetHandlerId;
         
-        // Extended Style Object
         this.style = {
             stroke: data.style?.stroke || 'var(--dim-gray)',
             strokeWidth: data.style?.strokeWidth || 2,
@@ -21,36 +20,22 @@ export class ConnectionDefinition {
         this.data = data.data || {};
     }
 
-    /**
-     * Returns the SVG path string. 
-     * We pass the store/registry to reuse existing geometry logic.
-     */
-    getPath(nodes, registry, store) {
-        // Reuse the existing robust Bezier logic from geometry.js
-        // We pass 'this' as the link object expected by calculatePath
-        return calculatePath(this, nodes, registry, store.cache);
-    }
+    getPath(nodes, registry, store) { return calculatePath(this, nodes, registry, store.cache);}
 
     update(data) {
         if (!data) return;
-
-        // Aggiornamento Label (Merge intelligente)
         if (data.label) {
             this.label = { 
                 ...this.label, 
                 ...data.label 
             };
         }
-
-        // Aggiornamento Style (Merge intelligente)
         if (data.style) {
             this.style = { 
                 ...this.style, 
                 ...data.style 
             };
         }
-
-        // Aggiornamento Data custom
         if (data.data) {
             this.data = { 
                 ...this.data, 
@@ -58,20 +43,20 @@ export class ConnectionDefinition {
             };
         }
 
-        // Aggiorna proprietà dirette solo se presenti (es. targetHandlerId per ricollegamenti)
         if (data.sourceHandlerId) this.sourceHandlerId = data.sourceHandlerId;
         if (data.targetHandlerId) this.targetHandlerId = data.targetHandlerId;
     }
 
-    serialize() {
+    getData() {
         return {
             id: this.id,
             type: this.type,
             sourceHandlerId: this.sourceHandlerId,
             targetHandlerId: this.targetHandlerId,
-            label: this.label,
-            style: this.style,
-            data: this.data
+            label: this.label ? { ...this.label } : undefined,
+            style: this.style ? { ...this.style } : undefined,
+            data: this.data ? JSON.parse(JSON.stringify(this.data)) : {}
         };
     }
+
 }

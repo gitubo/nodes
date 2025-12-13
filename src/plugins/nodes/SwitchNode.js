@@ -37,7 +37,6 @@ export default class SwitchNodeDefinition extends NodeDefinition {
         const h = (CONFIG.node.handlerSeparator*3) + 
                   (CONFIG.node.handlerSeparator*2 )*this.sourceHandlers.length +
                   CONFIG.node.smallBorderRadius;
-        //const h = CONFIG.node.handlerSeparator*2*( this.sourceHandlers.length+1);
         return { width: w, height: h};
     }
 
@@ -45,7 +44,6 @@ export default class SwitchNodeDefinition extends NodeDefinition {
 
     getHandlers() { return [...this.targetHandlers, ...this.sourceHandlers]; }
     
-    // Reuse the Diamond shape path logic
     getShapePath() {
         const W = this.width;
         const sR = CONFIG.node.smallBorderRadius;
@@ -64,7 +62,6 @@ export default class SwitchNodeDefinition extends NodeDefinition {
             currentY += CONFIG.node.handlerSeparator - CONFIG.handler.margin;
             currentY -= CONFIG.handler.margin;
         }
-        //const H = CONFIG.node.handlerSeparator*2*( this.sourceHandlers.length+1);
         const H = (CONFIG.node.handlerSeparator*3) + 
                   (CONFIG.node.handlerSeparator*2 )*this.sourceHandlers.length +
                   CONFIG.node.smallBorderRadius;
@@ -83,7 +80,6 @@ export default class SwitchNodeDefinition extends NodeDefinition {
         return path;
     }
 
-    // --- MODULAR PROPERTIES ---
     static renderProperties(container, nodeData, onChange) {
         // 1. Render base properties
         super.renderProperties(container, nodeData, onChange);

@@ -27,37 +27,24 @@ export class NodeDefinition {
 
     static getRole() { return NODE_ROLES.CORE; }
 
-    static serialize(node, registry) {
-        let serializedHandlers = {};
-        if (node.handlers) {
-            serializedHandlers = node.handlers.reduce((handles, handle) => {
-                const HandlerDef = registry.getHandlerDefinition(handle.type);
-                if (!HandlerDef) {
-                    console.warn(`[Serialization] Handler type ${handle.type} not defined in Registry.`);
-                } else {
-                    handles = { 
-                        ...handles, 
-                        ...HandlerDef.serialize(handle)
-                    };
-                }
-                return handles;
-            }, {});
-        }
-        
+    getData() {
         return {
-            [node.id] : {
-                type: node.type, 
-                label: node.label,
-                note: node.note,
-                data: node.data || {},
-                handles: serializedHandlers,
-                presentation: {
-                    position: {
-                        x: node.position.x, 
-                        y: node.position.y
-                    }
+            id: this.id,
+            type: this.type,
+            label: this.label,
+            note: this.note,
+            data: this.data ? JSON.parse(JSON.stringify(this.data)) : {},
+            presentation: {
+                position: { ...this.position }
+            },
+            handles: this.handlers.reduce((acc, h) => {
+                if (typeof h.getData === 'function') {
+                    acc[h.id] = h.getData();
+                } else {
+                    console.warn(`Handler ${h.id} missing getData()`);
                 }
-            }
+                return acc;
+            }, {})
         };
     }
 
@@ -69,23 +56,22 @@ export class NodeDefinition {
             nodeData.note,
             nodeData.data
         );
-        
         instance.id = nodeData.id;
-    //    instance.type = nodeData.type;
 
-        instance.handlers = []; // Sovrascriviamo per assicurarci di usare solo i dati deserializzati
-        const serializedHandles = nodeData.handles || {};
+        if (nodeData.handles) {
+            instance.handlers.forEach(h => {
+                const hData = nodeData.handles[h.id];
+                if (hData) {
+                    const HandlerClass = registry.getHandlerDefinition(hData.type);
+                    if (HandlerClass && typeof HandlerClass.deserialize === 'function') {
+                         const restoredHandler = HandlerClass.deserialize(hData);
+                         Object.assign(h, restoredHandler);
+                         h.id = hData.id; 
+                    }
+                }
+            });
+        }
         
-        Object.entries(serializedHandles).forEach(([handleId, handleData]) => {
-            const HandlerClass = registry.getHandlerDefinition(handleData.type);
-            if (HandlerClass) {
-                const instanceHandle = HandlerClass.deserialize(handleData, handleId);
-                instance.handlers.push(instanceHandle);
-            } else {
-                 console.warn(`[Deserialization] Handler type ${handleData.type} not defined in Registry. Skipping.`);
-            }
-        });
-
         return instance;
     }
 
@@ -116,7 +102,5 @@ export class NodeDefinition {
         `.replace(/\s+/g, ' ');
     }
         
-    static renderProperties(container, nodeData, onChange) {
-        // This logic remains as it's UI-specific for the properties panel
-    }
+    static renderProperties(container, nodeData, onChange) { }
 }

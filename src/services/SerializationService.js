@@ -1,94 +1,66 @@
-// src/SerializationService.js
-
 export class SerializationService {
     constructor(registry) {
         this.registry = registry;
     }
 
-    /**
-     * Serializes the current graph state into a plain object.
-     * Sanitizes data to remove runtime instances (like handler.instance)
-     * and derived arrays (like sourceHandlers) to prevent circular ref errors.
-     */
     serialize(state) {
         const exportData = {
             metadata: {
-                version: '0.1', 
+                version: '2.2', 
                 createdAt: new Date().toISOString(),
-                viewport: {
-                    x: state.transform.x || 0,
-                    y: state.transform.y || 0,
-                    k: state.transform.k || 1 
-                }
+                viewport: { ...state.transform }
             },
             nodes: {},
             connections: {}
         };
 
+        // 1. Serialize Nodes 
         state.nodes.forEach(node => {
-            const definition = this.registry.getNodeDefinition(node.type);
-            if (!definition) {
-                console.warn(`[Serialization] node type ${node.type} is not defined into the Registry`);
-                return;
+            if (typeof node.getData === 'function') {
+                exportData.nodes[node.id] = node.getData();
             }
-            exportData.nodes = { 
-                ...exportData.nodes, 
-                ...definition.serialize(node, this.registry)
-            };
         });
 
+        // 2. Serialize Links 
         state.links.forEach(link => {
-            exportData.connections[link.id] = { ...link };
+            if (typeof link.getData === 'function') {
+                exportData.connections[link.id] = link.getData();
+            } else {
+                console.warn(`Link ${link.id} missing getData()`);
+                exportData.connections[link.id] = { ...link }; 
+            }
         });
 
         return exportData;
     }
 
-    /**
-     * Deserializes plain object data back into class instances.
-     */
     deserialize(data) {
         if (!data || !data.nodes || !data.connections) {
             return { nodes: [], links: [] };
         }
         
-        const viewportState = data.metadata?.viewport || { x: 0, y: 0, k: 1 };
-
+        const viewport = data.metadata?.viewport || { x: 0, y: 0, k: 1 };
         const newNodes = [];
 
-        Object.entries(data.nodes).forEach(([nodeId, nodeData]) => {
+        // Restore Nodes
+        Object.values(data.nodes).forEach(nodeData => {
             const NodeClass = this.registry.getNodeDefinition(nodeData.type);
-            if (!NodeClass) {
-                console.warn(`No definition for node type ${nodeData.type}. Skipping node with ID: ${nodeId}`);
-                return;
+            if (NodeClass) {
+                // Static deserialize creates the instance
+                const instance = NodeClass.deserialize(nodeData, this.registry);
+                newNodes.push(instance);
             }
-            
-            nodeData.id = nodeId;
-            const instance = NodeClass.deserialize(nodeData, this.registry);
-            
-            newNodes.push(instance);
         });
 
-        // LINK: Trasformiamo i dati grezzi in Istanze
+        // Restore Links
         const newLinks = Object.values(data.connections).map(linkData => {
-            // Recupera la definizione in base al tipo salvato
             const LinkClass = this.registry.getConnectionDefinition(linkData.type || 'default');
-            
             if (LinkClass) {
-                // Creiamo l'istanza passando i dati grezzi al costruttore
-                // Assumiamo che il costruttore accetti (data) e riempia i campi
-                const instance = new LinkClass(linkData);
-                return instance;
-            } else {
-                console.warn(`Unknown link type: ${linkData.type}`);
-                return null;
+                return new LinkClass(linkData);
             }
-        }).filter(l => l !== null); // Rimuovi eventuali null
+            return null;
+        }).filter(l => l !== null);
 
-        return { 
-            nodes: newNodes, 
-            links: newLinks, 
-            viewport: data.metadata?.viewport || { x: 0, y: 0, k: 1 } 
-        };
+        return { nodes: newNodes, links: newLinks, viewport };
     }
 }

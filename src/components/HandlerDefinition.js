@@ -29,6 +29,19 @@ export class HandlerDefinition {
         return `M 0,0 m -${r},0 a ${r},${r} 0 1,0 ${r*2},0 a ${r},${r} 0 1,0 -${r*2},0`;
     }
 
+    getData() {
+        return {
+            id: this.id,
+            type: this.type,
+            label: this.label,
+            role: this.role, // Importante per la logica di connessione
+            presentation: {
+                offset: { ...this.offset }, // Clona l'oggetto per sicurezza
+                direction: this.direction
+            }
+        };
+    }
+
     renderExtras(group, state) {}
 
     renderLabel(group) {
@@ -55,31 +68,24 @@ export class HandlerDefinition {
             .attr("text-anchor", "start");
     }
 
-    static serialize(handler) {
-        return {
-            [handler.id] : {
-                type: handler.type, 
-                label: handler.label,
-                presentation: {
-                    offset: {
-                        x: handler.offset.x, 
-                        y: handler.offset.y
-                    },
-                    direction: handler.direction
-                }
-            }
-        };
-    }
-
-    static deserialize(data, id) {
-        const offset_x = data.presentation?.offset?.x || 0;
-        const offset_y = data.presentation?.offset?.y || 0;
-        const label = data.label || '';
-        const direction = data.presentation?.direction || 'right';
-        const instance = new this(offset_x, offset_y, label, direction);
-
-        instance.id = id;
-//        instance.type = data.type; 
+    static deserialize(data) {
+        // Ricostruisce un handler temporaneo o restituisce i dati
+        // Dato che gli handler sono spesso creati nel costruttore del Nodo,
+        // questo metodo serve più come "parser" o "configurator".
+        
+        const offset = data.presentation?.offset || { x: 0, y: 0 };
+        
+        // Creiamo una nuova istanza
+        const instance = new this(
+            offset.x, 
+            offset.y, 
+            data.label, 
+            data.presentation?.direction || 'right'
+        );
+        
+        instance.id = data.id;
+        instance.role = data.role;
+        
         return instance;
     }
 

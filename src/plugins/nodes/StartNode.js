@@ -22,20 +22,6 @@ export default class StartNodeDefinition extends NodeDefinition {
         const source =  H/2 - (SourceHandlerDefinition.getDimension(this.handlers[0]).radius+CONFIG.handler.margin);
 
         return 'M32 0 176 0A16 16 90 01192 16L192 28A20 20 90 00192 68L192 80A16 16 90 01176 96L32 96A32 32 90 010 64L0 32A32 32 90 0132 0Z';
-        return `
-            M ${R},0
-            L ${W - sR},0
-            A ${sR},${sR} 0 0 1 ${W},${sR}
-            L ${W},${source}
-            A 1,1 0 0 0 ${W},${H - source}
-            L ${W},${H - sR}
-            A ${sR},${sR} 0 0 1 ${W - sR},${H}
-            L ${R},${H}
-            A ${R},${R} 0 0 1 0,${H - R}
-            L 0,${R}
-            A ${R},${R} 0 0 1 ${R},0
-            Z
-        `.replace(/\s+/g, ' ');
     }
 
 }
