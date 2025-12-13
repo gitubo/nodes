@@ -69,15 +69,26 @@ export class SerializationService {
             newNodes.push(instance);
         });
 
-        const newLinks = Object.values(data.connections).map(l => ({
-            id: l.id,
-            source: l.source,
-            target: l.target,
-            sourceHandlerId: l.sourceHandlerId || l.sourceHandler,
-            targetHandlerId: l.targetHandlerId || l.targetHandler,
-            label: l.label
-        }));
+        // LINK: Trasformiamo i dati grezzi in Istanze
+        const newLinks = Object.values(data.connections).map(linkData => {
+            // Recupera la definizione in base al tipo salvato
+            const LinkClass = this.registry.getConnectionDefinition(linkData.type || 'default');
+            
+            if (LinkClass) {
+                // Creiamo l'istanza passando i dati grezzi al costruttore
+                // Assumiamo che il costruttore accetti (data) e riempia i campi
+                const instance = new LinkClass(linkData);
+                return instance;
+            } else {
+                console.warn(`Unknown link type: ${linkData.type}`);
+                return null;
+            }
+        }).filter(l => l !== null); // Rimuovi eventuali null
 
-        return { nodes: newNodes, links: newLinks, viewport: viewportState };
+        return { 
+            nodes: newNodes, 
+            links: newLinks, 
+            viewport: data.metadata?.viewport || { x: 0, y: 0, k: 1 } 
+        };
     }
 }

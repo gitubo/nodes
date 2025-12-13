@@ -7,12 +7,16 @@ export default class TargetHandlerDefinition extends HandlerDefinition {
     constructor(x, y, label, direction='left') {
         super(x, y, label, direction);
         this.role = "target";
-        this.dimensions = {
-            width: CONFIG.handler.width,
-            height: CONFIG.handler.height
-        };
+        this.dimensions = { width: CONFIG.handler.width, height: CONFIG.handler.height };
     }
 
+    getShapePath() { 
+        const w = CONFIG.handler.width/2;
+        const h = CONFIG.handler.height/2
+        return `M-${w} -${h}H${w}V${h}H-${w}Z`; 
+    }
+
+/*
     render(selection) {
         const w = CONFIG.handler.width;
         const h = CONFIG.handler.height;
@@ -25,4 +29,5 @@ export default class TargetHandlerDefinition extends HandlerDefinition {
             .attr("class", "handler target");
         
     }
+    */
 }

@@ -5,7 +5,7 @@ export class NodeRenderer {
     constructor(renderCallback, registry, store) {
         this.renderCallback = renderCallback;
         this.registry = registry;
-        this.store = store; // Store reference
+        this.store = store; 
     }
     
     renderBody(selection, d) {
@@ -75,6 +75,50 @@ export class NodeRenderer {
     }
 
     renderHandlers(selection, d) {
+        const renderer = this;
+        
+        // 1. Bind the Handler Instances directly
+        // d.getHandlers() returns the array of actual HandlerDefinition instances stored in the state
+        selection.selectAll("g.handler-g")
+            .data(d.getHandlers(), h => h.id)
+            .join("g")
+            .attr("class", h => `handler-g ${h.type} ${h.role}`)
+            .attr("transform", h => `translate(${h.offset.x}, ${h.offset.y})`)
+            .each(function(h) {
+                const group = d3.select(this);
+
+                // PERFORMANCE FIX: 
+                // We do NOT call 'new HandlerDef()' here. 'h' IS the instance.
+                
+                // 2. Render Main Body (The "Port")
+                // We use 'h' to call getShapePath directly
+                group.selectAll("path.handler-body")
+                    .data([h]) 
+                    .join("path")
+                    .attr("class", "handler-body")
+                    .attr("d", h.getShapePath()) 
+                    .style("fill", "var(--platinum)")
+                    .style("stroke", "var(--dim-gray)");
+
+                // 3. Render Label
+                // h is the instance, so we call its method directly
+                if (typeof h.renderLabel === 'function') {
+                    h.renderLabel(group);
+                }
+
+                // 4. Render Extras (Helper Buttons, etc.)
+                const isConnected = renderer.store.links.some(l => l.sourceHandlerId === h.id);
+                
+                if (typeof h.renderExtras === 'function') {
+                    h.renderExtras(group, { 
+                        isConnected, 
+                        eventBus: renderer.store.eventBus 
+                    });
+                }
+            });
+    }
+
+    OLDrenderHandlers(selection, d) {
         const renderer = this;
         selection.selectAll("g.handler-g")
             .data(() => {

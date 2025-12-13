@@ -11,6 +11,7 @@ import { showCustomMenu } from '../components/ContextMenu.js';
 import { getIcon } from '../components/Icons.js';
 import { Note } from '../components/Note.js';
 import { PluginLoader } from '../services/PluginLoader.js';
+import { ConnectionDefinition } from './sdk.js';
 
 export class DAGWidget {
     constructor(containerSelector, config = {}) {
@@ -159,7 +160,7 @@ export class DAGWidget {
         
         // Pass dependencies to the renderer module
         initRenderer(this.svg, this.store, this.registry, this.eventBus);
-        //this.addNodeHelperSystem.listen();
+        this.registry.registerConnection('default', ConnectionDefinition);
         
         startRenderLoop();
 

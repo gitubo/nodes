@@ -97,15 +97,19 @@ export class NodeDragState extends InteractionState {
     }
 }
 
-// 3. Connection Creation State
 export class ConnectionCreationState extends InteractionState {
     constructor(context, sourceHandler) {
         super(context);
         this.sourceHandler = sourceHandler;
+        
+        // Visual feedback immediately
+        d3.select(`.handler-g[data-id="${sourceHandler.id}"]`).classed("connecting", true);
     }
 
     onMouseMove(e) {
         const mouse = this.ctx.getMousePos(e);
+        
+        // Update the ghost link in the UI State via the Store
         this.ctx.store.setGhostLink({
             sourceHandlerId: this.sourceHandler.id,
             targetX: mouse.x,
@@ -115,15 +119,34 @@ export class ConnectionCreationState extends InteractionState {
 
     onMouseUp(e) {
         const target = e.target.closest('.handler-g');
+        let created = false;
+
         if (target) {
             const targetData = d3.select(target).datum();
-            // Logic to validate connection (Source -> Target)
-            if (targetData.role !== this.sourceHandler.role) {
-                this.ctx.store.addLink(this.sourceHandler.id, targetData.id);
+            
+            // Logic: Prevent self-connection and ensure Source-Target role match
+            if (targetData.id !== this.sourceHandler.id) {
+                
+                // Allow connection if roles are opposite (Source -> Target OR Target -> Source)
+                const isValidConnection = 
+                    (this.sourceHandler.role === 'source' && targetData.role.includes('target')) ||
+                    (this.sourceHandler.role.includes('target') && targetData.role === 'source');
+
+                if (isValidConnection) {
+                    // Normalize: Always store Source ID first, Target ID second
+                    const sourceId = this.sourceHandler.role === 'source' ? this.sourceHandler.id : targetData.id;
+                    const targetId = this.sourceHandler.role === 'source' ? targetData.id : this.sourceHandler.id;
+
+                    this.ctx.store.addLink(sourceId, targetId);
+                    created = true;
+                }
             }
         }
         
+        // Cleanup
         this.ctx.store.setGhostLink(null);
+        d3.select(`.handler-g[data-id="${this.sourceHandler.id}"]`).classed("connecting", false);
+        
         this.ctx.setState(new IdleState(this.ctx));
     }
 }

@@ -23,12 +23,23 @@
         import { DAGWidget } from './src/core/Widget.js';
 
         // 1. Initialize Widget
-        const widget = new DAGWidget('#canvas-container');
+        const container = document.getElementById('canvas-container');
+        const viewportWidth = container.offsetWidth;
+        const viewportHeight = container.offsetHeight;
+        const widget = new DAGWidget('#canvas-container', {
+            showDefaultUI: true,
+            initialZoom: 0.65,
+            initialOffsetX: viewportWidth / 4, 
+            initialOffsetY: viewportHeight / 4
+        });
 
         // 2. Subscribe to the Event Stream (Outbound)
         widget.subscribe((type, payload) => {
             console.log(type," --> ",JSON.stringify(payload, null, 2));
         });
+
+        // 3. Load widget plugin
+        widget.loadPlugins();
 
         // 3. Dispatch Helper (Inbound)
         // Expose to window for the HTML buttons to use

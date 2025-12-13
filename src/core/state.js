@@ -23,7 +23,10 @@ export class Store {
             ghostLink: null
         };
 
-        this.cache = { nodeLinks: new Map() };
+        this.cache = { 
+            nodeLinks: new Map(),
+            handlerAbsPos: new Map()
+        };
 
         // 4. Separation: History Logic isolated
         this.history = new HistoryManager(
@@ -77,7 +80,13 @@ export class Store {
             // Update the position object
             node.position.x = x;
             node.position.y = y;
-            
+            node.handlers.forEach(h => {
+                this.cache.handlerAbsPos.set(h.id, {
+                     x: x + (h.offset.x || 0),
+                     y: y + (h.offset.y || 0),
+                     dir: h.direction
+                });
+            });
             // Emit high-frequency event. render.js uses this for immediate link updates.
             this.eventBus.emit('NODE_MOVED_HIGH_FREQ', node);
         }
@@ -88,40 +97,90 @@ export class Store {
         this.eventBus.emit('NODE_MOVED', { id, from: oldPos, to: newPos });
     }
 
-    addLink(sourceId, targetId) {
+    addLink(sourceId, targetId, type = 'default', data = {}) {
         this._snapshot();
-        const link = { id: crypto.randomUUID(), sourceHandlerId: sourceId, targetHandlerId: targetId };
-        this.state.links.push(link);
+        
+        // 1. Recupera la classe dal Registry (es. ConnectionDefinition standard o custom)
+        const LinkClass = this.registry.getConnectionDefinition(type);
+        
+        if (!LinkClass) {
+            console.error(`Link type '${type}' not registered.`);
+            return;
+        }
+
+        // 2. Istanzia la classe
+        // Nota: Passiamo un oggetto di configurazione come deciso nel costruttore
+        const linkInstance = new LinkClass({
+            sourceHandlerId: sourceId,
+            targetHandlerId: targetId,
+            data: data
+            // style, label, etc. prendono i valori di default della classe
+        });
+
+        // 3. Salva l'istanza nello stato
+        this.state.links.push(linkInstance);
+        
         this._rebuildCache();
-        this.eventBus.emit('CONNECTION_CREATED', link);
+        this.eventBus.emit('CONNECTION_CREATED', linkInstance);
+        
+        return linkInstance;
     }
 
     updateLink(id, newData) {
-        const link = this.getLink(id); // Assuming getLink(id) exists and retrieves the link object
+        const link = this.getLink(id);
         if (!link) {
             console.warn(`Attempted to update non-existent link with ID: ${id}`);
             return;
         }
 
         this._snapshot(); 
-        Object.assign(link, newData); 
+        
+        // --- FIX: Usa il metodo dell'istanza invece di Object.assign ---
+        if (typeof link.update === 'function') {
+            link.update(newData);
+        } else {
+            // Fallback per sicurezza (o per vecchi oggetti non migrati)
+            Object.assign(link, newData);
+        }
+
         this.eventBus.emit('CONNECTION_UPDATED', link);
+        
+        // Ricostruisci la cache se cambia la topologia
         if (newData.sourceHandlerId || newData.targetHandlerId) {
             this._rebuildCache();
         }
     }
 
-    removeLink(linkId) {
+    removeLink(id) {
+        // 1. Snapshot per l'HistoryManager (Undo/Redo)
         this._snapshot(); 
+
         const initialLength = this.state.links.length;
-        this.state.links = this.state.links.filter(link => link.id !== linkId);
-        if (this.state.links.length < initialLength) {
-            this._rebuildCache(); 
-            this.selection.deselect(); // Deselect the removed link
-            this.eventBus.emit('CONNECTION_REMOVED', linkId);
-        } else {
-            console.warn(`Attempted to remove non-existent link with ID: ${linkId}`);
+        
+        // Trova e rimuovi il link
+        const linkIndex = this.state.links.findIndex(link => link.id === id);
+        
+        if (linkIndex === -1) {
+            console.warn(`Attempted to remove non-existent link with ID: ${id}`);
+            return false;
         }
+
+        // Rimuove 1 elemento a partire dall'indice trovato
+        const [removedLink] = this.state.links.splice(linkIndex, 1);
+        
+        if (removedLink) {
+            // 2. Aggiornamento della Cache
+            // È più semplice e sicuro ricostruire l'intera cache dei nodi/link 
+            // dopo un'operazione distruttiva, dato che è veloce.
+            this._rebuildCache(); 
+            
+            // 3. Emetti l'evento per il Renderer
+            this.eventBus.emit('CONNECTION_REMOVED', removedLink);
+            
+            return true;
+        }
+
+        return false;
     }
 
     setGhostLink(data) {
@@ -196,6 +255,20 @@ export class Store {
     }
 
     _rebuildCache() {
+        this.cache.handlerAbsPos.clear();
+        
+        // O(N) Loop to cache all handler positions once
+        this.state.nodes.forEach(node => {
+            if(!node.handlers) return;
+            node.handlers.forEach(h => {
+                this.cache.handlerAbsPos.set(h.id, {
+                    x: node.position.x + (h.offset.x || 0),
+                    y: node.position.y + (h.offset.y || 0),
+                    dir: h.direction || 'right'
+                });
+            });
+        });
+
         this.cache.nodeLinks.clear(); 
 
         this.state.links.forEach(link => {

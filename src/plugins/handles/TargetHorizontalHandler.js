@@ -12,6 +12,13 @@ export default class TargetHorizontalHandlerDefinition extends TargetHandlerDefi
         this.dimensions = { width: _h, height: _w };
     }
 
+    getShapePath() { 
+        const w = CONFIG.handler.height/2;
+        const h = CONFIG.handler.width/2
+        return `M-${w} -${h}H${w}V${h}H-${w}Z`; 
+    }
+    
+    /*
     render(selection) {
         const h = CONFIG.handler.width;
         const w = CONFIG.handler.height;
@@ -25,5 +32,5 @@ export default class TargetHorizontalHandlerDefinition extends TargetHandlerDefi
         
         this.setupDrag(selection);
     }
-
+*/
 }

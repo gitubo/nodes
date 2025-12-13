@@ -7,21 +7,20 @@ import { CONFIG } from '../core/config.js';
  * @param {Array} nodes - The array of node objects (from store.state.nodes).
  * @param {Registry} registry - The node definition registry.
  */
-export function findGlobalHandlerPos(handlerId, nodes, registry) {
-    if (!nodes || !registry) return { x: 0, y: 0, dir: 'right' };
+export function findGlobalHandlerPos(handlerId, nodes, registry, storeCache) {
+    // 1. FAST PATH: Check cache
+    if (storeCache && storeCache.handlerAbsPos.has(handlerId)) {
+        return storeCache.handlerAbsPos.get(handlerId);
+    }
 
+    // 2. SLOW PATH: Fallback (Legacy logic) [cite: 688-692]
     for (const node of nodes) {
-        //const definition = registry.getNodeDefinition(node.type);
-        //const handlers = definition ? definition.getHandlers(node) : [];
-        
-        for (const handler of node.getHandlers()) {
+        for (const handler of node.handlers) {
             if (handler.id === handlerId) {
-                const localX = handler.offset.x || 0;
-                const localY = handler.offset.y || 0;
                 return {
-                    x: node.position.x + localX, 
-                    y: node.position.y + localY,
-                    dir: handler.direction || 'right' 
+                    x: node.position.x + handler.offset.x, 
+                    y: node.position.y + handler.offset.y,
+                    dir: handler.direction
                 };
             }
         }

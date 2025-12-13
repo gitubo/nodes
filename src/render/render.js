@@ -1,6 +1,6 @@
 // src/render.js
-import { calculatePath, calculatePositionAlongPath } from './geometry.js';
 import { NodeRenderer } from './NodeRenderer.js';
+import { calculatePositionAlongPath, calculatePath } from './geometry.js';
 
 let nodeRenderer;
 let rafId = null;
@@ -149,30 +149,34 @@ function renderLinks(viewport) {
                     .attr("class", "link-group")
                     .attr("data-id", d => d.id);
                 
-                // Hit area (invisible, thick)
+                // Hit area
                 g.append("path").attr("class", "link-hitarea")
                     .style("stroke", "transparent").style("stroke-width", 15).style("fill", "none")
-                    .attr("d", d => calculatePath(d, store.state.nodes, registry));
+                    // QUI LA MAGIA: Chiamiamo il metodo dell'istanza
+                    .attr("d", d => d.getPath(store.state.nodes, registry, store)); 
                 
                 // Visual Link
                 g.append("path").attr("class", "link")
-                    .attr("d", d => calculatePath(d, store.state.nodes, registry))
-                    // Apply Dynamic Styles
-                    .style("stroke", d => d.style?.stroke || 'var(--dim-gray)')
-                    .style("stroke-width", d => d.style?.strokeWidth || 2);
+                    // ANCHE QUI
+                    .attr("d", d => d.getPath(store.state.nodes, registry, store))
+                    // Stili gestiti dall'istanza (se presenti in style)
+                    .style("stroke", d => d.style?.stroke)
+                    .style("stroke-width", d => d.style?.strokeWidth);
 
                  return g;
             },
             update => {
                 update.attr("data-id", d => d.id);
-                const linkPath = update.select("path.link");
                 
-                linkPath.attr("d", d => calculatePath(d, store.state.nodes, registry))
-                    // Update Dynamic Styles
-                    .style("stroke", d => d.style?.stroke || 'var(--dim-gray)')
-                    .style("stroke-width", d => d.style?.strokeWidth || 2);
-                    
-                update.select("path.link-hitarea").attr("d", d => calculatePath(d, store.state.nodes, registry));
+                // Aggiornamento Path e Stili
+                const linkPath = update.select("path.link");
+                linkPath.attr("d", d => d.getPath(store.state.nodes, registry, store))
+                        .style("stroke", d => d.style?.stroke)
+                        .style("stroke-width", d => d.style?.strokeWidth);
+
+                update.select("path.link-hitarea")
+                      .attr("d", d => d.getPath(store.state.nodes, registry, store));
+                
                 return update;
             },
             exit => exit.remove()

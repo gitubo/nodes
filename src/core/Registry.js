@@ -2,6 +2,7 @@ export class Registry {
     constructor() {
         this.nodeDefinitions = new Map();
         this.handlerDefinitions = new Map();
+        this.connectionDefinitions = new Map();
     }
     
     registerNode(type, ClassRef) { 
@@ -30,5 +31,13 @@ export class Registry {
     
     getHandlerTypes() { 
         return Array.from(this.handlerDefinitions.keys()); 
+    }
+
+    registerConnection(type, ClassRef) {
+        this.connectionDefinitions.set(type, ClassRef);
+    }
+
+    getConnectionDefinition(type) {
+        return this.connectionDefinitions.get(type) || this.connectionDefinitions.get('default');
     }
 }

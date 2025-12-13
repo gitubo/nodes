@@ -22,6 +22,39 @@ export class HandlerDefinition {
     static getRole(obj) { return obj.role || ''; }
     static draw(obj){}
 
+    getShapePath() {
+        // Default: A circle path
+        const r = CONFIG.handler.radius;
+        // SVG Path for a circle: M cx,cy m -r,0 a r,r 0 1,0 (r*2),0 a r,r 0 1,0 -(r*2),0
+        return `M 0,0 m -${r},0 a ${r},${r} 0 1,0 ${r*2},0 a ${r},${r} 0 1,0 -${r*2},0`;
+    }
+
+    renderExtras(group, state) {}
+
+    renderLabel(group) {
+        if (!this.label) return;
+
+        // Clean up previous labels
+        group.selectAll(".handler-label-group").remove();
+
+        const labelGroup = group.append("g")
+            .attr("class", "handler-label-group")
+            .style("cursor", "move"); // or pointer
+
+        // Default position: slightly to the right/top depending on direction logic
+        // You can make this smarter based on this.direction
+        const x = CONFIG.handler.radius + 8 + (this.labelOffsetX || 0);
+        const y = (this.labelOffsetY || 0);
+
+        labelGroup.attr("transform", `translate(${x}, ${y})`);
+        
+        labelGroup.append("text")
+            .attr("class", "handler-label-text")
+            .text(this.label)
+            .attr("dy", "0.3em")
+            .attr("text-anchor", "start");
+    }
+
     static serialize(handler) {
         return {
             [handler.id] : {
