@@ -48,14 +48,21 @@ body {
     flex-direction: column;
 }
 
-/* --- Fixed Top Commands Panel (NEW) --- */
 #commands-panel {
     top: 20px;
     left: 50%;
-    transform: translateX(-50%); /* Center horizontally */
+    transform: translateX(-50%); 
     flex-direction: row;
     padding: 8px;
     align-items: center;
+    visibility: hidden; 
+    opacity: 0;
+    transition: opacity 0.3s ease-in-out;
+}
+
+#commands-panel.ready {
+    visibility: visible;
+    opacity: 1;
 }
 
 #commands-panel .control-group {

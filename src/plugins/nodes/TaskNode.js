@@ -1,13 +1,13 @@
-// nodes/TaskNode.js
-import { NodeDefinition, NODE_ROLES } from './NodeDefinition.js';
-import { CONFIG } from '../core/config.js'; 
-import { SourceHandlerDefinition } from '../handlers/SourceHandler.js';
-import { TargetVerticalHandlerDefinition } from '../handlers/TargetVerticalHandler.js';
+import { NodeDefinition, NODE_ROLES, CONFIG } from '../../core/sdk.js';
+import SourceHandlerDefinition from '../handles/SourceHandler.js'; 
+import TargetVerticalHandlerDefinition from '../handles/TargetVerticalHandler.js';
 
-export class TaskNodeDefinition extends NodeDefinition {
+export default class TaskNodeDefinition extends NodeDefinition {
+
+    static get type() { return 'task'; }
+    
     constructor(x, y, _label, note, data) {
         super(x, y, 'task', note, data);
-        this.type = 'task';
         this.width = 192;
         this.height = 96;
         this.handlers.push(new TargetVerticalHandlerDefinition(0, this.height/2));

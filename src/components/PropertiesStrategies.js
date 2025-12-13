@@ -1,6 +1,3 @@
-// src/components/PropertiesStrategies.js
-import { getIcon } from './Icons.js';
-
 class BaseStrategy {
     constructor(store) { this.store = store; }
     

@@ -1,11 +1,11 @@
-import { HandlerDefinition } from './HandlerDefinition.js';
-import { CONFIG } from '../core/config.js';
+import { HandlerDefinition, CONFIG } from '../../core/sdk.js';
 
-export class TargetHandlerDefinition extends HandlerDefinition {
+export default class TargetHandlerDefinition extends HandlerDefinition {
+
+    static get type() { return 'target'; }
 
     constructor(x, y, label, direction='left') {
         super(x, y, label, direction);
-        this.type = "target";
         this.role = "target";
         this.dimensions = {
             width: CONFIG.handler.width,

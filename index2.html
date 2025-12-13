@@ -70,50 +70,57 @@
     </button>
 
 
-    <script type="module">
-        import { DAGWidget } from './src/core/Widget.js';
-        const container = document.getElementById('canvas-container');
-        const viewportWidth = container.offsetWidth;
-        const viewportHeight = container.offsetHeight;
+<script type="module">
 
-        // 1. Initialize Widget
-        const widget = new DAGWidget('#canvas-container', {
-            showDefaultUI: false,
-            initialZoom: 0.5,
-            initialOffsetX: viewportWidth / 3, 
-            initialOffsetY: viewportHeight / 2
-        });
-        
-        // 2. Subscribe to Events
-        widget.subscribe((type, payload) => {
-            logEvent(type, payload);
-            if (type === 'EXPORT_READY') {
-                console.log("--- EXPORTED DATA ---");
-                console.log(JSON.stringify(payload, null, 2));
+    import { DAGWidget } from './src/core/Widget.js';
+
+    // ---------------------------------------------
+    // FUNZIONE DI VISIBILITÀ DEL PANNELLO (Estetica)
+    // ---------------------------------------------
+    function handleControlPanelVisibility() {
+        const controlPanel = document.getElementById('commands-panel');
+        if (!controlPanel) return;
+
+        // Tenta di usare l'API dei font moderni
+        document.fonts.ready.then(function () {
+            // Sostituisci "Font Family Name" con il nome esatto del font delle tue icone (es. "Material Symbols Outlined")
+            // Se non sei sicuro, la clausola else scatterà il fallback da 500ms.
+            if (document.fonts.check('16px "Font Family Name"')) { 
+                controlPanel.classList.add('ready');
+            } else {
+                // Fallback: mostra dopo 500ms se non rilevato
+                setTimeout(() => controlPanel.classList.add('ready'), 500);
             }
-
-            if (type === 'HISTORY_CHANGED') {
-                const undoBtn = document.querySelector('button[title="Undo"]');
-                const redoBtn = document.querySelector('button[title="Redo"]');
-
-                if (undoBtn) {
-                    undoBtn.disabled = !payload.canUndo;
-                    undoBtn.style.opacity = payload.canUndo ? '1' : '0.5';
-                }
-                if (redoBtn) {
-                    redoBtn.disabled = !payload.canRedo;
-                    redoBtn.style.opacity = payload.canRedo ? '1' : '0.5';
-                }
-            }
+        }).catch(err => {
+            console.error("Font loading error, using fallback:", err);
+            // Fallback di sicurezza se l'API fallisce
+            setTimeout(() => controlPanel.classList.add('ready'), 1000); 
         });
 
-        // 2b. Populate Node Palette with Dynamic Icons
+        // Fallback di sicurezza: se per qualche motivo il font check si blocca o non funziona,
+        // garantiamo che la barra compaia comunque dopo 2 secondi per non bloccare l'UI.
+        setTimeout(() => {
+            if (!controlPanel.classList.contains('ready')) {
+                controlPanel.classList.add('ready');
+                console.warn("Forzata la visualizzazione del pannello di controllo dopo 2s.");
+            }
+        }, 2000);
+    }
+    
+    // ---------------------------------------------
+    // NUOVA FUNZIONE: Popola la Node Palette DOPO che i plugin sono caricati
+    // ---------------------------------------------
+    function populateNodePalette(widget) {
         const paletteList = document.getElementById('node-palette-list');
-        const nodeDefinitions = widget.dispatch('get_nodes_definition');
         
+        // RICHIESTA ESEGUITA SOLO DOPO IL CARICAMENTO ASINCRONO:
+        const rawDefinitions = widget.dispatch('get_nodes_definition');
+        
+        // 🚨 DEBUG: Ensure the definitions are an array and log the result
+        const nodeDefinitions = Array.isArray(rawDefinitions) ? rawDefinitions : [];
+
         // Group nodes by role
         const nodesByRole = nodeDefinitions.reduce((acc, def) => {
-            // def.role now holds the descriptive string (e.g., 'Data Transformation')
             const role = def.role || 'Core'; 
             if (!acc[role]) {
                 acc[role] = [];
@@ -122,15 +129,7 @@
             return acc;
         }, {});
         
-        // Define a desired role order 
-        const roleOrder = [
-            'Core',
-            'Data', 
-            'Tools', 
-            'Logic',
-        ];
-        
-        // Sort roles based on defined order, placing any unrecognized roles at the end
+        const roleOrder = [ 'Core', 'Data', 'Tools', 'Logic' ];
         const sortedRoles = roleOrder.filter(role => nodesByRole[role]).concat(
             Object.keys(nodesByRole).filter(role => !roleOrder.includes(role))
         );
@@ -141,14 +140,11 @@
             sortedRoles.forEach(role => {
                 const definitions = nodesByRole[role];
                 
-                // 1. Create and append the Group Header
                 const groupHeader = document.createElement('div');
                 groupHeader.className = 'palette-group-header';
-                // Use the role string directly as the header text, as requested
                 groupHeader.textContent = role; 
                 paletteList.appendChild(groupHeader);
                 
-                // 2. Append the node items for this group
                 definitions.forEach(def => {
                     const type = def.type;
                     
@@ -156,16 +152,13 @@
                     item.className = 'palette-item';
                     item.dataset.type = type;
                     
-                    // Get the raw path data from the widget
                     const pathData = widget.dispatch('get_node_icon_path_data', { type });
                     
-                    // Create SVG container
                     const svgNS = "http://www.w3.org/2000/svg";
                     const svg = document.createElementNS(svgNS, "svg");
                     svg.setAttribute("class", "palette-icon-svg");
                     svg.setAttribute("viewBox", "0 0 40 40"); 
                     
-                    // Create path
                     const path = document.createElementNS(svgNS, "path");
                     path.setAttribute("d", pathData);
                     path.setAttribute("fill", "currentColor");
@@ -182,6 +175,7 @@
                     
                     paletteList.appendChild(item);
 
+                    // Scaling logic using requestAnimationFrame for performance
                     requestAnimationFrame(() => {
                         try {
                             const d3Path = d3.select(path);
@@ -204,8 +198,71 @@
                 });
             });
         }
+        
+        // Add listener here to ensure it uses the now-populated list
+        paletteList.addEventListener('click', (event) => {
+            const item = event.target.closest('.palette-item');
+            if (item && item.dataset.type) {
+                window.spawnNodeInCenter(item.dataset.type); 
+            }
+        });
+    }
 
-        // 3. Global Dispatch Bridge
+
+    // ---------------------------------------------
+    // FUNZIONE DI AVVIO PRINCIPALE DELL'APPLICAZIONE (Core)
+    // ---------------------------------------------
+    function initApp() {
+        // Avvia la logica di visualizzazione del pannello, che lavora in background.
+        handleControlPanelVisibility(); 
+        
+        const container = document.getElementById('canvas-container');
+        const viewportWidth = container.offsetWidth;
+        const viewportHeight = container.offsetHeight;
+
+        // 1. Inistantiate the widget
+        const widget = new DAGWidget('#canvas-container', {
+            showDefaultUI: false,
+            initialZoom: 0.65,
+            initialOffsetX: viewportWidth / 4, 
+            initialOffsetY: viewportHeight / 4
+        });
+
+        // 2. Subscribe to the widget events
+        widget.subscribe((type, payload) => {
+            logEvent(type, payload);
+            
+            try {
+                if (type === 'EXPORT_READY') {
+                    console.log("--- EXPORTED DATA ---");
+                    console.log(JSON.stringify(payload, null, 2));
+                }
+    
+                if (type === 'HISTORY_CHANGED') {
+                    const undoBtn = document.querySelector('button[title="Undo"]');
+                    const redoBtn = document.querySelector('button[title="Redo"]');
+    
+                    if (undoBtn) {
+                        undoBtn.disabled = !payload.canUndo;
+                        undoBtn.style.opacity = payload.canUndo ? '1' : '0.5';
+                    }
+                    if (redoBtn) {
+                        redoBtn.disabled = !payload.canRedo;
+                        redoBtn.style.opacity = payload.canRedo ? '1' : '0.5';
+                    }
+                }
+                if (type === 'PLUGINS_LOADED') {
+                    populateNodePalette(widget);
+                }
+            } catch (error) {
+                console.error("Error inside widget.subscribe handler:", error);
+            }
+        });
+
+        // 3. Load widget plugin
+        widget.loadPlugins();
+
+        // 4. Global Dispatch Bridge
         window.cmd = (command, payload) => {
             console.log(`%c➤ Dispatch: ${command}`, 'color: blue; font-weight: bold;', payload || '');
             widget.dispatch(command, payload);
@@ -225,7 +282,6 @@
             const transform = d3.zoomTransform(svgElement);
             
             // 3. Convert Screen Coordinates -> Graph Coordinates
-            // Formula: (Pixel - Translate) / Scale
             const graphX = (centerX - transform.x) / transform.k;
             const graphY = (centerY - transform.y) / transform.k;
             
@@ -238,14 +294,6 @@
             document.getElementById(menuId).classList.toggle('hidden');
         };
 
-        paletteList.addEventListener('click', (event) => {
-            const item = event.target.closest('.palette-item');
-            if (item && item.dataset.type) {
-                window.spawnNodeInCenter(item.dataset.type); 
-            }
-        });
-
-
         // --- Helper: Event Logging ---
         const logDiv = document.getElementById('log');
         function logEvent(type, payload) {
@@ -253,15 +301,23 @@
             entry.className = 'log-card';
             const time = new Date().toLocaleTimeString();
             
-            const dataStr = JSON.stringify(payload, (k,v) => k === 'handlers' ? '[...]' : v, 2);
-            entry.innerHTML = `
+            let dataEvent = `
                 <div class="card-header">
                     <strong class="card-title">${type}</strong>
                     <span class="card-time">${time}</span> 
                 </div>
-                <pre class="card-payload">${dataStr}</pre>
             `;
-            
+
+            if(payload){
+                const dataStr = JSON.stringify(payload, (k,v) => k === 'handlers' ? '[...]' : v, 2);
+                const dataValue = `
+                    <pre class="card-payload">${dataStr}</pre>
+                `;
+                dataEvent += dataValue;
+            }
+
+            entry.innerHTML = dataEvent;
+
             logDiv.prepend(entry);
             if (logDiv.childElementCount > 50) logDiv.lastChild.remove();
         }
@@ -271,22 +327,29 @@
         const toggleBtn = document.getElementById('toggle-events-btn');
         const toggleIcon = toggleBtn.querySelector('.material-symbols-outlined');
         
-        toggleBtn.addEventListener('click', () => {
-            const isHidden = eventPanel.classList.toggle('hidden');
-            
-            // Toggles the chevron icon direction
-            if (isHidden) {
-                toggleIcon.textContent = 'chevron_left';
-                toggleBtn.title = 'Show Panel';
-            } else {
-                toggleIcon.textContent = 'chevron_right';
-                toggleBtn.title = 'Hide Panel';
-            }
-        });
-        
-        // REMOVED: Palette toggle logic
+        if (toggleBtn) {
+            toggleBtn.addEventListener('click', () => {
+                const isHidden = eventPanel.classList.toggle('hidden');
+                
+                // Toggles the chevron icon direction
+                if (toggleIcon) {
+                    if (isHidden) {
+                        toggleIcon.textContent = 'chevron_left';
+                        toggleBtn.title = 'Show Panel';
+                    } else {
+                        toggleIcon.textContent = 'chevron_right';
+                        toggleBtn.title = 'Hide Panel';
+                    }
+                }
+            });
+        }
         
         console.log("Widget Initialized. Dispatch commands via window.cmd()");
-    </script>
+    }
+
+    document.addEventListener('DOMContentLoaded', initApp);
+</script>
+
+
 </body>
 </html>

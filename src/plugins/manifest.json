@@ -1,0 +1,15 @@
+{
+    "handles": [
+        "handles/SourceHandler.js",
+        "handles/TargetHandler.js",
+        "handles/TargetHorizontalHandler.js",
+        "handles/TargetVerticalHandler.js"
+    ],
+    "nodes": [
+        "nodes/EndNode.js",
+        "nodes/ServiceNode.js",
+        "nodes/TaskNode.js",
+        "nodes/StartNode.js",
+        "nodes/SwitchNode.js"
+    ]
+}

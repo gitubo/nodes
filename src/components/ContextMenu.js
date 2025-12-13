@@ -134,7 +134,7 @@ function showContextMenu(event, type, data, eventBus, store) {
     }
     else if (type === 'handler') {
         actions.push({
-            icon: 'rename', label: 'Edit Text',
+            icon: 'edit', label: 'Edit Text',
             callback: () => {
                  const val = prompt("Handler Label:", data.label);
                  if(val) { data.label = val; store.selectObject(null, null); }
@@ -162,7 +162,7 @@ function showContextMenu(event, type, data, eventBus, store) {
     actions.forEach(a => {
         const btn = document.createElement('button');
         btn.className = `icon-btn ${a.variant || ''}`;
-        btn.innerHTML = getIcon(a.icon, 20) || getIcon('settings', 20);
+        btn.innerHTML = getIcon(a.icon, 24) || getIcon('settings', 24);
         btn.title = a.label;
         btn.onclick = (e) => { 
             e.stopPropagation(); 

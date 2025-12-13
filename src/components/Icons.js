@@ -1,36 +1,28 @@
 // Icons.js - Libreria centralizzata SVG
 export const ICONS = {
-    delete: '<path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>',
+    //20
+    delete: '<path d="M9 20V8M15 20V8M20 6V21Q20 23 18 23H6Q4 23 4 21V6M6 4V4Q6 1 8 1H16Q18 1 18 3V4M23 4H1"/>',
     plus: '<path d="M10 5 L10 15 M5 10 L15 10"/>',
     minus: '<path d="M5 10 L15 10"/>',
-    zoomIn: '<circle cx="11" cy="11" r="8"></circle> <line x1="21" y1="21" x2="16.65" y2="16.65"></line> <line x1="11" y1="8" x2="11" y2="14"></line> <line x1="8" y1="11" x2="14" y2="11"></line>',
-    zoomOut: '<circle cx="11" cy="11" r="8"></circle> <line x1="21" y1="21" x2="16.65" y2="16.65"></line> <line x1="8" y1="11" x2="14" y2="11"></line>',
-    zoomFitToScreen: '<circle cx="11" cy="11" r="8"></circle> <line x1="21" y1="21" x2="16.65" y2="16.65"></line> <rect x="8" y="8" width="6" height="6"></rect>',
-    zoomResetView: '<circle cx="12" cy="12" r="2.5" fill="currentColor" stroke="none"></circle> <path d="M7 3h-2a2 2 0 0 0-2 2v2"></path> <path d="M17 3h2a2 2 0 0 1 2 2v2"></path> <path d="M17 21h2a2 2 0 0 0 2-2v-2"></path> <path d="M7 21h-2a2 2 0 0 1-2-2v-2"></path>',
-    reset: '<circle cx="10" cy="10" r="4" fill="none"/>',
-    close: '<path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>',
     settings: '<path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.488.488 0 0 0-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.484.484 0 0 0-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.58 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/>',
-    labelAdd: '<line x1="3" y1="12" x2="3" y2="7" stroke-width="2"></line> <line x1="3" y1="7" x2="16" y2="7" stroke-width="2"></line> <line x1="16" y1="7" x2="21" y2="13" stroke-width="2"></line> <line x1="21" y1="13" x2="16" y2="19" stroke-width="2"></line> <line x1="16" y1="19" x2="11" y2="19" stroke-width="2"></line> <line x1="5" y1="15" x2="5" y2="21" stroke-width="2"></line> <line x1="2" y1="18" x2="8" y2="18" stroke-width="2"></line>',
-    labelDelete: '<line x1="3" y1="19" x2="3" y2="9" stroke-width="2"></line> <line x1="8" y1="7" x2="16" y2="7" stroke-width="2"></line> <line x1="16" y1="7" x2="21" y2="13" stroke-width="2"></line> <line x1="21" y1="13" x2="17" y2="17" stroke-width="2"></line> <line x1="13" y1="19" x2="3" y2="19" stroke-width="2"></line> <line x1="18" y1="21" x2="3" y2="5" stroke-width="2"></line>',
-    addNode: '<circle cx="12" cy="12" r="10"></circle> <line x1="12" y1="7" x2="12" y2="17"></line> <line x1="7" y1="12" x2="17" y2="12"></line>',
-    addNote: '<path d="M6.5944 20.98V8.1928Q6.5944 7.5252 7.0606 7.0598 7.5268 6.5944 8.1928 6.5944H20.98Q21.6393 6.5944 22.109 7.0638 22.5784 7.5335 22.5784 8.1928V17.2504L17.2504 22.5784H8.1928Q7.5335 22.5784 7.0641 22.1087 6.5944 21.6393 6.5944 20.98ZM1.293 5.3956Q1.1598 4.7296 1.5461 4.2101T2.5984 3.5574L15.1991 1.3197Q15.8651 1.1865 16.3846 1.5594T17.0373 2.5984L17.4635 4.996M4.0636 18.9021T3.5574 17.9963L1.293 5.3956M14.5864 10.5904V18.5824M18.5824 14.5864H10.5904"/>',
-    openFile: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path> <polyline points="14 2 14 8 20 8"></polyline> <line x1="12" y1="18" x2="12" y2="10"></line> <polyline points="9 13 12 10 15 13"></polyline>',
-    saveFile: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path> <polyline points="14 2 14 8 20 8"></polyline> <line x1="12" y1="10" x2="12" y2="17"></line> <polyline points="9 15 12 18 15 15"></polyline>',
-    rename: '<path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>',
+    labelAdd: '<path d="M12 17H17L23 11 17 5H5Q2 5 2 8V12M5 20V14M8 17H2">',
+    labelDelete: '<path d="M16 20 6 2M5 5Q2 5 2 8V14Q2 17 5 17H12M17 17 23 11 17 5H10">',
+    close: '<path d="M19 5 5 19M19 19 5 5"/>',
     undo: '<path d="M12.5 8c-2.65 0-5.05.99-6.9 2.6L2 7v9h9l-3.62-3.62c1.39-1.16 3.16-1.88 5.12-1.88 3.54 0 6.55 2.31 7.6 5.5l2.37-.78C21.08 11.03 17.15 8 12.5 8z"/>',
     redo: '<path d="M18.4 10.6C16.55 9 14.15 8 11.5 8c-4.65 0-8.58 3.03-9.96 7.22L3.9 16c1.05-3.19 4.05-5.5 7.6-5.5 1.95 0 3.73.72 5.12 1.88L13 16h9V7l-3.6 3.6z"/>',
+    addNote: '<path d="M6.5944 20.98V8.1928Q6.5944 7.5252 7.0606 7.0598 7.5268 6.5944 8.1928 6.5944H20.98Q21.6393 6.5944 22.109 7.0638 22.5784 7.5335 22.5784 8.1928V17.2504L17.2504 22.5784H8.1928Q7.5335 22.5784 7.0641 22.1087 6.5944 21.6393 6.5944 20.98ZM1.293 5.3956Q1.1598 4.7296 1.5461 4.2101T2.5984 3.5574L15.1991 1.3197Q15.8651 1.1865 16.3846 1.5594T17.0373 2.5984L17.4635 4.996M4.0636 18.9021T3.5574 17.9963L1.293 5.3956M14.5864 10.5904V18.5824M18.5824 14.5864H10.5904"/>',
+    openFile: '<path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8zM14 2V6Q14 8 16 8H20M12 19 12 10M15 13 12 10 9 13">',
+    saveFile: '<path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8zM14 2V6Q14 8 16 8H20M12 19 12 10M15 16 12 19 9 16">',
+    edit: '<path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>',
+    zoomIn: '<path d="M10 1a1 1 0 000 16A1 1 0 0010 1m0 3V14m5-5H5Zm3 0c0 4-2 6 0 8l3 3q0 2-2 2l-3-3c-2-2-2-2-6-2">',
+    zoomOut: '<path d="M10 1A1 1 0 0010 17 1 1 0 0010 1M15 9H5ZM18 9C18 13 16 15 18 17L21 20Q21 22 19 22L16 19C14 17 14 17 10 17">',
+    zoomFitToScreen: '<path d="M10 1A1 1 0 0010 17 1 1 0 0010 1M18 9C18 13 16 15 18 17L21 20Q21 22 19 22L16 19C14 17 14 17 10 17M12 5H8Q6 5 6 7V11Q6 13 8 13H12Q14 13 14 11V7Q14 5 12 5">',
+    zoomResetView: '<path d="M2 8V5Q2 2 5 2H8M22 16V19Q22 22 19 22H16M22 8V5Q22 2 19 2H16M8 22H5Q2 22 2 19V16M12 10A1 1 0 0012 14 1 1 0 0012 10">',
+
+    addNode: '<path d="M12 2A1 1 0 0012 22 1 1 0 0012 2M12 5V19M19 12H5">',    
 };
 
-export function getIcon(name, size = 24, className = '') {
-    const path = ICONS[name] || '';
-    return `
-        <svg class="${className}" width="${size}" height="${size}" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="0">
-            ${path}
-        </svg>
-    `;
-}
-
-export function getStrokeIcon(name, size = 24, strokeWidth = 2) {
+export function getIcon(name, size = 24, strokeWidth = 2) {
     const path = ICONS[name] || '';
     return `
         <svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${strokeWidth}">

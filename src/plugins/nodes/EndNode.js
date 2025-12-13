@@ -1,12 +1,12 @@
-// nodes/EndNode.js
-import { NodeDefinition, NODE_ROLES } from './NodeDefinition.js';
-import { CONFIG } from '../core/config.js';
-import { TargetVerticalHandlerDefinition } from '../handlers/TargetVerticalHandler.js';
+import { NodeDefinition, NODE_ROLES, CONFIG } from '../../core/sdk.js';
+import TargetVerticalHandlerDefinition from '../handles/TargetVerticalHandler.js';
 
-export class EndNodeDefinition extends NodeDefinition {
+export default class EndNodeDefinition extends NodeDefinition {
+
+    static get type() { return 'end'; }
+
     constructor(x, y) {
         super(x, y, 'end');
-        this.type = 'end';
         this.width = 192;
         this.height = 96;
         this.handlers.push(new TargetVerticalHandlerDefinition(0, this.height/2));

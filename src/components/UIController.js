@@ -1,4 +1,4 @@
-import { getStrokeIcon, getIcon } from './Icons.js';
+import { getIcon } from './Icons.js';
 import { showCustomMenu } from './ContextMenu.js';
 import { PropertiesPanel } from './PropertiesPanel.js';
 
@@ -81,21 +81,21 @@ export class UIController {
             </div>
             <div class="panel-separator"></div>
             <div class="panel-group">
-                <button class="icon-btn" data-action="zoom-in" title="Zoom In">${getStrokeIcon('zoomIn')}</button>
-                <button class="icon-btn" data-action="zoom-out" title="Zoom Out">${getStrokeIcon('zoomOut')}</button>
-                <button class="icon-btn" data-action="zoom-fit" title="Fit to Screen">${getStrokeIcon('zoomFitToScreen')}</button>
-                <button class="icon-btn" data-action="zoom-reset" title="Reset View">${getStrokeIcon('zoomResetView')}</button>
+                <button class="icon-btn" data-action="zoom-in" title="Zoom In">${getIcon('zoomIn')}</button>
+                <button class="icon-btn" data-action="zoom-out" title="Zoom Out">${getIcon('zoomOut')}</button>
+                <button class="icon-btn" data-action="zoom-fit" title="Fit to Screen">${getIcon('zoomFitToScreen')}</button>
+                <button class="icon-btn" data-action="zoom-reset" title="Reset View">${getIcon('zoomResetView')}</button>
             </div>
         
             <div class="panel-separator"></div>
             <div class="panel-group">
-                <button class="icon-btn" id="btn-add-node" data-action="add-node" title="Add Node">${getStrokeIcon('addNode')}</button>
-                <button class="icon-btn" id="btn-add-note" data-action="add-note" title="Add Note">${getStrokeIcon('addNote')}</button>
+                <button class="icon-btn" id="btn-add-node" data-action="add-node" title="Add Node">${getIcon('addNode')}</button>
+                <button class="icon-btn" id="btn-add-note" data-action="add-note" title="Add Note">${getIcon('addNote')}</button>
             </div>
             <div class="panel-separator"></div>
             <div class="panel-group">
-                 <button class="icon-btn" data-action="open-file" title="Open File">${getStrokeIcon('openFile')}</button>
-                  <button class="icon-btn" data-action="save-file" title="Save File">${getStrokeIcon('saveFile')}</button>
+                 <button class="icon-btn" data-action="open-file" title="Open File">${getIcon('openFile')}</button>
+                  <button class="icon-btn" data-action="save-file" title="Save File">${getIcon('saveFile')}</button>
             </div>
         `;
         document.body.appendChild(p);
@@ -160,7 +160,7 @@ export class UIController {
             const def = this.registry.getNodeDefinition(type);
             return {
                 label: type.charAt(0).toUpperCase() + type.slice(1),
-                icon: getStrokeIcon('addNode', 16), // Or specific icons if available
+                icon: getIcon('addNode', 16), // Or specific icons if available
                 callback: () => {
                     // Convert Screen Coords -> Graph Coords
                     const transform = this.store.transform;

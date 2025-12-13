@@ -1,16 +1,17 @@
-import { NodeDefinition, NODE_ROLES } from './NodeDefinition.js';
-import { CONFIG } from '../core/config.js';
-import { SourceHandlerDefinition } from '../handlers/SourceHandler.js';
-import { TargetVerticalHandlerDefinition } from '../handlers/TargetVerticalHandler.js';
+import { NodeDefinition, NODE_ROLES, CONFIG } from '../../core/sdk.js';
+import SourceHandlerDefinition from '../handles/SourceHandler.js'; 
+import TargetVerticalHandlerDefinition from '../handles/TargetVerticalHandler.js';
 
 const DEFINITIONS = {
     sourceHandlerLabels: ["yes", "no", "maybe"]
 };
 
-export class SwitchNodeDefinition extends NodeDefinition {
+export default class SwitchNodeDefinition extends NodeDefinition {
+
+    static get type() { return 'switch'; }
+
     constructor(x, y, _label, note, data) {
         super(x, y, 'switch', note, data);
-        this.type = 'switch';
         this.conditions = [];
         this.targetHandlers = [];
         this.targetHandlers.push(new TargetVerticalHandlerDefinition(0, CONFIG.node.handlerSeparator*2));
@@ -40,7 +41,7 @@ export class SwitchNodeDefinition extends NodeDefinition {
         return { width: w, height: h};
     }
 
-    static getIconPath() { return 'M465 342l42 42q14-13 37-28t48-24l-15-59q-35 11-64.5 31.5T465 342Zm171-84 14 58q21-4 49.5-5t66.5 1l-90 90 42 42L880 282 718 120l-42 42 89 89q-42-2-76.5.5T636 258ZM80 450v60H280q46 0 79 15.5T432 585q63 69 135.5 98.5T766 708l-90 90 42 42L880 678 718 516l-42 42 90 90q-108 6-174.5-19.5T478 545q-13-15-32-31.5T401 480q16-10 35-24.5T466 428l-43-43q-33 33-64 49t-79 16H80Z'; }
+    static getIconPath() { return 'M39.5 24.2l4.2 4.2q1.4-1.3 3.7-2.8t4.8-2.4l-1.5-5.9q-3.5 1.1-6.45 3.15T39.5 24.2Zm17.1-8.4 1.4 5.8q2.1-.4 4.95-.5t6.65.1l-9 9 4.2 4.2L81 18.2 64.8 2 60.6 6.2l8.9 8.9q-4.2-.2-7.65.05T56.6 15.8ZM1 35v6H21q4.6 0 7.9 1.55T36.2 48.5q6.3 6.9 13.55 9.85T69.6 60.8l-9 9 4.2 4.2L81 57.8 64.8 41.6l-4.2 4.2 9 9q-10.8.6-17.45-1.95T40.8 44.5q-1.3-1.5-3.2-3.15T33.1 38q1.6-1 3.5-2.45T39.6 32.8l-4.3-4.3q-3.3 3.3-6.4 4.9t-7.9 1.6H1Z'; }
 
     getHandlers() { return [...this.targetHandlers, ...this.sourceHandlers]; }
     

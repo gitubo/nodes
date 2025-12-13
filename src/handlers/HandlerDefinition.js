@@ -3,15 +3,20 @@ import { CONFIG } from '../core/config.js';
 const generateId = () => crypto.randomUUID();
 
 export class HandlerDefinition {
+    static get type() {
+         throw new Error("Handler plugins must implement a static get type() method.");
+    }
+
     constructor(x, y, label='', direction = 'right') {
         this.id = generateId();
-        this.type = 'base';
+        this.type = this.constructor.type;
         this.role = '';
         this.offset = {x: x, y: y};
         this.label = label;
         this.direction = direction;
         this.dimensions = { width: CONFIG.handler.width, height: CONFIG.handler.height };
     }
+
 
     static getDimension(obj) { return obj.dimensions || {}; }
     static getRole(obj) { return obj.role || ''; }

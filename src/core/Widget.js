@@ -5,17 +5,19 @@ import { EventBus } from './EventBus.js';
 import { CONFIG } from './config.js';
 import { UIController } from '../components/UIController.js';
 import { SerializationService } from '../services/SerializationService.js';
-import { Registry, registerDefaultDefinitions } from './Registry.js'; 
+import { Registry } from './Registry.js'; 
 import { InputSystem } from '../services/InputSystem.js';
 import { showCustomMenu } from '../components/ContextMenu.js';
-import { getStrokeIcon } from '../components/Icons.js';
+import { getIcon } from '../components/Icons.js';
 import { Note } from '../components/Note.js';
+import { PluginLoader } from '../services/PluginLoader.js';
 
 export class DAGWidget {
     constructor(containerSelector, config = {}) {
         this.container = typeof containerSelector === 'string' 
             ? document.querySelector(containerSelector) 
             : containerSelector;
+
         if (!this.container) throw new Error(`Container ${containerSelector} not found`);
 
         this.config = { 
@@ -25,26 +27,35 @@ export class DAGWidget {
             initialZoom: 1.0, 
             initialOffsetX: 0, 
             initialOffsetY: 0,
-            ...config };
+            manifestUrl: './src/plugins/manifest.json', 
+            ...config 
+        };
+
         this.subscribers = new Set();
         this.zoomBehavior = null;
 
-        // --- 1. Instantiate Core Services (Dependency Injection) ---
+        // --- 1. Instantiate Core Services ---
         this.eventBus = new EventBus();
-        this.registry = new Registry();
+        this.registry = new Registry(); // Empty registry
         
-        // Populate default node types
-        registerDefaultDefinitions(this.registry);
+        // [Removed] registerDefaultDefinitions(this.registry); -> Handled by Loader now
 
         this.serializationService = new SerializationService(this.registry);
         this.store = new Store(this.eventBus, this.serializationService, this.registry);
+        this.pluginLoader = new PluginLoader(this.registry);
 
-        // --- 2. Initialize DOM ---
+        // --- 2. Listen for Command Requests ---
+        this.eventBus.on('CMD_REQUESTED', ({command, payload}) => {
+            this.dispatch(command, payload);
+        });
+
+        
+        // B. Initialize DOM (Canvas, SVG)
         this._initDOM();
 
-        // --- 3. Instantiate Controllers ---
-        // Pass the instances created above
+        // C. Instantiate UI Controllers (Dependencies are now ready)
         this.inputSystem = new InputSystem(this.svg.node(), this.store, this.eventBus, this.registry);
+        
         if (this.config.showDefaultUI) {
             this.uiController = new UIController(
                 this,
@@ -55,17 +66,24 @@ export class DAGWidget {
             );
         }
 
-        // Listen for internal command requests from InputSystem
-        this.eventBus.on('CMD_REQUESTED', ({command, payload}) => {
-            this.dispatch(command, payload);
-        });
-
-        // --- 4. Initialize System ---
+        // D. Initialize System (Renderer, Loops, Event Bridge)
         this._initSystem();
         this._setupEventBridge();
         
-        // Setup internal interactions
+        // E. Setup internal interactions
         this.inputSystem.attachEvents();
+    }
+
+    /**
+     * Internal async method to load plugins and THEN start the UI
+     */
+    loadPlugins() {
+        this.pluginLoader.loadFromManifest(this.config.manifestUrl)
+            .then(() => { 
+                this.eventBus.emit('PLUGINS_LOADED', null); 
+                this.loadDemoData();
+            })
+            .catch(err => console.error("Critical error during plugin loading", err));
     }
 
     _initDOM() {
@@ -144,10 +162,6 @@ export class DAGWidget {
         //this.addNodeHelperSystem.listen();
         
         startRenderLoop();
-
-        if (this.store.nodes.length === 0) {
-            this.loadDemoData();
-        }
 
         this.eventBus.on('NODE_MOVED_HIGH_FREQ', (node) => {
             updateLinksOnly(node.id); 
@@ -264,18 +278,9 @@ export class DAGWidget {
             case 'delete_node': if (payload.id) this.store.removeNode(payload.id); break;
             case 'update_node': if (payload.id) this.store.updateNode(payload.id, payload); break;
             case 'get_node': return payload.id ? this.store.getNode(payload.id) : null;
-            case 'get_nodes_definition': 
-                const nodeTypes = this.registry.getNodeTypes();
-                return nodeTypes
-                    .filter(type => type !== 'base') 
-                    .map(type => {
-                        const Def = this.registry.getNodeDefinition(type);
-                        if (!Def) return null;
-                        const role = Def.getRole ? Def.getRole() : NODE_ROLES.CORE; 
-                        const label = Def.name.replace('Definition', ''); 
-                        return { type, role, label };
-                    })
-                    .filter(def => def !== null); 
+            case 'get_nodes_definition':
+                // MUST call the registry function and return its result directly
+                return this.registry.getAllNodeDefinitions();
             case 'get_object_detail':
                 return payload.id ? this.store.getObjectById(payload.id) : null;
             case 'get_node_icon_path_data':
@@ -309,7 +314,6 @@ export class DAGWidget {
                 }
                 break;
             case 'open_connection_menu':
-                // Delegate UI logic to controller to keep Widget clean
                 this._showNodeCreationMenu(
                     payload.clientX, 
                     payload.clientY, 
@@ -320,10 +324,8 @@ export class DAGWidget {
                 const { type, x, y, sourceHandlerId } = payload;
                 const newNode = this.store.addNode(type, x, y);
                 if (newNode && sourceHandlerId) {
-                    // Auto-connect to the first target handler of the new node
                     const def = this.registry.getNodeDefinition(type);
                     if (def && def.hasTargetHandlers()) {
-                         // Find the ID of the first handler in the new node instance
                          const targetHandler = newNode.handlers.find(h => h.role === 'target');
                          if(targetHandler) {
                              this.store.addLink(sourceHandlerId, targetHandler.id);
@@ -351,7 +353,7 @@ export class DAGWidget {
         const menuItems = nodeTypes.map(type => {
             return {
                 label: type.charAt(0).toUpperCase() + type.slice(1),
-                icon: getStrokeIcon('addNode', 16), 
+                icon: getIcon('addNode', 16), 
                 callback: () => {
                     const transform = this.store.transform;
                     const graphX = (clientX - transform.x) / transform.k;
@@ -360,7 +362,7 @@ export class DAGWidget {
                     if (sourceHandlerId) {
                         this.dispatch('spawn_node_connected', { 
                             type, 
-                            x: graphX + 50, // Slight offset for visual flow
+                            x: graphX + 50, 
                             y: graphY - 20, 
                             sourceHandlerId 
                         });
@@ -374,7 +376,7 @@ export class DAGWidget {
         showCustomMenu(clientX, clientY, menuItems);
     }
     _setupEventBridge() {
-        const internalEvents = ['NODE_CREATED', 'NODE_UPDATED', 'NODE_REMOVED', 'NODE_MOVED', 'CONNECTION_CREATED', 'CONNECTION_UPDATED', 'CONNECTION_REMOVED', 'SELECTION_CHANGED', 'HISTORY_CHANGED'];
+        const internalEvents = ['PLUGINS_LOADED', 'NODE_CREATED', 'NODE_UPDATED', 'NODE_REMOVED', 'NODE_MOVED', 'CONNECTION_CREATED', 'CONNECTION_UPDATED', 'CONNECTION_REMOVED', 'SELECTION_CHANGED', 'HISTORY_CHANGED'];
         internalEvents.forEach(evtName => {
             this.eventBus.on(evtName, (payload) => this._notifySubscribers(evtName, payload));
         });

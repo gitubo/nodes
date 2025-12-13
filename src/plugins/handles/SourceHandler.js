@@ -1,12 +1,12 @@
-// src/handlers/SourceHandler.js
-import { HandlerDefinition } from './HandlerDefinition.js';
-import { CONFIG } from '../core/config.js';
+import { HandlerDefinition, CONFIG } from '../../core/sdk.js';
 
-export class SourceHandlerDefinition extends HandlerDefinition {
+export default class SourceHandlerDefinition extends HandlerDefinition {
+
+    static get type() { return 'source'; }
+
     constructor(x, y, label, direction='right') {
         super(x, y, label, direction);
         this.role = 'source';
-        this.type = 'source';
         this.dimensions = { radius: CONFIG.handler.radius };
     }
     

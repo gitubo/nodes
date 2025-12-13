@@ -1,12 +1,12 @@
-// nodes/TaskNode.js
-import { NodeDefinition, NODE_ROLES } from './NodeDefinition.js';
-import { CONFIG } from '../core/config.js'; 
-import { TargetHorizontalHandlerDefinition } from '../handlers/TargetHorizontalHandler.js';
+import { NodeDefinition, NODE_ROLES, CONFIG } from '../../core/sdk.js';
+import TargetHorizontalHandlerDefinition from '../handles/TargetHorizontalHandler.js';
 
-export class ServiceNodeDefinition extends NodeDefinition {
+export default class ServiceNodeDefinition extends NodeDefinition {
+
+    static get type() { return 'service'; }
+
     constructor(x, y, _label, note, data) {
         super(x, y, 'service', note, data);
-        this.type = 'service';
         this.width = 192;
         this.height = 96;
         this.handlers.push(new TargetHorizontalHandlerDefinition(48, 0));

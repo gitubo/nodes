@@ -1,4 +1,3 @@
-// src/nodes/NodeDefinition.js
 import { CONFIG } from '../core/config.js';
 
 export const NODE_ROLES = {
@@ -11,8 +10,8 @@ export const NODE_ROLES = {
 export class NodeDefinition {
     constructor(x, y, label, note, data) {
         this.id = crypto.randomUUID();
+        this.type = this.constructor.type; 
         this.role = this.constructor.getRole();
-        this.type = 'base';
         this.label = label;
         this.note = note;
         this.width = CONFIG.node.width;
@@ -20,6 +19,10 @@ export class NodeDefinition {
         this.handlers = [];
         this.position = {x: x, y: y};
         this.data = data;
+    }
+
+    static get type() {
+        throw new Error("Node plugins must implement a static get type() method.");
     }
 
     static getRole() { return NODE_ROLES.CORE; }

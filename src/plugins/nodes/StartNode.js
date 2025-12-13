@@ -1,12 +1,12 @@
-// nodes/StartNode.js
-import { NodeDefinition, NODE_ROLES } from './NodeDefinition.js';
-import { CONFIG } from '../core/config.js';
-import { SourceHandlerDefinition } from '../handlers/SourceHandler.js';
+import { NodeDefinition, NODE_ROLES, CONFIG } from '../../core/sdk.js';
+import SourceHandlerDefinition from '../handles/SourceHandler.js'; 
 
-export class StartNodeDefinition extends NodeDefinition {
+export default class StartNodeDefinition extends NodeDefinition {
+
+    static get type() { return 'start'; }
+
     constructor(x, y) {
         super(x, y, 'start');
-        this.type = 'start';
         this.width = 192;
         this.height = 96;
         this.handlers.push(new SourceHandlerDefinition(this.width, this.height/2));

@@ -1,10 +1,12 @@
-import { CONFIG } from '../core/config.js';
-import { TargetHandlerDefinition } from './TargetHandler.js';
+import { CONFIG } from '../../core/sdk.js';
+import TargetHandlerDefinition from '../handles/TargetHandler.js';
 
-export class TargetHorizontalHandlerDefinition extends TargetHandlerDefinition {
+export default class TargetHorizontalHandlerDefinition extends TargetHandlerDefinition {
+
+    static get type() { return 'target_horizontal'; }
+
     constructor(x, y, label) {
         super(x, y, label, 'top');
-        this.type = "target_horizontal";
         const _w = this.dimensions.height;
         const _h = this.dimensions.width;
         this.dimensions = { width: _h, height: _w };
