@@ -3,6 +3,15 @@ export class Registry {
         this.nodeDefinitions = new Map();
         this.handlerDefinitions = new Map();
         this.connectionDefinitions = new Map();
+        this.strategyDefinitions = new Map();
+    }
+
+    registerStrategy(type, strategy) {
+        this.strategyDefinitions.set(type, strategy);
+    }
+
+    getStrategy(type) {
+        return this.strategyDefinitions.get(type);
     }
     
     registerNode(type, ClassRef) { 

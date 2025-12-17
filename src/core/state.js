@@ -225,6 +225,14 @@ export class Store {
         return note;
     }
 
+    updateNote(id, changes) {
+        const note = this.getNote(id);
+        if (!note) return;
+        this._snapshot(); 
+        Object.assign(note, changes);
+        this.eventBus.emit('NOTE_UPDATED', note);
+    }
+
     updateNode(id, changes) {
         const node = this.getNode(id);
         if (!node) return;

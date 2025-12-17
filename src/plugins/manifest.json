@@ -11,5 +11,8 @@
         "nodes/TaskNode.js",
         "nodes/StartNode.js",
         "nodes/SwitchNode.js"
+    ],
+    "strategies": [
+        "strategies/TextExportStrategy.js"
     ]
 }

@@ -1,4 +1,4 @@
-import { calculatePath } from '../render/geometry.js';
+import { calculatePath, ConnectionPathType  } from '../render/geometry.js';
 
 export class ConnectionDefinition {
     static get type() { return 'default'; }
@@ -8,14 +8,13 @@ export class ConnectionDefinition {
         this.type = this.constructor.type;
         this.sourceHandlerId = data.sourceHandlerId;
         this.targetHandlerId = data.targetHandlerId;
-        
+
+        this.pathType = data.pathType || ConnectionPathType.SMOOTH_STEP;
         this.style = {
             stroke: data.style?.stroke || 'var(--dim-gray)',
-            strokeWidth: data.style?.strokeWidth || 2,
-            fontSize: data.style?.fontSize || 12,    
-            fontColor: data.style?.fontColor || '#000000' 
+            strokeWidth: data.style?.strokeWidth || 2
         };
-        
+
         this.label = data.label || { text: '', offset: 0.5 };
         this.data = data.data || {};
     }
@@ -53,10 +52,11 @@ export class ConnectionDefinition {
             type: this.type,
             sourceHandlerId: this.sourceHandlerId,
             targetHandlerId: this.targetHandlerId,
+            pathType: this.pathType,
             label: this.label ? { ...this.label } : undefined,
             style: this.style ? { ...this.style } : undefined,
             data: this.data ? JSON.parse(JSON.stringify(this.data)) : {}
         };
     }
 
-}
+} 

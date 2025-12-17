@@ -76,9 +76,8 @@ export class NodeRenderer {
 
     renderHandlers(selection, d) {
         const renderer = this;
-        
-        // 1. Bind the Handler Instances directly
-        // d.getHandlers() returns the array of actual HandlerDefinition instances stored in the state
+
+        // 1. Join Data directly from the Node's handler instances
         selection.selectAll("g.handler-g")
             .data(d.getHandlers(), h => h.id)
             .join("g")
@@ -87,28 +86,24 @@ export class NodeRenderer {
             .each(function(h) {
                 const group = d3.select(this);
 
-                // PERFORMANCE FIX: 
-                // We do NOT call 'new HandlerDef()' here. 'h' IS the instance.
-                
-                // 2. Render Main Body (The "Port")
-                // We use 'h' to call getShapePath directly
+                // --- FIX: Render Main Body with Conditional Styling ---
                 group.selectAll("path.handler-body")
                     .data([h]) 
                     .join("path")
                     .attr("class", "handler-body")
-                    .attr("d", h.getShapePath()) 
-                    .style("fill", "var(--platinum)")
-                    .style("stroke", "var(--dim-gray)");
+                    .attr("d", h.getShapePath())
+                    // Only apply inline styles if the instance has specific overrides.
+                    // Otherwise, passing null removes the attribute, allowing CSS to win.
+                    .attr("fill", h.backgroundColor || null)
+                    .attr("stroke", h.borderColor || null);
 
-                // 3. Render Label
-                // h is the instance, so we call its method directly
+                // 2. Render Label (Delegates to the updated HandlerDefinition method above)
                 if (typeof h.renderLabel === 'function') {
                     h.renderLabel(group);
                 }
 
-                // 4. Render Extras (Helper Buttons, etc.)
+                // 3. Render Extras (Helper buttons)
                 const isConnected = renderer.store.links.some(l => l.sourceHandlerId === h.id);
-                
                 if (typeof h.renderExtras === 'function') {
                     h.renderExtras(group, { 
                         isConnected, 
@@ -116,70 +111,6 @@ export class NodeRenderer {
                     });
                 }
             });
-    }
-
-    OLDrenderHandlers(selection, d) {
-        const renderer = this;
-        selection.selectAll("g.handler-g")
-            .data(() => {
-                return d.getHandlers() || [];
-            }, h => h.id)
-            .join(
-                enter => {
-                    const g = enter.append("g")
-                        .attr("class", h => `handler-g ${h.type} ${h.role}`)
-                        .attr("data-id", h => h.id)
-                        .attr("transform", h => {
-                            const tx = h.offset?.x || 0;
-                            const ty = h.offset?.y || 0;
-                            return `translate(${tx},${ty})`;
-                        }); 
-
-                    g.each(function (h) {
-                        const HandlerClass = renderer.registry.getHandlerDefinition(h.type);
-                        if (!HandlerClass) return;
-
-                        const instance = new HandlerClass();
-                        
-                        // FIX: Sync the visual instance ID with the persistent data ID
-                        // This ensures the Geometry engine can find this handler by ID later
-                        instance.id = h.id; 
-
-                        h.instance = instance; 
-                        
-                        // Pass connection state AND eventBus to allow the helper button to dispatch commands
-                        const isConnected = renderer.store.links.some(l => l.sourceHandlerId === h.id);
-                        instance.render(d3.select(this), { 
-                            isConnected, 
-                            eventBus: renderer.store.eventBus 
-                        });
-                    });
-                    return g;
-                },
-                update => {
-                    update.attr("transform", h => {
-                            const tx = h.offset?.x || 0;
-                            const ty = h.offset?.y || 0;
-                            return `translate(${tx},${ty})`;
-                        });
-                    update.each(function (h) {
-                        if (h.instance) {
-                            // Ensure the instance ID is synced on update as well
-                            h.instance.id = h.id;
-
-                            const isConnected = renderer.store.links.some(l => l.sourceHandlerId === h.id);
-                            
-                            // Re-render with updated connection state and eventBus
-                            h.instance.render(d3.select(this), { 
-                                isConnected, 
-                                eventBus: renderer.store.eventBus 
-                            });
-                        }
-                    });
-                    return update;
-                },
-                exit => exit.remove()
-            );
     }
 
     render(selection, d) {

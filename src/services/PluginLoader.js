@@ -19,6 +19,10 @@ export class PluginLoader {
                 await this._loadPlugins(manifest.nodes, 'node', basePath);
             }
             
+            if (manifest.strategies) {
+                await this._loadPlugins(manifest.strategies, 'strategy', basePath);
+            }
+
             console.log("Plugins loaded successfully from:", basePath);
             
         } catch (error) {
@@ -35,16 +39,15 @@ export class PluginLoader {
                 const module = await import(fullPath);
                 
                 const PluginClass = module.default;
-                if (!PluginClass) {
-                    console.warn(`Plugin ${fullPath} has no default export.`);
-                    continue;
-                }
+                if (!PluginClass) continue;
 
                 const type = PluginClass.type;
                 if (category === 'node') {
                     this.registry.registerNode(type, PluginClass);
-                } else {
+                } else if (category === 'handler') {
                     this.registry.registerHandler(type, PluginClass);
+                } else if (category === 'strategy') {
+                    this.registry.registerStrategy(type, Plugin);
                 }
 
             } catch (err) {

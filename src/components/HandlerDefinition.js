@@ -23,9 +23,7 @@ export class HandlerDefinition {
     static draw(obj){}
 
     getShapePath() {
-        // Default: A circle path
         const r = CONFIG.handler.radius;
-        // SVG Path for a circle: M cx,cy m -r,0 a r,r 0 1,0 (r*2),0 a r,r 0 1,0 -(r*2),0
         return `M 0,0 m -${r},0 a ${r},${r} 0 1,0 ${r*2},0 a ${r},${r} 0 1,0 -${r*2},0`;
     }
 
@@ -52,30 +50,93 @@ export class HandlerDefinition {
 
         const labelGroup = group.append("g")
             .attr("class", "handler-label-group")
-            .style("cursor", "move"); // or pointer
+            .style("cursor", "move");
 
-        // Default position: slightly to the right/top depending on direction logic
-        // You can make this smarter based on this.direction
-        const x = CONFIG.handler.radius + 8 + (this.labelOffsetX || 0);
-        const y = (this.labelOffsetY || 0);
+        const margin = this.labelMargin || 12;
+        const padding = 6;
 
-        labelGroup.attr("transform", `translate(${x}, ${y})`);
-        
-        labelGroup.append("text")
+        // --- FIX: Remove Hardcoded Defaults ---
+        // Only use instance properties. If undefined, let CSS handle it.
+        const customBorder = this.borderColor || null;
+        const customBg = this.backgroundColor || null;
+        const customFontColor = this.fontColor || null;
+        const customFontSize = this.fontSize || '12px'
+
+        // 1. Render Text first (to measure it)
+        const textEl = labelGroup.append("text")
             .attr("class", "handler-label-text")
             .text(this.label)
-            .attr("dy", "0.3em")
-            .attr("text-anchor", "start");
+            .attr("dominant-baseline", "middle")
+            .attr("y", 1);
+
+        // Apply custom text color if exists, else rely on CSS (.handler-label-text)
+        if (customFontColor) textEl.style("fill", customFontColor);
+        if (customFontSize) textEl.style("font-size", customFontSize);
+
+        // 2. Calculate Position & Anchor
+        let x = 0, y = 0, anchor = "start";
+        const bbox = textEl.node().getBBox();
+        const w = bbox.width + (padding * 2);
+        const h = bbox.height + (padding * 2);
+
+        switch(this.direction) {
+            case 'left':
+                anchor = "end";
+                x = -margin;
+                break;
+            case 'top':
+                anchor = "middle";
+                y = -margin;
+                break;
+            case 'bottom':
+                anchor = "middle";
+                y = margin + (h/2);
+                break;
+            case 'top_right':
+                anchor = "start";
+                x = margin * 0.7;
+                y = -margin * 0.7;
+                break;
+            case 'top_left':
+                anchor = "end";
+                x = -margin * 0.7;
+                y = -margin * 0.7;
+                break;
+            case 'right':
+            default:
+                anchor = "start";
+                x = margin;
+                break;
+        }
+
+        textEl.attr("text-anchor", anchor);
+
+        // 3. Correct Rect Position based on Anchor
+        let rectX = 0;
+        if (anchor === "start") rectX = -padding; // Shift left by padding
+        else if (anchor === "middle") rectX = -w / 2;
+        else if (anchor === "end") rectX = -w + padding; // Shift right by padding
+
+        // 5. Insert Rect BEHIND text
+        const rect = labelGroup.insert("rect", "text")
+            .attr("x", rectX)
+            .attr("y", -h / 2)
+            .attr("width", w)
+            .attr("height", h)
+            .attr("rx", 8)
+            .attr("class", "handler-label-bg")
+            .attr("stroke-width", 1);
+
+        if (customBorder) rect.attr("stroke", customBorder);
+        if (customBg) rect.attr("fill", customBg);
+        
+        // 6. Move the whole group
+        labelGroup.attr("transform", `translate(${x}, ${y})`);
     }
 
     static deserialize(data) {
-        // Ricostruisce un handler temporaneo o restituisce i dati
-        // Dato che gli handler sono spesso creati nel costruttore del Nodo,
-        // questo metodo serve più come "parser" o "configurator".
-        
         const offset = data.presentation?.offset || { x: 0, y: 0 };
         
-        // Creiamo una nuova istanza
         const instance = new this(
             offset.x, 
             offset.y, 
@@ -89,29 +150,11 @@ export class HandlerDefinition {
         return instance;
     }
 
-    /**
-     * Render the handler visual elements
-     * @param {d3.Selection} selection - D3 selection to render into
-     */
-    render(selection) {
-        // Override in subclasses
-    }
+    render(selection) {}
     
-    /**
-     * Update handler position
-     * @param {d3.Selection} selection - D3 selection of handler group
-     * @param {Object} position - {x, y} coordinates
-     */
     updatePosition(selection, position) {
         selection.attr("transform", `translate(${position.x}, ${position.y})`);
     }
     
-    /**
-     * Setup drag behavior for this handler type
-     * @param {d3.Selection} selection - D3 selection to attach drag to
-     * @param {Object} callbacks - {onStart, onDrag, onEnd}
-     */
-    setupDrag(selection, callbacks) {
-        // Override in subclasses that support dragging
-    }
+    setupDrag(selection, callbacks) {}
 }

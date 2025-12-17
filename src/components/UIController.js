@@ -96,6 +96,7 @@ export class UIController {
             <div class="panel-group">
                  <button class="icon-btn" data-action="open-file" title="Open File">${getIcon('openFile')}</button>
                   <button class="icon-btn" data-action="save-file" title="Save File">${getIcon('saveFile')}</button>
+                  <button class="icon-btn" data-action="traverse-diagram" title="Traverse the Diagram">${getIcon('traverse')}</button>
             </div>
         `;
         document.body.appendChild(p);
@@ -127,6 +128,7 @@ export class UIController {
                     URL.revokeObjectURL(url);
                     break;
                 case 'open-file': this.openFile(); break;
+                case 'traverse-diagram': this.widget.dispatch('traverse', { strategy: 'text_export' }); break;
                 case 'add-node':
                     // 1. Get position of the clicked button
                     const btnRect = btn.getBoundingClientRect();

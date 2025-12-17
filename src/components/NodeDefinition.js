@@ -49,6 +49,7 @@ export class NodeDefinition {
     }
 
     static deserialize(nodeData, registry) {
+        // 1. Instantiate the node (this creates NEW handlers with NEW IDs)
         const instance = new this(
             nodeData.presentation?.position?.x || 0, 
             nodeData.presentation?.position?.y || 0,
@@ -58,15 +59,39 @@ export class NodeDefinition {
         );
         instance.id = nodeData.id;
 
+        // 2. Restore Handler IDs by matching Role/Index
         if (nodeData.handles) {
+            // Convert the hash map of saved handles to an array
+            const savedHandlers = Object.values(nodeData.handles);
+            
+            // Group saved handlers by role for matching
+            const savedHandlersByRole = savedHandlers.reduce((acc, h) => {
+                if (!acc[h.role]) acc[h.role] = [];
+                acc[h.role].push(h);
+                return acc;
+            }, {});
+
+            // Iterate over the FRESH handlers created by the constructor
             instance.handlers.forEach(h => {
-                const hData = nodeData.handles[h.id];
-                if (hData) {
-                    const HandlerClass = registry.getHandlerDefinition(hData.type);
+                const roleGroup = savedHandlersByRole[h.role];
+                
+                // If we have saved data for this role, pop the first one (FIFO)
+                if (roleGroup && roleGroup.length > 0) {
+                    const match = roleGroup.shift(); // Take first match
+                    
+                    // CRITICAL: Restore the ID so links can find this handler
+                    h.id = match.id; 
+                    
+                    // Restore mutable properties
+                    if (match.label !== undefined) h.label = match.label;
+                    
+                    // Allow specific handler logic to restore extra data
+                    const HandlerClass = registry.getHandlerDefinition(match.type);
                     if (HandlerClass && typeof HandlerClass.deserialize === 'function') {
-                         const restoredHandler = HandlerClass.deserialize(hData);
-                         Object.assign(h, restoredHandler);
-                         h.id = hData.id; 
+                         const restoredExtra = HandlerClass.deserialize(match);
+                         Object.assign(h, restoredExtra);
+                         // Ensure ID is kept from the match, not the deserialized extra
+                         h.id = match.id; 
                     }
                 }
             });

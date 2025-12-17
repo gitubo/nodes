@@ -4,32 +4,26 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DAG Widget - Floating UI Demo</title>
-    
     <script src="https://d3js.org/d3.v7.min.js"></script>
-
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" />
-
     <link rel="stylesheet" href="./styles/main.css">
     <link rel="stylesheet" href="./app.css">
-
-    </head>
+</head>
 <body>
 
     <div id="canvas-container"></div>
 
     <div id="node-palette-panel" class="floating-panel">
-        <div id="node-palette-list">
-            </div>
+        <div id="node-palette-list"></div>
     </div>
     
     <div id="commands-panel" class="floating-panel">
-        
         <div class="control-group" title="History">
             <button class="icon-button" onclick="cmd('undo')" title="Undo">
                 <span class="material-symbols-outlined">undo</span>
             </button>
             <button class="icon-button" onclick="cmd('redo')" title="Redo">
-                <span class="material-symbols-outlined">redo</span>
+                 <span class="material-symbols-outlined">redo</span>
             </button>
         </div>
 
@@ -44,16 +38,19 @@
                 <span class="material-symbols-outlined">zoom_out</span>
             </button>
             <button class="icon-button" onclick="cmd('zoom_reset')" title="Reset View">
-                <span class="material-symbols-outlined">reset_focus</span>
+                 <span class="material-symbols-outlined">reset_focus</span>
             </button>
         </div>
 
         <div class="control-group" title="Utility">
             <button class="icon-button" onclick="cmd('import')" title="Open file">
-                <span class="material-symbols-outlined">folder_open</span>
+                <span class="material-symbols-outlined">upload</span>
             </button>
             <button class="icon-button" onclick="cmd('export')" title="Create representation">
-                <span class="material-symbols-outlined">data_object</span>
+                 <span class="material-symbols-outlined">download</span>
+            </button>
+            <button class="icon-button" onclick="cmd('traverse', { strategy: 'text_export' })" title="Run Traversal">
+                 <span class="material-symbols-outlined">data_object</span>
             </button>
         </div>
     </div>
@@ -69,66 +66,52 @@
         <span class="material-symbols-outlined">chevron_left</span> 
     </button>
 
-
 <script type="module">
-
     import { DAGWidget } from './src/core/Widget.js';
 
     // ---------------------------------------------
-    // FUNZIONE DI VISIBILITÀ DEL PANNELLO (Estetica)
+    // UI VISIBILITY LOGIC
     // ---------------------------------------------
     function handleControlPanelVisibility() {
         const controlPanel = document.getElementById('commands-panel');
         if (!controlPanel) return;
 
-        // Tenta di usare l'API dei font moderni
         document.fonts.ready.then(function () {
-            // Sostituisci "Font Family Name" con il nome esatto del font delle tue icone (es. "Material Symbols Outlined")
-            // Se non sei sicuro, la clausola else scatterà il fallback da 500ms.
-            if (document.fonts.check('16px "Font Family Name"')) { 
+            if (document.fonts.check('16px "Material Symbols Outlined"')) { 
                 controlPanel.classList.add('ready');
             } else {
-                // Fallback: mostra dopo 500ms se non rilevato
                 setTimeout(() => controlPanel.classList.add('ready'), 500);
             }
         }).catch(err => {
             console.error("Font loading error, using fallback:", err);
-            // Fallback di sicurezza se l'API fallisce
             setTimeout(() => controlPanel.classList.add('ready'), 1000); 
         });
 
-        // Fallback di sicurezza: se per qualche motivo il font check si blocca o non funziona,
-        // garantiamo che la barra compaia comunque dopo 2 secondi per non bloccare l'UI.
         setTimeout(() => {
             if (!controlPanel.classList.contains('ready')) {
                 controlPanel.classList.add('ready');
-                console.warn("Forzata la visualizzazione del pannello di controllo dopo 2s.");
             }
         }, 2000);
     }
     
     // ---------------------------------------------
-    // NUOVA FUNZIONE: Popola la Node Palette DOPO che i plugin sono caricati
+    // POPULATE PALETTE (USING PURE QUERIES)
     // ---------------------------------------------
     function populateNodePalette(widget) {
         const paletteList = document.getElementById('node-palette-list');
         
-        // RICHIESTA ESEGUITA SOLO DOPO IL CARICAMENTO ASINCRONO:
-        const rawDefinitions = widget.dispatch('get_nodes_definition');
-        
-        // 🚨 DEBUG: Ensure the definitions are an array and log the result
+        // QUERY: Get immutable definition data (not classes)
+        const rawDefinitions = widget.api.queries.getAllNodesDefinition();
         const nodeDefinitions = Array.isArray(rawDefinitions) ? rawDefinitions : [];
 
         // Group nodes by role
         const nodesByRole = nodeDefinitions.reduce((acc, def) => {
             const role = def.role || 'Core'; 
-            if (!acc[role]) {
-                acc[role] = [];
-            }
+            if (!acc[role]) acc[role] = [];
             acc[role].push(def);
             return acc;
         }, {});
-        
+
         const roleOrder = [ 'Core', 'Data', 'Tools', 'Logic' ];
         const sortedRoles = roleOrder.filter(role => nodesByRole[role]).concat(
             Object.keys(nodesByRole).filter(role => !roleOrder.includes(role))
@@ -136,7 +119,6 @@
 
         if (nodeDefinitions.length > 0) {
             paletteList.innerHTML = '';
-            
             sortedRoles.forEach(role => {
                 const definitions = nodesByRole[role];
                 
@@ -147,12 +129,12 @@
                 
                 definitions.forEach(def => {
                     const type = def.type;
-                    
                     const item = document.createElement('div');
                     item.className = 'palette-item';
                     item.dataset.type = type;
                     
-                    const pathData = widget.dispatch('get_node_icon_path_data', { type });
+                    // QUERY: Get icon path string (safe primitive)
+                    const pathData = widget.api.queries.getNodeIconPathData(type);
                     
                     const svgNS = "http://www.w3.org/2000/svg";
                     const svg = document.createElementNS(svgNS, "svg");
@@ -164,10 +146,9 @@
                     path.setAttribute("fill", "currentColor");
                     svg.appendChild(path);
 
-                    // Use the label derived in the dispatch command
-                    const label = def.type.charAt(0).toUpperCase() + def.type.slice(1)
-                    
+                    const label = def.type.charAt(0).toUpperCase() + def.type.slice(1);
                     item.appendChild(svg);
+                    
                     const span = document.createElement('span');
                     span.className = 'palette-item-label';
                     span.innerText = label;
@@ -175,31 +156,25 @@
                     
                     paletteList.appendChild(item);
 
-                    // Scaling logic using requestAnimationFrame for performance
+                    // Scaling logic
                     requestAnimationFrame(() => {
                         try {
                             const d3Path = d3.select(path);
                             const bbox = path.getBBox();
-                            
                             const targetSize = 32; 
                             const padding = 4;
-                            
                             if (bbox.width > 0 && bbox.height > 0) {
                                 const scale = targetSize / Math.max(bbox.width, bbox.height);
                                 const tx = padding + (targetSize - bbox.width * scale) / 2 - bbox.x * scale;
                                 const ty = padding + (targetSize - bbox.height * scale) / 2 - bbox.y * scale;
-                                
                                 d3Path.attr("transform", `translate(${tx}, ${ty}) scale(${scale})`);
                             }
-                        } catch(e) {
-                            console.warn("Could not scale icon for", type, e);
-                        }
+                        } catch(e) { console.warn(e); }
                     });
                 });
             });
         }
         
-        // Add listener here to ensure it uses the now-populated list
         paletteList.addEventListener('click', (event) => {
             const item = event.target.closest('.palette-item');
             if (item && item.dataset.type) {
@@ -208,19 +183,16 @@
         });
     }
 
-
     // ---------------------------------------------
-    // FUNZIONE DI AVVIO PRINCIPALE DELL'APPLICAZIONE (Core)
+    // MAIN APP INIT
     // ---------------------------------------------
     function initApp() {
-        // Avvia la logica di visualizzazione del pannello, che lavora in background.
         handleControlPanelVisibility(); 
         
         const container = document.getElementById('canvas-container');
         const viewportWidth = container.offsetWidth;
         const viewportHeight = container.offsetHeight;
 
-        // 1. Inistantiate the widget
         const widget = new DAGWidget('#canvas-container', {
             showDefaultUI: false,
             initialZoom: 0.65,
@@ -228,128 +200,133 @@
             initialOffsetY: viewportHeight / 4
         });
 
-        // 2. Subscribe to the widget events
+        // Event Subscription
         widget.subscribe((type, payload) => {
             logEvent(type, payload);
             
-            try {
-                if (type === 'EXPORT_READY') {
-                    console.log("--- EXPORTED DATA ---");
-                    console.log(JSON.stringify(payload, null, 2));
+            if (type === 'EXPORT_READY') {
+                console.log("--- EXPORTED DATA (Event) ---");
+                console.log(JSON.stringify(payload, null, 2));
+            }
+
+            if (type === 'HISTORY_CHANGED') {
+                const undoBtn = document.querySelector('button[title="Undo"]');
+                const redoBtn = document.querySelector('button[title="Redo"]');
+                if (undoBtn) {
+                    undoBtn.disabled = !payload.canUndo;
+                    undoBtn.style.opacity = payload.canUndo ? '1' : '0.5';
                 }
-    
-                if (type === 'HISTORY_CHANGED') {
-                    const undoBtn = document.querySelector('button[title="Undo"]');
-                    const redoBtn = document.querySelector('button[title="Redo"]');
-    
-                    if (undoBtn) {
-                        undoBtn.disabled = !payload.canUndo;
-                        undoBtn.style.opacity = payload.canUndo ? '1' : '0.5';
-                    }
-                    if (redoBtn) {
-                        redoBtn.disabled = !payload.canRedo;
-                        redoBtn.style.opacity = payload.canRedo ? '1' : '0.5';
-                    }
+                if (redoBtn) {
+                    redoBtn.disabled = !payload.canRedo;
+                    redoBtn.style.opacity = payload.canRedo ? '1' : '0.5';
                 }
-                if (type === 'PLUGINS_LOADED') {
-                    populateNodePalette(widget);
-                }
-            } catch (error) {
-                console.error("Error inside widget.subscribe handler:", error);
+            }
+            if (type === 'PLUGINS_LOADED') {
+                populateNodePalette(widget);
             }
         });
 
-        // 3. Load widget plugin
-        widget.loadPlugins();
+        // COMMAND: Load Plugins
+        widget.api.commands.loadPlugins();
 
-        // 4. Global Dispatch Bridge
+        // REFACTOR: Global Dispatch Bridge using new API
         window.cmd = (command, payload) => {
             console.log(`%c➤ Dispatch: ${command}`, 'color: blue; font-weight: bold;', payload || '');
-            widget.dispatch(command, payload);
+            
+            // Map UI buttons to new API commands
+            switch (command) {
+                // Mutators (Command)
+                case 'undo': widget.api.commands.undo(); break;
+                case 'redo': widget.api.commands.redo(); break;
+                case 'zoom_in': widget.api.commands.zoomIn(); break;
+                case 'zoom_out': widget.api.commands.zoomOut(); break;
+                case 'zoom_fit': widget.api.commands.zoomFit(); break;
+                case 'zoom_reset': widget.api.commands.zoomReset(); break;
+                case 'create_node': widget.api.commands.createNode(payload); break;
+                
+                // Exporters (Query + Side Effect if desired)
+                case 'export': 
+                    // 1. Get data via Query (Synchronous)
+                    const data = widget.api.queries.getGraphData();
+                    console.log("Graph Data Exported (Query):", data);
+                    
+                    // 2. Trigger UI feedback (if not relying on the internal event)
+                    logEvent("EXPORT_DATA_QUERY", data);
+                    break;
+                    
+                // Importers (Command)
+                case 'import': 
+                    if(payload) widget.api.commands.importState(payload);
+                    else openFileImport();
+                    break;
+
+                case 'traverse': 
+                    widget.dispatch('traverse', payload); // payload will be { strategy: 'text_export' }
+                    break;
+            }
         };
+
+        // File Import Helper
+        function openFileImport() {
+             const input = document.createElement('input');
+             input.type = 'file'; input.accept = 'application/json';
+             input.onchange = (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (evt) => {
+                    try { 
+                        const data = JSON.parse(evt.target.result);
+                        widget.api.commands.importState(data);
+                    } catch (err) { alert("Invalid JSON"); }
+                };
+                reader.readAsText(file);
+             };
+             input.click();
+        }
         
         window.spawnNodeInCenter = (nodeType) => {
             const container = document.getElementById('canvas-container');
-            const svgElement = container.querySelector('svg');
-
-            if (!svgElement) return;
-
-            // 1. Get Screen Center (Pixels relative to viewport)
-            const centerX = container.offsetWidth / 2;
-            const centerY = container.offsetHeight / 2;
-            
-            // 2. Get current D3 Zoom Transform (Translate & Scale)
-            const transform = d3.zoomTransform(svgElement);
-            
-            // 3. Convert Screen Coordinates -> Graph Coordinates
-            const graphX = (centerX - transform.x) / transform.k;
-            const graphY = (centerY - transform.y) / transform.k;
-            
-            // 4. Dispatch 'create_node' with corrected coordinates
-            cmd('create_node', { type: nodeType, x: graphX, y: graphY });
+            const widgetCoords = widget.getWidgetCoordinates(
+                container.offsetWidth / 2, 
+                container.offsetHeight / 2
+            );
+            widget.api.commands.createNode({ type: nodeType, x: widgetCoords.x, y: widgetCoords.y });
         };
 
-        // --- Helper: UI Menu Toggles ---
-        window.toggleMenu = (menuId) => {
-            document.getElementById(menuId).classList.toggle('hidden');
-        };
-
-        // --- Helper: Event Logging ---
+        // --- Helpers ---
         const logDiv = document.getElementById('log');
         function logEvent(type, payload) {
             const entry = document.createElement('div');
             entry.className = 'log-card';
             const time = new Date().toLocaleTimeString();
-            
-            let dataEvent = `
-                <div class="card-header">
-                    <strong class="card-title">${type}</strong>
-                    <span class="card-time">${time}</span> 
-                </div>
-            `;
-
+            let dataEvent = `<div class="card-header"><strong class="card-title">${type}</strong><span class="card-time">${time}</span></div>`;
             if(payload){
                 const dataStr = JSON.stringify(payload, (k,v) => k === 'handlers' ? '[...]' : v, 2);
-                const dataValue = `
-                    <pre class="card-payload">${dataStr}</pre>
-                `;
-                dataEvent += dataValue;
+                dataEvent += `<pre class="card-payload">${dataStr}</pre>`;
             }
-
             entry.innerHTML = dataEvent;
-
             logDiv.prepend(entry);
             if (logDiv.childElementCount > 50) logDiv.lastChild.remove();
         }
         
-        // --- Helper: Event Panel Toggle (Right) ---
         const eventPanel = document.getElementById('event-panel');
         const toggleBtn = document.getElementById('toggle-events-btn');
-        const toggleIcon = toggleBtn.querySelector('.material-symbols-outlined');
-        
         if (toggleBtn) {
             toggleBtn.addEventListener('click', () => {
                 const isHidden = eventPanel.classList.toggle('hidden');
-                
-                // Toggles the chevron icon direction
+                const toggleIcon = toggleBtn.querySelector('.material-symbols-outlined');
                 if (toggleIcon) {
-                    if (isHidden) {
-                        toggleIcon.textContent = 'chevron_left';
-                        toggleBtn.title = 'Show Panel';
-                    } else {
-                        toggleIcon.textContent = 'chevron_right';
-                        toggleBtn.title = 'Hide Panel';
-                    }
+                    toggleIcon.textContent = isHidden ? 'chevron_left' : 'chevron_right';
                 }
             });
         }
         
-        console.log("Widget Initialized. Dispatch commands via window.cmd()");
+        console.log("Widget Initialized.");
     }
 
     document.addEventListener('DOMContentLoaded', initApp);
 </script>
-
 
 </body>
 </html>

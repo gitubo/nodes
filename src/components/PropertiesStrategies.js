@@ -13,7 +13,12 @@ class BaseStrategy {
         input.value = value || '';
         if (type === 'color' && !value) input.value = '#000000';
         
-        input.onchange = (e) => onChange(e.target.value);
+        // FIX: Use oninput for text/number to capture changes immediately
+        // Use onchange for color inputs or others that might not fire oninput reliably across browsers
+        const eventType = (type === 'text' || type === 'number') ? 'oninput' : 'onchange';
+
+        input[eventType] = (e) => onChange(e.target.value);
+        
         group.appendChild(input);
         return group;
     }

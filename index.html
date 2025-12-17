@@ -8,15 +8,11 @@
     <link rel="stylesheet" href="./styles/main.css">
     <style>
         body { display: flex; height: 100vh; overflow: hidden; margin: 0; }
-
         #canvas-container { flex-grow: 1; position: relative; }
-
         h3 { margin: 0 0 5px 0; font-size: 14px; color: #333; }
     </style>
 </head>
 <body>
-
-
     <div id="canvas-container"></div>
 
     <script type="module">
@@ -26,6 +22,7 @@
         const container = document.getElementById('canvas-container');
         const viewportWidth = container.offsetWidth;
         const viewportHeight = container.offsetHeight;
+        
         const widget = new DAGWidget('#canvas-container', {
             showDefaultUI: true,
             initialZoom: 0.65,
@@ -35,20 +32,31 @@
 
         // 2. Subscribe to the Event Stream (Outbound)
         widget.subscribe((type, payload) => {
-            console.log(type," --> ",JSON.stringify(payload, null, 2));
+            console.log(type, " --> ", JSON.stringify(payload, null, 2));
         });
 
-        // 3. Load widget plugin
-        widget.loadPlugins();
+        // 3. Load widget plugin (COMMAND)
+        widget.api.commands.loadPlugins();
 
-        // 3. Dispatch Helper (Inbound)
-        // Expose to window for the HTML buttons to use
+        // 4. Dispatch Helper (USING STRICT CQS API)
         window.cmd = (command, payload) => {
             console.log(`%c➤ Dispatch: ${command}`, 'color: blue; font-weight: bold;', payload || '');
-            widget.dispatch(command, payload);
+            
+            // Map strings to specific API calls
+            switch (command) {
+                // Commands (Void return)
+                case 'create_node': widget.api.commands.createNode(payload); break;
+                case 'zoom_in': widget.api.commands.zoomIn(); break;
+                case 'undo': widget.api.commands.undo(); break;
+                case 'redo': widget.api.commands.redo(); break;
+                
+                // Fallback for testing internal legacy routing
+                default: 
+                    widget.dispatch(command, payload);
+            }
         };
 
-        console.log("Widget Initialized. Dispatch commands via window.cmd()");
+        console.log("Widget Initialized. Use window.cmd('create_node', {type:'task'})");
     </script>
 </body>
 </html>

@@ -1,14 +1,34 @@
 export class Note {
-    constructor(id, data, widget) {
+constructor(id, data, widget) {
         this.id = id;
         this.widget = widget;
-        this.data = data; // Reference to Store object
+        this.data = data; 
         
-        // Wrapper for SVG compatibility
         this.foreignObject = document.createElementNS('http://www.w3.org/2000/svg', 'foreignObject');
-        this.el = document.createElement('div'); // The actual visual note
+        this.el = document.createElement('div');
         
         this.render();
+
+        // --- NEW: Bind Update Listener ---
+        // We create a bound function reference to remove it later if needed
+        this.handleUpdate = (updatedNote) => {
+            if (updatedNote.id === this.id) {
+                // Update local data reference and refresh view
+                this.data = updatedNote;
+                this.updateView();
+            }
+        };
+
+        this.widget.eventBus.on('NOTE_UPDATED', this.handleUpdate);
+
+        // Optional: Auto-cleanup listener if this specific note is removed
+        this.handleRemove = (removedId) => {
+            if (removedId === this.id) {
+                this.widget.eventBus.off('NOTE_UPDATED', this.handleUpdate);
+                this.widget.eventBus.off('NOTE_REMOVED', this.handleRemove);
+            }
+        };
+        this.widget.eventBus.on('NOTE_REMOVED', this.handleRemove);
     }
 
     render() {
@@ -50,13 +70,11 @@ export class Note {
     }
 
     updateView() {
-        // Update SVG Wrapper Dimensions
         this.foreignObject.setAttribute('x', this.data.x);
         this.foreignObject.setAttribute('y', this.data.y);
         this.foreignObject.setAttribute('width', this.data.width);
         this.foreignObject.setAttribute('height', this.data.height);
 
-        // Update Styles
         this.el.style.backgroundColor = this.data.style.backgroundColor;
         this.labelEl.innerText = this.data.text;
         this.labelEl.style.color = this.data.style.color;
