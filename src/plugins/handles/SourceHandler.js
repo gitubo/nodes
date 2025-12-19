@@ -5,7 +5,7 @@ export default class SourceHandlerDefinition extends HandlerDefinition {
     static get type() { return 'source'; }
 
     constructor(x, y, label, direction='right') {
-        super(x, y, label, direction);
+        super(x, y, label, direction, 'out');
         this.role = 'source';
         this.dimensions = { radius: CONFIG.handler.radius };
     }

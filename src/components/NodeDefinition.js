@@ -13,6 +13,7 @@ export class NodeDefinition {
         this.type = this.constructor.type; 
         this.role = this.constructor.getRole();
         this.label = label;
+        this.style = data?.style || { fontSize: 20 };
         this.note = note;
         this.width = CONFIG.node.width;
         this.height = CONFIG.node.height;
@@ -35,6 +36,7 @@ export class NodeDefinition {
             note: this.note,
             data: this.data ? JSON.parse(JSON.stringify(this.data)) : {},
             presentation: {
+                style: this.style,
                 position: { ...this.position }
             },
             handles: this.handlers.reduce((acc, h) => {
@@ -59,31 +61,32 @@ export class NodeDefinition {
         );
         instance.id = nodeData.id;
 
+        if (nodeData.presentation?.style) {
+            instance.style = nodeData.presentation?.style;
+        }
+
         // 2. Restore Handler IDs by matching Role/Index
         if (nodeData.handles) {
             // Convert the hash map of saved handles to an array
             const savedHandlers = Object.values(nodeData.handles);
             
-            // Group saved handlers by role for matching
-            const savedHandlersByRole = savedHandlers.reduce((acc, h) => {
-                if (!acc[h.role]) acc[h.role] = [];
-                acc[h.role].push(h);
+            const savedHandlersByType = savedHandlers.reduce((acc, h) => {
+                if (!acc[h.type]) acc[h.type] = [];
+                acc[h.type].push(h);
                 return acc;
             }, {});
 
             // Iterate over the FRESH handlers created by the constructor
             instance.handlers.forEach(h => {
-                const roleGroup = savedHandlersByRole[h.role];
+                const typeGroup = savedHandlersByType[h.type];
                 
-                // If we have saved data for this role, pop the first one (FIFO)
-                if (roleGroup && roleGroup.length > 0) {
-                    const match = roleGroup.shift(); // Take first match
+                // Match FIFO (First In, First Out) by Type
+                if (typeGroup && typeGroup.length > 0) {
+                    const match = typeGroup.shift(); 
                     
-                    // CRITICAL: Restore the ID so links can find this handler
                     h.id = match.id; 
-                    
-                    // Restore mutable properties
                     if (match.label !== undefined) h.label = match.label;
+                    if (match.flow !== undefined) h.flow = match.flow;
                     
                     // Allow specific handler logic to restore extra data
                     const HandlerClass = registry.getHandlerDefinition(match.type);
@@ -105,6 +108,7 @@ export class NodeDefinition {
     getHandlers() { return this.handlers || []; }
     getDimensions() { return { width: this.width, height: this.height }; }
     static getIconPath() { return ''; }
+    getShapeAttributes() { return null; }
 
     getShapePath() { 
         const W = CONFIG.node.width;

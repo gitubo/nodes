@@ -30,13 +30,20 @@ function isVertical(dir) {
     return dir === 'top' || dir === 'bottom';
 }
 
+function getOmniVector(p1, p2) {
+    const dx = p2.x - p1.x;
+    const dy = p2.y - p1.y;
+    const len = Math.sqrt(dx*dx + dy*dy);
+    if (len === 0) return { x: 1, y: 0 }; // Fallback
+    return { x: dx/len, y: dy/len };
+}
+
 // --- CORE ALGORITHM: Orthogonal Routing ---
 function buildOrthogonalPoints(source, target) {
     const dir1 = getDirVec(source.direction);
     const dir2 = getDirVec(target.direction);
 
     // 1. Calculate "Escape Points" using CLEARANCE
-    // This guarantees the line exits/enters straight for at least CLEARANCE pixels
     const p1 = { x: source.x, y: source.y };
     const start = { 
         x: p1.x + dir1.x * CLEARANCE, 
@@ -77,33 +84,27 @@ function buildOrthogonalPoints(source, target) {
     return filterColinearPoints(points);
 }
 
-// --- STRATEGY: Horizontal -> Horizontal (e.g. Left to Right) ---
+// --- STRATEGY: Horizontal -> Horizontal ---
 function routeHorizontalHorizontal(start, end, dir1, dir2, points) {
     const isFacing = (dir1.x === 1 && end.x > start.x) || (dir1.x === -1 && end.x < start.x);
-    // Ensure we have enough X space to fit two corners without overlapping
     const hasSpace = Math.abs(end.x - start.x) > CLEARANCE; 
 
     if (isFacing && hasSpace) {
-        // Z-Shape: Midpoint in X
         const midX = (start.x + end.x) / 2;
         points.push({ x: midX, y: start.y });
         points.push({ x: midX, y: end.y });
     } else {
-        // U-Shape: Go around
         const midY = (start.y + end.y) / 2;
-        
-        // Safety: Avoid cutting through nodes if Y is too close
         let channelY = midY;
         if (Math.abs(start.y - end.y) < CLEARANCE) {
              channelY = Math.max(start.y, end.y) + CLEARANCE;
         }
-
         points.push({ x: start.x, y: channelY });
         points.push({ x: end.x, y: channelY });
     }
 }
 
-// --- STRATEGY: Vertical -> Vertical (e.g. Top to Bottom) ---
+// --- STRATEGY: Vertical -> Vertical ---
 function routeVerticalVertical(start, end, dir1, dir2, points) {
     const isFacing = (dir1.y === 1 && end.y > start.y) || (dir1.y === -1 && end.y < start.y);
     const hasSpace = Math.abs(end.y - start.y) > CLEARANCE;
@@ -115,58 +116,40 @@ function routeVerticalVertical(start, end, dir1, dir2, points) {
     } else {
         const midX = (start.x + end.x) / 2;
         let channelX = midX;
-        
         if (Math.abs(start.x - end.x) < CLEARANCE) {
              channelX = Math.max(start.x, end.x) + CLEARANCE;
         }
-
         points.push({ x: channelX, y: start.y });
         points.push({ x: channelX, y: end.y });
     }
 }
 
-// --- STRATEGY: Horizontal -> Vertical (e.g. Right to Top) ---
+// --- STRATEGY: Horizontal -> Vertical ---
 function routeHorizontalVertical(start, end, dir1, dir2, points) {
-    // 1. Check if a simple Horizontal Run is valid direction-wise
     const dx = end.x - start.x;
     const isHRunValid = (dir1.x === 1 && dx >= 0) || (dir1.x === -1 && dx <= 0);
-
-    // 2. CRITICAL FIX: Check for "Forbidden Zones"
-    // If approaching a Top handler from below, or Bottom from above,
-    // we cannot use the target's X-axis directly (collision).
-    // Top (-1): Start must be above or equal to End (Start.y <= End.y)
-    // Bottom (1): Start must be below or equal to End (Start.y >= End.y)
+    
+    // Check collision zones
     const isEntryClear = (dir2.y === 1 && start.y >= end.y) || (dir2.y === -1 && start.y <= end.y);
 
     if (isHRunValid && isEntryClear) {
-        // Strategy A: Horizontal First (1 Corner)
-        // Path: Start -> (End.x, Start.y) -> End
         points.push({ x: end.x, y: start.y });
     } else {
-        // Strategy B: Vertical First (2 Corners)
-        // "Detour" around the corner.
-        // Path: Start -> (Start.x, End.y) -> End
-        // This creates a vertical segment at Start X, then goes Horizontal to Target.
-        // Solves the "Right to Top" issue when Target is above/right.
         points.push({ x: start.x, y: end.y });
     }
 }
 
-// --- STRATEGY: Vertical -> Horizontal (e.g. Bottom to Left) ---
+// --- STRATEGY: Vertical -> Horizontal ---
 function routeVerticalHorizontal(start, end, dir1, dir2, points) {
     const dy = end.y - start.y;
     const isVRunValid = (dir1.y === 1 && dy >= 0) || (dir1.y === -1 && dy <= 0);
     
-    // Check Forbidden Zones for Horizontal Target
-    // Left (-1): Start must be Left (Start.x <= End.x)
-    // Right (1): Start must be Right (Start.x >= End.x)
+    // Check collision zones
     const isEntryClear = (dir2.x === 1 && start.x >= end.x) || (dir2.x === -1 && start.x <= end.x);
 
     if (isVRunValid && isEntryClear) {
-        // Strategy A: Vertical First (1 Corner)
         points.push({ x: start.x, y: end.y });
     } else {
-        // Strategy B: Horizontal First (2 Corners)
         points.push({ x: end.x, y: start.y });
     }
 }
@@ -178,13 +161,9 @@ function filterColinearPoints(points) {
         const prev = points[i-1];
         const curr = points[i];
         const next = points[i+1];
-        // Check alignment with epsilon for float precision
         const isXAligned = Math.abs(prev.x - curr.x) < 0.1 && Math.abs(curr.x - next.x) < 0.1;
         const isYAligned = Math.abs(prev.y - curr.y) < 0.1 && Math.abs(curr.y - next.y) < 0.1;
-        
-        if (isXAligned || isYAligned) {
-            continue; 
-        }
+        if (isXAligned || isYAligned) continue; 
         res.push(curr);
     }
     res.push(points[points.length-1]);
@@ -201,7 +180,6 @@ function roundedCorner(prev, curr, next, r) {
 
     const len1 = Math.abs(dx1 + dy1);
     const len2 = Math.abs(dx2 + dy2);
-    // Limit radius to half the segment length to prevent artifacts
     const validR = Math.min(r, len1 / 2, len2 / 2);
 
     const p1 = {
@@ -229,13 +207,55 @@ function orthogonalRoundedPath(points, radius = 16) {
 // --- STANDARD PATHS ---
 
 function bezierPath(a, b) {
-    const strength = Math.max(Math.abs(b.x - a.x), Math.abs(b.y - a.y)) * 0.5;
-    const v1 = getDirVec(a.direction);
-    const v2 = getDirVec(b.direction);
-    v1.x *= strength; v1.y *= strength;
-    v2.x *= strength; v2.y *= strength;
+    const dir1 = a.vector; 
+    const dir2 = b.vector;
 
-    return `M ${a.x},${a.y} C ${a.x + v1.x},${a.y + v1.y} ${b.x + v2.x},${b.y + v2.y} ${b.x},${b.y}`;
+    const dx = b.x - a.x;
+    const dy = b.y - a.y;
+    const dist = Math.sqrt(dx*dx + dy*dy);
+
+    // 2. Base Curvature Strength (Adaptive)
+    // Standard rule: 50% of distance makes for a nice cubic Bezier
+    let strength = dist * 0.5;
+
+    // 3. Enforce CLEARANCE
+    // Ensures the line comes straight out of the socket for at least CLEARANCE pixels
+    if (strength < CLEARANCE) {
+        strength = CLEARANCE;
+    }
+
+    // 4. Handle "Difficult" Geometry (Backtracking)
+    // If the target is "behind" the source (dot product < 0), 
+    // we boost the loop size to ensure it arcs AROUND the node/content.
+    const dot1 = dx * dir1.x + dy * dir1.y;
+    
+    // Also check if the Source is "behind" the Target's entry vector
+    // This helps in perpendicular cases (Right -> Top) where they are close
+    const dot2 = dx * dir2.x + dy * dir2.y; // dot product with target direction
+
+    if (dot1 < 0 || dot2 > 0) {
+        // Boost strength to force a wider loop
+        // We add the CLEARANCE to ensure the loop clears the immediate node body
+        strength = Math.max(strength, dist * 0.7 + CLEARANCE);
+        
+        // Cap the max strength slightly to prevent massive loops on huge diagrams,
+        // but ensure it's at least enough to clear the gap.
+        // Heuristic: If they are 100px apart, loop is ~110px.
+        const MAX_LOOP = 300; 
+        strength = Math.min(strength, Math.max(MAX_LOOP, dist * 1.5));
+    }
+
+    const cp1 = {
+        x: a.x + dir1.x * strength,
+        y: a.y + dir1.y * strength
+    };
+    const cp2 = {
+        x: b.x + dir2.x * strength,
+        y: b.y + dir2.y * strength
+    };
+
+    return `M ${a.x},${a.y} C ${cp1.x},${cp1.y} ${cp2.x},${cp2.y} ${b.x},${b.y}`;
+
 }
 
 function straightPath(a, b) {
@@ -259,13 +279,13 @@ function resolveEndpoints(connection, nodes) {
 
     if (!sourceHandler) return null;
 
-    const source = {
+    const p1 = {
         x: sourceNode.position.x + sourceHandler.offset.x,
-        y: sourceNode.position.y + sourceHandler.offset.y,
-        direction: sourceHandler.direction || 'right'
+        y: sourceNode.position.y + sourceHandler.offset.y
     };
-
-    let target = null;
+    
+    // Resolve Target Position (Handle Ghost vs Real)
+    let p2 = null;
 
     // 2. Resolve Target (Real or Ghost)
     if (connection.targetHandlerId) {
@@ -276,30 +296,45 @@ function resolveEndpoints(connection, nodes) {
                 break;
             }
         }
-        if (targetHandler) {
-            target = {
-                x: targetNode.position.x + targetHandler.offset.x,
-                y: targetNode.position.y + targetHandler.offset.y,
-                direction: targetHandler.direction || 'left'
-            };
-        }
-    } else if (connection.targetX !== undefined) {
-        // GHOST LINK
-        let ghostDir = 'left';
-        // Heuristic: Opposite to source for natural curves
-        if (source.direction === 'left') ghostDir = 'right';
-        if (source.direction === 'top') ghostDir = 'bottom';
-        if (source.direction === 'bottom') ghostDir = 'top';
-
-        target = {
-            x: connection.targetX,
-            y: connection.targetY,
-            direction: ghostDir 
+        p2 = {
+            x: targetNode.position.x + targetHandler.offset.x,
+            y: targetNode.position.y + targetHandler.offset.y
         };
+    } else if (connection.targetX !== undefined) {
+        p2 = { x: connection.targetX, y: connection.targetY };
     }
 
-    if (!target) return null;
-    return { source, target };
+    if (!p1 || !p2) return null;
+
+    // 2. Resolve Vectors based on Direction
+    let dir1, dir2;
+
+    // Source Vector
+    if (sourceHandler.direction === 'omni') {
+        dir1 = getOmniVector(p1, p2);
+    } else {
+        dir1 = getDirVec(sourceHandler.direction || 'right');
+    }
+
+    // Target Vector
+    // Note: If target is 'omni', it points TOWARDS the source (incoming)
+    // Bezier logic expects vectors to point OUTWARDS from the node for control points.
+    // So for the target, we want the vector p2 -> p1
+    if (connection.targetHandlerId) {
+        if (targetHandler.direction === 'omni') {
+             dir2 = getOmniVector(p2, p1);
+        } else {
+             dir2 = getDirVec(targetHandler.direction || 'left');
+        }
+    } else {
+        // Ghost target: usually implies opposite of source
+        dir2 = { x: -dir1.x, y: -dir1.y }; 
+    }
+
+    return { 
+        source: { ...p1, direction: sourceHandler.direction, vector: dir1 }, 
+        target: { ...p2, direction: targetHandler?.direction, vector: dir2 } 
+    };
 }
 
 // --- PUBLIC EXPORTS ---
@@ -312,7 +347,7 @@ export function calculatePath(connection, nodes, registry) {
     switch (connection.pathType) {
         case ConnectionPathType.SMOOTH_STEP:
             const points = buildOrthogonalPoints(source, target);
-            return orthogonalRoundedPath(points, 16); // 16px radius for corners
+            return orthogonalRoundedPath(points, 16); 
         case ConnectionPathType.STRAIGHT:
             return straightPath(source, target);
         case ConnectionPathType.BEZIER:

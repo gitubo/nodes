@@ -72,8 +72,6 @@ function renderGhost() {
     if (!svg) return;
     const layer = svg.select("g.link-layer");
     
-    // OLD: const ghostData = store.state.ui.ghostLink ? [store.state.ui.ghostLink] : [];
-    // NEW: Access via transient uiState
     const ghostData = store.uiState.ghostLink ? [store.uiState.ghostLink] : [];
 
     layer.selectAll("path.ghost-link").data(ghostData)
@@ -85,8 +83,6 @@ function renderGhost() {
 function updateSelectionStyles() {
     if (!svg) return;
     
-    // OLD: const s = store.state.ui.selectedObject;
-    // NEW: Access via the SelectionManager
     const s = store.selection.getSelected(); 
     
     // The rest of the logic remains the same

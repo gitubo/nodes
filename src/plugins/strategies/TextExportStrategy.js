@@ -1,57 +1,38 @@
-/**
- * Plugin: Text Summary Export
- * Creates a human-readable text report of the flow.
- */
-export default {
-    // 1. Mandatory 'type' for Registry lookup
-    type: 'text_export',
+// src/plugins/strategies/TextExportStrategy.js
+import { TraverseStrategyDefinition } from '../../core/sdk.js';
+// Importa le definizioni se vuoi essere strict sui tipi, oppure accetta la stringa
+// Ma l'ideale è mantenere la logica flessibile.
 
-    // 2. Lifecycle: On Start (Setup the aggregator)
-    onStart: (aggregator) => {
-        return {
-            timestamp: new Date().toISOString(),
-            lines: ["--- DIAGRAM REPORT ---", ""]
-        };
-    },
+export default class TextExportStrategy extends TraverseStrategyDefinition {
+    static get type() { return 'text_export'; } // Fondamentale per il registry
 
-    // 3. Lifecycle: Sort (Topological or Visual sort)
-    sortNodes: (nodes, links) => {
-        // Simple visual sort: Top-to-Bottom, Left-to-Right
-        return [...nodes].sort((a, b) => {
-            const dy = a.position.y - b.position.y;
-            return dy !== 0 ? dy : a.position.x - b.position.x;
-        });
-    },
-
-    // 4. Visitors
-    visitors: {
-        'start': (node, agg) => {
-            agg.lines.push(`[START] Node ${node.id.substr(0,4)}`);
-            return agg;
-        },
-        'task': (node, agg, ctx) => {
-            const inputs = ctx.inputs.map(l => l.sourceHandlerId.substr(0,4)).join(", ");
-            agg.lines.push(`[TASK]  "${node.label}" (Inputs: ${inputs})`);
-            return agg;
-        },
-        'switch': (node, agg) => {
-            agg.lines.push(`[CHECK] Condition: ${node.condition || 'N/A'}`);
-            return agg;
-        },
-        'end': (node, agg) => {
-            agg.lines.push(`[END]   Process Finished.`);
-            return agg;
-        },
-        'default': (node, agg) => {
-            agg.lines.push(`[${node.type.toUpperCase()}]`);
-            return agg;
-        }
-    },
-
-    // 5. Lifecycle: On End (Final formatting)
-    onEnd: (agg) => {
-        agg.lines.push("", "--- END REPORT ---");
-        // Return the final output payload
-        return agg.lines.join("\n");
+    getInitialAggregator() {
+        return { content: "--- REPORT ---\n", steps: 0 };
     }
-};
+
+    sortNodes(nodes, links) {
+        // Puoi sovrascrivere l'ordinamento qui se vuoi
+        // Es. filtrare nodi disconnessi prima di ordinare
+        return super.sortNodes(nodes, links);
+    }
+
+    getVisitors() {
+        return {
+            'start': (node, agg) => {
+                agg.content += `[START] ${node.id.substring(0,8)}\n`;
+            },
+            'task': (node, agg) => {
+                agg.steps++;
+                agg.content += `${agg.steps}. TASK: ${node.label || 'Unnamed'}\n`;
+                // Accesso ai dati custom (Point 5 della tua richiesta precedente)
+                if (node.data?.assignee) {
+                    agg.content += `   Assigned to: ${node.data.assignee}\n`;
+                }
+            },
+            // Gestione generica per i custom nodes (es. CircleNode)
+            'default': (node, agg) => {
+                agg.content += `?. UNKNOWN NODE (${node.type})\n`;
+            }
+        };
+    }
+}

@@ -7,10 +7,11 @@ export class HandlerDefinition {
          throw new Error("Handler plugins must implement a static get type() method.");
     }
 
-    constructor(x, y, label='', direction = 'right') {
+    constructor(x, y, label='', direction = 'right', flow = 'any') {
         this.id = generateId();
         this.type = this.constructor.type;
-        this.role = '';
+        //this.role = '';
+        this.flow = flow;
         this.offset = {x: x, y: y};
         this.label = label;
         this.direction = direction;
@@ -22,6 +23,8 @@ export class HandlerDefinition {
     static getRole(obj) { return obj.role || ''; }
     static draw(obj){}
 
+    getShapeAttributes() { return null; }
+
     getShapePath() {
         const r = CONFIG.handler.radius;
         return `M 0,0 m -${r},0 a ${r},${r} 0 1,0 ${r*2},0 a ${r},${r} 0 1,0 -${r*2},0`;
@@ -32,7 +35,8 @@ export class HandlerDefinition {
             id: this.id,
             type: this.type,
             label: this.label,
-            role: this.role, // Importante per la logica di connessione
+            //role: this.role,
+            flow: this.flow,
             presentation: {
                 offset: { ...this.offset }, // Clona l'oggetto per sicurezza
                 direction: this.direction
@@ -140,12 +144,13 @@ export class HandlerDefinition {
         const instance = new this(
             offset.x, 
             offset.y, 
-            data.label, 
-            data.presentation?.direction || 'right'
+            data.label,
+            data.presentation?.direction || 'right',
+            data.flow || 'any'
         );
         
         instance.id = data.id;
-        instance.role = data.role;
+        //instance.role = data.role;
         
         return instance;
     }

@@ -9,7 +9,7 @@ export class ConnectionDefinition {
         this.sourceHandlerId = data.sourceHandlerId;
         this.targetHandlerId = data.targetHandlerId;
 
-        this.pathType = data.pathType || ConnectionPathType.SMOOTH_STEP;
+        this.pathType = data.pathType || ConnectionPathType.BEZIER;
         this.style = {
             stroke: data.style?.stroke || 'var(--dim-gray)',
             strokeWidth: data.style?.strokeWidth || 2

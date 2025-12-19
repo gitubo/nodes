@@ -141,41 +141,33 @@ class WidgetCommands {
         this.store.selection.deselect();
     }
 
-    traverseDiagram(payload) {
-        // 1. Destructure payload (it's passed as an object from dispatch now)
-        const { strategy: strategyName, initialAggregator } = payload || {};
-        
-        // 2. NEW: Emit TRIGGERED event immediately
-        this.widget.eventBus.emit('TRAVERSE_TRIGGERED', { 
-            strategy: strategyName, 
-            timestamp: new Date().toISOString() 
-        });
+    async traverseDiagram({ strategy: strategyName }) {
+        // CORREZIONE: Recupera la strategia dal Registry, non dal PluginLoader
+        const strategyClass = this.widget.registry.getStrategy(strategyName);
 
-        // 3. Lookup Strategy from Registry
-        const strategyImpl = this.widget.registry.getStrategy(strategyName);
-        
-        if (!strategyImpl) {
-            console.error(`Strategy '${strategyName}' not found.`);
-            this.widget.eventBus.emit('TRAVERSE_ERROR', { 
-                message: `Strategy ${strategyName} not found` 
-            });
+        if (!strategyClass) {
+            console.error(`Strategy ${strategyName} not found in Registry`);
+            this.widget.eventBus.emit('TRAVERSE_ERROR', { message: `Strategy ${strategyName} not found` });
             return;
         }
 
-        // 4. Run Service and handle completion via event
-        Promise.resolve(this.widget.traverseService.run(
-            this.widget.store.state, 
-            strategyImpl, 
-            initialAggregator
-        )).then((result) => {
-            this.widget.eventBus.emit('TRAVERSE_COMPLETED', {
+        // Istanziazione (il resto era corretto)
+        const strategyInstance = new strategyClass();
+        
+        try {
+            const result = await this.widget.traverseService.run(
+                this.widget.store.state, 
+                strategyInstance
+            );
+            
+            this.widget.eventBus.emit('TRAVERSE_COMPLETE', {
                 strategy: strategyName,
                 result: result
             });
-        }).catch(err => {
-            console.error("Traversal failed", err);
+        } catch (err) {
+            console.error(err);
             this.widget.eventBus.emit('TRAVERSE_ERROR', { message: err.message });
-        });
+        }
     }
 
     spawnNodeConnected({ type, x, y, sourceHandlerId }) {

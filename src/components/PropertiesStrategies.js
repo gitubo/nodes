@@ -36,6 +36,14 @@ export class NodePropertiesStrategy extends BaseStrategy {
         // Standard Fields
         container.appendChild(this.createInput('Label', data.label, 'text', v => data.label = v));
         container.appendChild(this.createInput('Note', data.note, 'text', v => data.note = v));
+        if (!data.style) data.style = { fontSize: 14 };
+        
+        container.appendChild(this.createInput(
+            'Font Size (px)', 
+            data.style.fontSize, 
+            'number', 
+            v => data.style.fontSize = parseInt(v)
+        ));
         container.appendChild(this.createSeparator());
 
         // Key/Value Dictionary Editor (Requirement 4a)
@@ -108,7 +116,8 @@ export class NodePropertiesStrategy extends BaseStrategy {
     save(id, data) {
         this.store.updateNode(id, { 
             label: data.label, 
-            note: data.note, 
+            note: data.note,
+            style: data.style, 
             data: data.data 
         });
     }

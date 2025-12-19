@@ -1,5 +1,6 @@
 import { snapToGrid } from '../core/config.js';
 import { findClosestTOnPath } from '../render/geometry.js';
+import { ConnectionValidator } from '../core/ConnectionValidator.js';
 
 // Base State
 class InteractionState {
@@ -125,21 +126,10 @@ export class ConnectionCreationState extends InteractionState {
             const targetData = d3.select(target).datum();
             
             // Logic: Prevent self-connection and ensure Source-Target role match
-            if (targetData.id !== this.sourceHandler.id) {
+            if (ConnectionValidator.isValid(this.sourceHandler, targetData)) {
                 
-                // Allow connection if roles are opposite (Source -> Target OR Target -> Source)
-                const isValidConnection = 
-                    (this.sourceHandler.role === 'source' && targetData.role.includes('target')) ||
-                    (this.sourceHandler.role.includes('target') && targetData.role === 'source');
-
-                if (isValidConnection) {
-                    // Normalize: Always store Source ID first, Target ID second
-                    const sourceId = this.sourceHandler.role === 'source' ? this.sourceHandler.id : targetData.id;
-                    const targetId = this.sourceHandler.role === 'source' ? targetData.id : this.sourceHandler.id;
-
-                    this.ctx.store.addLink(sourceId, targetId);
-                    created = true;
-                }
+                this.ctx.store.addLink(this.sourceHandler.id, targetData.id);
+                created = true;
             }
         }
         

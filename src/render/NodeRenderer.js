@@ -1,13 +1,59 @@
 // src/NodeRenderer.js
 import { CONFIG } from '../core/config.js';
 
+function truncateText(textSelection, maxWidth) {
+    textSelection.each(function() {
+        const el = d3.select(this);
+        const text = el.text();
+        let chars = text.length;
+        if (el.node().getComputedTextLength() <= maxWidth) return;
+        
+        // Simple binary reduction for performance
+        while (el.node().getComputedTextLength() > maxWidth && chars > 0) {
+            chars--;
+            el.text(text.substring(0, chars) + "...");
+        }
+    });
+}
+
 export class NodeRenderer {
     constructor(renderCallback, registry, store) {
         this.renderCallback = renderCallback;
         this.registry = registry;
         this.store = store; 
     }
-    
+
+_applyAttributes(selection, entity) {
+        // 1. Retrieve dynamic overrides from logic
+        let overrides = {};
+        if (typeof entity.getShapeAttributes === 'function') {
+            overrides = entity.getShapeAttributes() || {};
+        }
+
+        // 2. Apply styles with high specificity
+        // We separate strictly visual properties to use .style() so they override CSS classes.
+        // Other attributes (like transform, or custom data attributes) can use .attr()
+        
+        const styleProps = ['fill', 'stroke', 'stroke-width', 'stroke-dasharray', 'opacity', 'filter'];
+
+        // Apply as Inline Styles (Highest Specificity)
+        styleProps.forEach(prop => {
+            if (overrides[prop] !== undefined) {
+                selection.style(prop, overrides[prop]);
+            } else {
+                // Important: clear inline style if undefined, so CSS class can take over
+                selection.style(prop, null);
+            }
+        });
+
+        // Apply any other attributes that are NOT visual styles as attributes
+        Object.keys(overrides).forEach(key => {
+            if (!styleProps.includes(key)) {
+                selection.attr(key, overrides[key]);
+            }
+        });
+    }
+
     renderBody(selection, d) {
         const renderer = this;
         selection.each(function() {
@@ -20,15 +66,30 @@ export class NodeRenderer {
                 .join("path")
                 .attr("class", `node-body ${d.type}`)
                 .attr("d", d.getShapePath())
+                .call(sel => renderer._applyAttributes(sel, d))
                 .lower();
 
-            // 2. Render Icon
-            const icon = definition.getIconPath();
+
+            const iconPathData = definition.getIconPath();
+            const hasIcon = (iconPathData && iconPathData !== '');
+            
+            // Calculate Content Width for Labels
+            // If icon exists, text starts after icon. If not, text uses full width.
+            const nodeWidth = d.width || CONFIG.node.width;
+            const iconSize = CONFIG.node.iconSize;
+            const margin = CONFIG.node.iconMargin;
+            
+            const textStartX = hasIcon ? (margin * 2 + iconSize) : (nodeWidth / 2);
+            const textAnchor = hasIcon ? "start" : "middle";
+            const maxTextWidth = hasIcon 
+                ? (nodeWidth - textStartX - margin) // Remaining space
+                : (nodeWidth - margin * 2);
+            
             currentSelection.selectAll("path.node-icon").remove();
-            if(icon && icon !== ''){
+            if(hasIcon){
                 const path = currentSelection.append("path")
                     .attr("class", "node-icon")
-                    .attr("d", icon);
+                    .attr("d", iconPathData);
                 const bbox = path.node().getBBox();
                 const size = CONFIG.node.iconSize-CONFIG.node.iconPadding*2;
                 const scale = size / Math.max(bbox.width, bbox.height);
@@ -45,31 +106,35 @@ export class NodeRenderer {
                 const capitalized = d.label.charAt(0).toUpperCase() + d.label.slice(1);
                 const labelJoin = currentSelection.selectAll("text.node-label").data([d]);
                 
-                const label = labelJoin.enter()
+                labelJoin.enter()
                     .append("text")
-                    .attr("class", "node-label") 
-                    .attr("text-anchor", "left")
+                    .attr("class", `node-label ${d.type}`) 
                     .merge(labelJoin)
-                    .text(capitalized);
+                    .attr("text-anchor", textAnchor)
+                    .attr("y", d.note ? margin + iconSize/2 - 6 : margin + iconSize/2 + 5) 
+                    .attr("x", textStartX)
+                    .text(capitalized)
+                    // NUOVO: Applica font-size dallo stile del nodo
+                    .style("font-size", d.style && d.style.fontSize ? `${d.style.fontSize}px` : null)
+                    .call(sel => truncateText(sel, maxTextWidth));
 
-                label.attr("transform", `translate(${CONFIG.node.iconMargin*2+CONFIG.node.iconSize}, ${CONFIG.node.iconMargin+CONFIG.node.iconSize/2})`);
                 labelJoin.exit().remove();
-             } else {
-                currentSelection.selectAll("text.node-label").remove();
              }
              
+             // --- 4. Render Note with Truncation ---
              if (d.note) {
                 const noteJoin = currentSelection.selectAll("text.node-note").data([d]);
                 noteJoin.enter()
                     .append("text")
-                    .attr("class", "node-note") 
-                    .attr("text-anchor", "middle")
+                    .attr("class", `node-note ${d.type}`) 
                     .merge(noteJoin)
-                    .attr("transform", `translate(${CONFIG.node.iconMargin*2+CONFIG.node.iconSize}, ${CONFIG.node.iconMargin+CONFIG.node.iconSize})`)
-                    .text(d.note);
+                    .attr("text-anchor", textAnchor)
+                    .attr("y", margin + iconSize/2 + 12)
+                    .attr("x", textStartX)
+                    .text(d.note)
+                    .call(sel => truncateText(sel, maxTextWidth)); // <--- TRUNCATION
+
                 noteJoin.exit().remove();
-             } else {
-                currentSelection.selectAll("text.node-note").remove();
              }
         });
     }
@@ -81,7 +146,7 @@ export class NodeRenderer {
         selection.selectAll("g.handler-g")
             .data(d.getHandlers(), h => h.id)
             .join("g")
-            .attr("class", h => `handler-g ${h.type} ${h.role}`)
+            .attr("class", "handler-g")
             .attr("transform", h => `translate(${h.offset.x}, ${h.offset.y})`)
             .each(function(h) {
                 const group = d3.select(this);
@@ -90,12 +155,9 @@ export class NodeRenderer {
                 group.selectAll("path.handler-body")
                     .data([h]) 
                     .join("path")
-                    .attr("class", "handler-body")
+                    .attr("class", h => `handler-body ${h.type}`)
                     .attr("d", h.getShapePath())
-                    // Only apply inline styles if the instance has specific overrides.
-                    // Otherwise, passing null removes the attribute, allowing CSS to win.
-                    .attr("fill", h.backgroundColor || null)
-                    .attr("stroke", h.borderColor || null);
+                    .call(sel => renderer._applyAttributes(sel, h));
 
                 // 2. Render Label (Delegates to the updated HandlerDefinition method above)
                 if (typeof h.renderLabel === 'function') {

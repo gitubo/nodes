@@ -1,0 +1,21 @@
+.node-body.circle {
+    fill: #fff0f0; 
+    stroke: red;
+    stroke-width: 3px;
+}
+
+.node.circle.selected .node-body.circle {
+    stroke: darkred;
+    filter: drop-shadow(0 0 10px red);
+}
+
+.node-label.circle {
+    fill: darkred;
+}
+
+
+.handler-body.circle {
+    fill: #fff0;
+    stroke: #333;
+    stroke-width: 3px;
+}

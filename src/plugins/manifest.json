@@ -1,18 +1,43 @@
 {
-    "handles": [
-        "handles/SourceHandler.js",
-        "handles/TargetHandler.js",
-        "handles/TargetHorizontalHandler.js",
-        "handles/TargetVerticalHandler.js"
-    ],
-    "nodes": [
-        "nodes/EndNode.js",
-        "nodes/ServiceNode.js",
-        "nodes/TaskNode.js",
-        "nodes/StartNode.js",
-        "nodes/SwitchNode.js"
-    ],
-    "strategies": [
-        "strategies/TextExportStrategy.js"
-    ]
+    "core-set": {
+        "description": "Standard node set",
+        "handles": [
+            "handles/SourceHandler.js",
+            "handles/TargetHandler.js",
+            "handles/TargetVerticalHandler.js",
+            "handles/TargetHorizontalHandler.js"
+        ],
+        "nodes": [
+            "nodes/StartNode.js",
+            "nodes/EndNode.js",
+            "nodes/TaskNode.js",
+            "nodes/SwitchNode.js",
+            "nodes/ServiceNode.js"
+        ],
+        "strategies": [
+            "strategies/TextExportStrategy.js"
+        ],
+        "styles": [
+            "styles/core-theme.css"
+        ],
+        "config": {
+            "defaultNodeWidth": 192,
+            "theme": "light"
+        }
+    },
+    "custom-shapes": {
+        "description": "Experimental shapes",
+        "nodes": [
+            "nodes/CircleNode.js"
+        ],
+        "handles": [
+             "handles/CircleHandler.js"
+        ],
+        "styles": [
+            "styles/shapes.css"
+        ],
+        "config": {
+            "circleRadius": 50
+        }
+    }
 }
