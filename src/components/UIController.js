@@ -108,7 +108,6 @@ export class UIController {
             if (!btn) return;
             const action = btn.dataset.action;
             const svg = d3.select('svg'); 
-            
             switch(action) {
                 case 'undo': this.store.history.undo(); break;
                 case 'redo': this.store.history.redo(); break;
@@ -128,7 +127,7 @@ export class UIController {
                     URL.revokeObjectURL(url);
                     break;
                 case 'open-file': this.openFile(); break;
-                case 'traverse-diagram': this.widget.dispatch('traverse', { strategy: 'text_export' }); break;
+                case 'traverse-diagram': this.widget.dispatch('traverse', { strategy: 'javascript_ast' }); break;
                 case 'add-node':
                     // 1. Get position of the clicked button
                     const btnRect = btn.getBoundingClientRect();

@@ -14,12 +14,7 @@ export default class CircleNodeDefinition extends NodeDefinition {
 
     static getIconPath() { return ''; }
     
-    getShapePath() {
-        const W = CONFIG.node.width;
-        const H = CONFIG.node.height;
-
-        return 'M48 0A1 1 0 0048 96 1 1 0 0048 0Z';
-    }
+    getShapeTemplate() { return `<path d="M48 0A1 1 0 0048 96 1 1 0 0048 0Z" />`;}
 
     getShapeAttributes() {
         // Example: If the user configured a specific data value, override the CSS

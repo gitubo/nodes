@@ -10,9 +10,10 @@ export default class TargetHandlerDefinition extends HandlerDefinition {
         this.dimensions = { width: CONFIG.handler.width, height: CONFIG.handler.height };
     }
 
-    getShapePath() { 
+    getShapeTemplate() {
         const w = CONFIG.handler.width/2;
-        const h = CONFIG.handler.height/2
-        return `M-${w} -${h}H${w}V${h}H-${w}Z`; 
+        const h = CONFIG.handler.height/2;
+        return `<path d="M-${w} -${h}H${w}V${h}H-${w}Z" />`;
     }
+
 }

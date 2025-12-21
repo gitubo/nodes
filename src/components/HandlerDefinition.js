@@ -25,9 +25,10 @@ export class HandlerDefinition {
 
     getShapeAttributes() { return null; }
 
-    getShapePath() {
+    getShapeTemplate() {
         const r = CONFIG.handler.radius;
-        return `M 0,0 m -${r},0 a ${r},${r} 0 1,0 ${r*2},0 a ${r},${r} 0 1,0 -${r*2},0`;
+        const d = `M 0,0 m -${r},0 a ${r},${r} 0 1,0 ${r*2},0 a ${r},${r} 0 1,0 -${r*2},0`;
+        return `<path d="${d}" />`;
     }
 
     getData() {

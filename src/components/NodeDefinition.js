@@ -109,13 +109,13 @@ export class NodeDefinition {
     getDimensions() { return { width: this.width, height: this.height }; }
     static getIconPath() { return ''; }
     getShapeAttributes() { return null; }
-
-    getShapePath() { 
+    
+    getShapeTemplate() { 
         const W = CONFIG.node.width;
         const H = CONFIG.node.height;
         const sR = CONFIG.node.smallBorderRadius;
 
-        return `
+        const d = `
             M ${sR},0
             L ${W - sR},0
             A ${sR},${sR} 0 0 1 ${W},${sR}
@@ -129,6 +129,18 @@ export class NodeDefinition {
             A ${sR},${sR} 0 0 1 ${sR},0
             Z
         `.replace(/\s+/g, ' ');
+        return `<path d="${d}" />`;
+    }
+
+    static get schema() {
+        return null; 
+        /* Example Return:
+        {
+            "maxRetries": { type: "number", label: "Max Retries", default: 3 },
+            "role": { type: "select", label: "Role", options: ["admin", "user"] },
+            "isActive": { type: "boolean", label: "Active" }
+        }
+        */
     }
         
     static renderProperties(container, nodeData, onChange) { }

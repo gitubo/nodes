@@ -23,18 +23,14 @@ export class NodeRenderer {
         this.store = store; 
     }
 
-_applyAttributes(selection, entity) {
+    _applyAttributes(selection, entity) {
         // 1. Retrieve dynamic overrides from logic
         let overrides = {};
         if (typeof entity.getShapeAttributes === 'function') {
             overrides = entity.getShapeAttributes() || {};
         }
 
-        // 2. Apply styles with high specificity
-        // We separate strictly visual properties to use .style() so they override CSS classes.
-        // Other attributes (like transform, or custom data attributes) can use .attr()
-        
-        const styleProps = ['fill', 'stroke', 'stroke-width', 'stroke-dasharray', 'opacity', 'filter'];
+        const styleProps = CONFIG.renderer.allowedStyleProps;
 
         // Apply as Inline Styles (Highest Specificity)
         styleProps.forEach(prop => {
@@ -57,19 +53,19 @@ _applyAttributes(selection, entity) {
     renderBody(selection, d) {
         const renderer = this;
         selection.each(function() {
-             const currentSelection = d3.select(this);
-             const definition = renderer.registry.getNodeDefinition(d.type);
-             if (!definition) return;
-             
-             // 1. Render Shape
-             currentSelection.selectAll("path.node-body").data([d])
-                .join("path")
-                .attr("class", `node-body ${d.type}`)
-                .attr("d", d.getShapePath())
+            const currentSelection = d3.select(this);
+            const bodyJoin = currentSelection.selectAll("g.node-body-group").data([d]);
+
+            bodyJoin.enter()
+                .append("g")
+                .attr("class", `node-body-group node-body ${d.type}`) 
+                .merge(bodyJoin)
+                .html(d.getShapeTemplate()) 
                 .call(sel => renderer._applyAttributes(sel, d))
                 .lower();
+            bodyJoin.exit().remove();
 
-
+            const definition = renderer.registry.getNodeDefinition(d.type);
             const iconPathData = definition.getIconPath();
             const hasIcon = (iconPathData && iconPathData !== '');
             
@@ -151,13 +147,19 @@ _applyAttributes(selection, entity) {
             .each(function(h) {
                 const group = d3.select(this);
 
-                // --- FIX: Render Main Body with Conditional Styling ---
-                group.selectAll("path.handler-body")
-                    .data([h]) 
-                    .join("path")
-                    .attr("class", h => `handler-body ${h.type}`)
-                    .attr("d", h.getShapePath())
+                // 1. Create a container group for the handler visuals
+                const bodyJoin = group.selectAll("g.handler-visuals").data([h]);
+
+                bodyJoin.enter()
+                    .append("g")
+                    .attr("class", `handler-visuals handler-body ${h.type}`) // Keep 'handler-body' for CSS
+                    .merge(bodyJoin)
+                    // 2. Inject the template
+                    .html(h.getShapeTemplate())
+                    // 3. Apply attributes (colors, strokes defined in Definition)
                     .call(sel => renderer._applyAttributes(sel, h));
+                
+                bodyJoin.exit().remove();
 
                 // 2. Render Label (Delegates to the updated HandlerDefinition method above)
                 if (typeof h.renderLabel === 'function') {

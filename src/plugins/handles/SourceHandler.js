@@ -10,10 +10,9 @@ export default class SourceHandlerDefinition extends HandlerDefinition {
         this.dimensions = { radius: CONFIG.handler.radius };
     }
     
-    // 1. Standard Shape (The visual "port")
-    getShapePath() {
+    getShapeTemplate() {
         const r = CONFIG.handler.radius;
-        return `M 0,0 m -${r},0 a ${r},${r} 0 1,0 ${r*2},0 a ${r},${r} 0 1,0 -${r*2},0`;
+        return `<path d="M 0,0 m -${r},0 a ${r},${r} 0 1,0 ${r*2},0 a ${r},${r} 0 1,0 -${r*2},0" />`;
     }
 
     renderExtras(group, state) {

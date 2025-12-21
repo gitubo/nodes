@@ -55,7 +55,7 @@ export default class SwitchNodeDefinition extends NodeDefinition {
 
     getHandlers() { return [...this.targetHandlers, ...this.sourceHandlers]; }
     
-    getShapePath() {
+    getShapeTemplate() {
         const W = this.width;
         const sR = CONFIG.node.smallBorderRadius;
         
@@ -95,7 +95,7 @@ export default class SwitchNodeDefinition extends NodeDefinition {
         path += ` L ${tW},${inputY - tH} L 0,${inputY - tH}`;
         path += ` L 0,${sR} A ${sR},${sR} 0 0 1 ${sR},0 Z`;
         
-        return path;
+        return `<path d="${path}" />`;
     }
 
     static renderProperties(container, nodeData, onChange) {

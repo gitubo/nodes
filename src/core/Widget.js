@@ -159,8 +159,7 @@ class WidgetCommands {
                 this.widget.store.state, 
                 strategyInstance
             );
-            
-            this.widget.eventBus.emit('TRAVERSE_COMPLETE', {
+            this.widget.eventBus.emit('TRAVERSE_COMPLETED', {
                 strategy: strategyName,
                 result: result
             });

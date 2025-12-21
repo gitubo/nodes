@@ -8,6 +8,10 @@ const MODULE_8 = MODULE * 8;  //64
 const MODULE_16 = MODULE * 16;  //128
 
 export const CONFIG = {
+    renderer: {
+        allowedStyleProps: ['fill', 'stroke', 'stroke-width', 'stroke-dasharray', 'opacity', 'filter', 'stroke-dashoffset', 'transform'] 
+    },
+
     // Canvas settings
     canvas: {
         width: 1024,
