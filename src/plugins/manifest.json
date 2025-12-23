@@ -5,14 +5,18 @@
             "handles/SourceHandler.js",
             "handles/TargetHandler.js",
             "handles/TargetVerticalHandler.js",
-            "handles/TargetHorizontalHandler.js"
+            "handles/TargetHorizontalHandler.js",
+            "handles/BidirectionalHorizontalHandler.js"
         ],
         "nodes": [
             "nodes/StartNode.js",
             "nodes/EndNode.js",
             "nodes/TaskNode.js",
             "nodes/SwitchNode.js",
-            "nodes/ServiceNode.js"
+            "nodes/ServiceNode.js",
+            "nodes/GlassNode.js",
+            "nodes/CallNode.js",
+            "nodes/RequestNode.js"
         ],
         "strategies": [
             "strategies/JavascriptAstStrategy.js"

@@ -1,7 +1,7 @@
 .node-body.circle {
-    fill: #fff0f0; 
-    stroke: red;
-    stroke-width: 3px;
+    fill: #f5e67e; 
+    stroke: d4a41f66;
+    stroke-width: 2px;
 }
 
 .node.circle.selected .node-body.circle {
@@ -13,9 +13,8 @@
     fill: darkred;
 }
 
-
 .handler-body.circle {
-    fill: #fff0;
-    stroke: #333;
-    stroke-width: 3px;
+    fill: #f5e67e66;
+    stroke: #d4a41f66;
+    stroke-width: 1px;
 }

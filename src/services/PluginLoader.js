@@ -1,25 +1,17 @@
-// src/services/PluginLoader.js
-
 export class PluginLoader {
     constructor(registry) {
         this.registry = registry;
         this.loadedStyles = new Set(); // Prevent duplicate CSS loading
     }
 
-    /**
-     * Loads plugins from a JSON manifest.
-     * Expected structure: { "pluginName": { nodes: [], styles: [], ... } }
-     */
     async loadFromManifest(manifestUrl) {
         try {
             const response = await fetch(manifestUrl);
             const manifest = await response.json();
 
-            // Calculate base path relative to the manifest location
             const absoluteManifestUrl = new URL(manifestUrl, document.baseURI).href;
             const basePath = absoluteManifestUrl.substring(0, absoluteManifestUrl.lastIndexOf('/') + 1);
 
-            // Iterate over each plugin bundle defined in the JSON
             for (const [pluginName, bundle] of Object.entries(manifest)) {
                 console.groupCollapsed(`[PluginLoader] Loading bundle: ${pluginName}`);
                 await this._loadPluginBundle(pluginName, bundle, basePath);
@@ -34,10 +26,7 @@ export class PluginLoader {
     }
 
     async _loadPluginBundle(name, bundle, basePath) {
-        // 1. Register Configuration (Point 5)
         if (bundle.config) {
-            // Assuming Registry has a method for this, or we store it in a global config map
-            // For now, we extend the registry capability or access a global config
             if (this.registry.registerConfig) {
                 this.registry.registerConfig(name, bundle.config);
             } else {
@@ -45,12 +34,10 @@ export class PluginLoader {
             }
         }
 
-        // 2. Inject Styles (Point 4 - CSS Files)
         if (bundle.styles && Array.isArray(bundle.styles)) {
             bundle.styles.forEach(stylePath => this._injectStyle(basePath + stylePath));
         }
 
-        // 3. Load Logic Modules (Nodes, Handles, Strategies)
         const loadPromises = [];
 
         if (bundle.handles) {
@@ -73,8 +60,6 @@ export class PluginLoader {
         link.rel = 'stylesheet';
         link.href = href;
         
-        // Append to head. Since this runs after main.css is loaded, 
-        // these styles will naturally override core defaults.
         document.head.appendChild(link);
         this.loadedStyles.add(href);
         console.log(`   + Style injected: ${href}`);
