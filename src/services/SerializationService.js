@@ -6,7 +6,7 @@ export class SerializationService {
     serialize(state) {
         const exportData = {
             metadata: {
-                version: '2.2', 
+                version: '0.1', 
                 createdAt: new Date().toISOString(),
                 viewport: { ...state.transform }
             },

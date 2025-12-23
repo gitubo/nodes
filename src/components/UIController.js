@@ -109,8 +109,8 @@ export class UIController {
             const action = btn.dataset.action;
             const svg = d3.select('svg'); 
             switch(action) {
-                case 'undo': this.store.history.undo(); break;
-                case 'redo': this.store.history.redo(); break;
+                case 'undo': this.store.undo(); break; 
+                case 'redo': this.store.redo(); break;
                 case 'zoom-in': svg.transition().call(window.zoomBehavior.scaleBy, 1.3); break;
                 case 'zoom-out': svg.transition().call(window.zoomBehavior.scaleBy, 0.7); break;
                 case 'zoom-reset': svg.transition().call(window.zoomBehavior.transform, d3.zoomIdentity); break;
