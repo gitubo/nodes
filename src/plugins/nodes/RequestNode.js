@@ -12,7 +12,7 @@ export default class RequestNodeDefinition extends NodeDefinition {
         this.handlers.push(new BidirectionalHandlerDefinition(this.width/2, 0, '', 'top'));
     }
 
-    static getRole() { return NODE_ROLES.TOOLS; }
+    static get role() { return NODE_ROLES.TOOLS; }
 
     static hasTargetHandlers() { return true; }
 

@@ -116,7 +116,7 @@ export default class SwitchNodeDefinition extends NodeDefinition {
                       CONFIG.node.smallBorderRadius;
     }
 
-    static getRole() { return NODE_ROLES.LOGIC; }
+    static get role() { return NODE_ROLES.LOGIC; }
     static hasTargetHandlers() { return true; }
 
     getDimensions() {

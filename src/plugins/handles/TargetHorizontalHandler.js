@@ -5,8 +5,8 @@ export default class TargetHorizontalHandlerDefinition extends TargetHandlerDefi
 
     static get type() { return 'target_horizontal'; }
 
-    constructor(x, y, label) {
-        super(x, y, label, 'top');
+    constructor(x, y, label, direction='top') {
+        super(x, y, label, direction);
         const _w = this.dimensions.height;
         const _h = this.dimensions.width;
         this.dimensions = { width: _h, height: _w };

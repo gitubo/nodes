@@ -11,7 +11,7 @@ export class NodeDefinition {
     constructor(x, y, label, note, data) {
         this.id = crypto.randomUUID();
         this.type = this.constructor.type; 
-        this.role = this.constructor.getRole();
+        this.role = this.constructor.role;
         this.label = label;
         this.style = data?.style || { fontSize: 20 };
         this.note = note;
@@ -22,11 +22,8 @@ export class NodeDefinition {
         this.data = data;
     }
 
-    static get type() {
-        throw new Error("Node plugins must implement a static get type() method.");
-    }
-
-    static getRole() { return NODE_ROLES.CORE; }
+    static get type() { throw new Error("Node plugins must implement a static get type() method."); }
+    static get role() { return NODE_ROLES.CORE; }
 
     getData() {
         return {

@@ -8,7 +8,7 @@ export class Registry {
 
     _validateInterface(ClassRef, type, category) {
         const interfaces = {
-            node: ['type', 'getRole'], // Required static getters/methods
+            node: ['type', 'role'],
             handler: ['type', 'getShapePath'],
             strategy: ['type', 'getVisitors', 'sortNodes']
         };

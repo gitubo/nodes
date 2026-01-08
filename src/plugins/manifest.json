@@ -1,47 +1,27 @@
 {
-    "core-set": {
-        "description": "Standard node set",
+    "llm": {
+        "description": "LLM node set",
         "handles": [
-            "handles/SourceHandler.js",
-            "handles/TargetHandler.js",
-            "handles/TargetVerticalHandler.js",
-            "handles/TargetHorizontalHandler.js",
-            "handles/BidirectionalHorizontalHandler.js"
+            "handles/CircleHandler.js"
         ],
         "nodes": [
-            "nodes/StartNode.js",
-            "nodes/EndNode.js",
-            "nodes/TaskNode.js",
-            "nodes/SwitchNode.js",
-            "nodes/ServiceNode.js",
-            "nodes/GlassNode.js",
-            "nodes/CallNode.js",
-            "nodes/RequestNode.js"
+            "nodes/LLMSolutionArchitectNode.js",
+            "nodes/LLMBusinessAnalystNode.js",
+            "nodes/LLMCopywriterNode.js",
+            "nodes/LLMQueryNode.js",
+            "nodes/LLMAnswerNode.js",
+            "nodes/LLMGuardrailNode.js",
+            "nodes/LLMStorageNode.js"
         ],
         "strategies": [
-            "strategies/JavascriptAstStrategy.js"
+            "strategies/LLMStrategy.js"
         ],
         "styles": [
-            "styles/core-theme.css"
+            "styles/llm.css"
         ],
         "config": {
             "defaultNodeWidth": 192,
             "theme": "light"
-        }
-    },
-    "custom-shapes": {
-        "description": "Experimental shapes",
-        "nodes": [
-            "nodes/CircleNode.js"
-        ],
-        "handles": [
-             "handles/CircleHandler.js"
-        ],
-        "styles": [
-            "styles/shapes.css"
-        ],
-        "config": {
-            "circleRadius": 50
         }
     }
 }

@@ -4,16 +4,15 @@ export default class CircleHandlerDefinition extends HandlerDefinition {
 
     static get type() { return 'circle'; }
 
-    constructor(x, y) {
-        super(x, y, '', 'omni', 'any');
+    constructor(x, y, label, direction='right') {
+        super(x, y, label, direction, 'out');
         this.role = 'source';
-        this.dimensions = { internal_radius: 52, external_radius: 64 };
+        this.dimensions = { radius: 16 };
     }
 
     getShapeTemplate() {
-        const ir = this.dimensions.internal_radius;
-        const er = this.dimensions.external_radius;
-        return `<path d="M 0,-${er}A1 1 0 000 ${er} 1 1 0 000-${er}ZM0-${ir}A1 1 0 010 ${ir} 1 1 0 010-${ir}" />`;
+        const r = this.dimensions.radius;
+        return `<path d="M-${r} 0A1 1 0 00${r} 0 1 1 0 00-${r} 0" />`;
     }
 
 }

@@ -1,0 +1,46 @@
+{
+    "core-set": {
+        "description": "Standard node set",
+        "handles": [
+            "handles/SourceHandler.js",
+            "handles/TargetHandler.js",
+            "handles/TargetVerticalHandler.js",
+            "handles/TargetHorizontalHandler.js",
+            "handles/BidirectionalHorizontalHandler.js"
+        ],
+        "nodes": [
+            "nodes/StartNode.js",
+            "nodes/EndNode.js",
+            "nodes/TaskNode.js",
+            "nodes/SwitchNode.js",
+            "nodes/ServiceNode.js",
+            "nodes/CallNode.js",
+            "nodes/RequestNode.js"
+        ],
+        "strategies": [
+            "strategies/JavascriptAstStrategy.js"
+        ],
+        "styles": [
+            "styles/core-theme.css"
+        ],
+        "config": {
+            "defaultNodeWidth": 192,
+            "theme": "light"
+        }
+    },
+    "custom-shapes": {
+        "description": "Experimental shapes",
+        "nodes": [
+            "nodes/CircleNode.js"
+        ],
+        "handles": [
+             "handles/RingHandler.js"
+        ],
+        "styles": [
+            "styles/shapes.css"
+        ],
+        "config": {
+            "circleRadius": 50
+        }
+    }
+}

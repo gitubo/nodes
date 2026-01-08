@@ -12,7 +12,7 @@ export default class ServiceNodeDefinition extends NodeDefinition {
         this.handlers.push(new TargetHorizontalHandlerDefinition(48, 0));
     }
 
-    static getRole() { return NODE_ROLES.TOOLS; }
+    static get role() { return NODE_ROLES.TOOLS; }
 
     static hasTargetHandlers() { return true; }
 

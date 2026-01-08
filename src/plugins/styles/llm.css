@@ -1,0 +1,17 @@
+.handler-body {
+    fill: #6cdcd199;
+    stroke: #3a6a66cc;
+    stroke-width: 1px;
+}
+
+.node-icon.line {
+    fill: none;
+    stroke: none;
+    stroke-width: 0px;
+}
+
+.handler-label-bg {
+    fill: #eee9;
+    stroke: #eee;
+    stroke-width: 1px;
+}

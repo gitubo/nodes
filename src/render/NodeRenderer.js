@@ -97,8 +97,8 @@ export class NodeRenderer {
                     .attr("transform", `translate(${CONFIG.node.iconMargin}, ${CONFIG.node.iconMargin})`);
             }
 
-             // 3. Render Labels
-             if (d.label) {
+            // 3. Render Labels
+            if (d.label) {
                 const capitalized = d.label.charAt(0).toUpperCase() + d.label.slice(1);
                 const labelJoin = currentSelection.selectAll("text.node-label").data([d]);
                 

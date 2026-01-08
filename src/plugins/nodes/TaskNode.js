@@ -14,7 +14,7 @@ export default class TaskNodeDefinition extends NodeDefinition {
         this.handlers.push(new SourceHandlerDefinition(this.width, this.height/2));
     }
 
-    static getRole() { return NODE_ROLES.TOOLS; }
+    static get role() { return NODE_ROLES.TOOLS; }
 
     static hasTargetHandlers() { return true; }
 

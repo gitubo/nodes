@@ -16,7 +16,7 @@ export default class CallNodeDefinition extends NodeDefinition {
         this.handlers.push(new BidirectionalHandlerDefinition(this.width/2, this.height));
     }
 
-    static getRole() { return NODE_ROLES.TOOLS; }
+    static get role() { return NODE_ROLES.TOOLS; }
 
     static hasTargetHandlers() { return true; }
 

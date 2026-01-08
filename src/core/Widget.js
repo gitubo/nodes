@@ -206,7 +206,7 @@ class WidgetQueries {
         const definitions = this.widget.registry.getAllNodeDefinitions();
         const metadata = definitions.map(DefClass => ({
             type: DefClass.type,
-            role: DefClass.getRole ? DefClass.getRole() : 'Core',
+            role: DefClass.role,
         }));
         return deepClone(metadata);
     }

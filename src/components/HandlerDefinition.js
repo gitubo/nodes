@@ -10,7 +10,6 @@ export class HandlerDefinition {
     constructor(x, y, label='', direction = 'right', flow = 'any') {
         this.id = generateId();
         this.type = this.constructor.type;
-        //this.role = '';
         this.flow = flow;
         this.offset = {x: x, y: y};
         this.label = label;
@@ -20,7 +19,6 @@ export class HandlerDefinition {
 
 
     static getDimension(obj) { return obj.dimensions || {}; }
-    static getRole(obj) { return obj.role || ''; }
     static draw(obj){}
 
     getShapeAttributes() { return null; }
@@ -36,10 +34,9 @@ export class HandlerDefinition {
             id: this.id,
             type: this.type,
             label: this.label,
-            //role: this.role,
             flow: this.flow,
             presentation: {
-                offset: { ...this.offset }, // Clona l'oggetto per sicurezza
+                offset: { ...this.offset },
                 direction: this.direction
             }
         };
